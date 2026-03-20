@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: nucosmos-pos-postgres
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nucosmos_pos}
+      POSTGRES_USER: ${POSTGRES_USER:-nucosmos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nucosmos_dev_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
