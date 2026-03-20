@@ -34,6 +34,13 @@ public class DeviceEntity extends BaseEntity {
     @Column
     private OffsetDateTime lastSeenAt;
 
+    protected DeviceEntity() {
+    }
+
+    public void markHeartbeat(OffsetDateTime heartbeatAt) {
+        this.lastSeenAt = heartbeatAt;
+    }
+
     public StoreEntity getStore() {
         return store;
     }

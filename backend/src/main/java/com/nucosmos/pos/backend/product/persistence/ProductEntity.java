@@ -33,6 +33,44 @@ public class ProductEntity extends BaseEntity {
     @Column(nullable = false)
     private boolean active;
 
+    protected ProductEntity() {
+    }
+
+    public static ProductEntity create(
+            ProductCategoryEntity category,
+            String sku,
+            String name,
+            String description,
+            BigDecimal price
+    ) {
+        ProductEntity entity = new ProductEntity();
+        entity.category = category;
+        entity.sku = sku;
+        entity.name = name;
+        entity.description = normalizeDescription(description);
+        entity.price = price;
+        entity.active = true;
+        return entity;
+    }
+
+    public void update(
+            ProductCategoryEntity category,
+            String sku,
+            String name,
+            String description,
+            BigDecimal price
+    ) {
+        this.category = category;
+        this.sku = sku;
+        this.name = name;
+        this.description = normalizeDescription(description);
+        this.price = price;
+    }
+
+    public void deactivate() {
+        this.active = false;
+    }
+
     public ProductCategoryEntity getCategory() {
         return category;
     }
@@ -55,5 +93,13 @@ public class ProductEntity extends BaseEntity {
 
     public boolean isActive() {
         return active;
+    }
+
+    private static String normalizeDescription(String description) {
+        if (description == null) {
+            return null;
+        }
+        String trimmed = description.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }
