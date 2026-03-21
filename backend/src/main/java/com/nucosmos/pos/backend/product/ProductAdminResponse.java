@@ -11,6 +11,7 @@ public record ProductAdminResponse(
         String sku,
         String name,
         String description,
+        String imageUrl,
         BigDecimal price,
         boolean active
 ) {

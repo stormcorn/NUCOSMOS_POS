@@ -30,14 +30,41 @@ public class ProductAdminService {
     public List<ProductCategorySummaryResponse> listProductCategories() {
         return productCategoryRepository.findAllByOrderByDisplayOrderAscNameAsc()
                 .stream()
-                .map(category -> new ProductCategorySummaryResponse(
-                        category.getId(),
-                        category.getCode(),
-                        category.getName(),
-                        category.getDisplayOrder(),
-                        category.isActive()
-                ))
+                .map(this::toCategorySummary)
                 .toList();
+    }
+
+    @Transactional
+    public ProductCategorySummaryResponse createProductCategory(ProductCategoryUpsertRequest request) {
+        validateUniqueCategoryCode(request.code(), null);
+        ProductCategoryEntity category = ProductCategoryEntity.create(
+                request.code().trim(),
+                request.name().trim(),
+                request.displayOrder()
+        );
+        return toCategorySummary(productCategoryRepository.save(category));
+    }
+
+    @Transactional
+    public ProductCategorySummaryResponse updateProductCategory(UUID categoryId, ProductCategoryUpsertRequest request) {
+        ProductCategoryEntity category = loadCategory(categoryId);
+        validateUniqueCategoryCode(request.code(), categoryId);
+        category.update(
+                request.code().trim(),
+                request.name().trim(),
+                request.displayOrder()
+        );
+        return toCategorySummary(category);
+    }
+
+    @Transactional
+    public ProductCategorySummaryResponse deactivateProductCategory(UUID categoryId) {
+        ProductCategoryEntity category = loadCategory(categoryId);
+        if (productRepository.existsByCategory_IdAndActiveTrue(categoryId)) {
+            throw new BadRequestException("Product category still has active products");
+        }
+        category.deactivate();
+        return toCategorySummary(category);
     }
 
     @Transactional(readOnly = true)
@@ -61,6 +88,7 @@ public class ProductAdminService {
                 request.sku().trim(),
                 request.name().trim(),
                 request.description(),
+                request.imageUrl(),
                 request.price()
         );
 
@@ -78,6 +106,7 @@ public class ProductAdminService {
                 request.sku().trim(),
                 request.name().trim(),
                 request.description(),
+                request.imageUrl(),
                 request.price()
         );
 
@@ -96,9 +125,25 @@ public class ProductAdminService {
                 .orElseThrow(() -> new NotFoundException("Product not found"));
     }
 
+    private ProductCategoryEntity loadCategory(UUID categoryId) {
+        return productCategoryRepository.findById(categoryId)
+                .orElseThrow(() -> new NotFoundException("Product category not found"));
+    }
+
     private ProductCategoryEntity loadActiveCategory(UUID categoryId) {
         return productCategoryRepository.findByIdAndActiveTrue(categoryId)
                 .orElseThrow(() -> new BadRequestException("Product category is invalid or inactive"));
+    }
+
+    private void validateUniqueCategoryCode(String rawCode, UUID excludeCategoryId) {
+        String code = rawCode.trim();
+        boolean exists = excludeCategoryId == null
+                ? productCategoryRepository.existsByCodeIgnoreCase(code)
+                : productCategoryRepository.existsByCodeIgnoreCaseAndIdNot(code, excludeCategoryId);
+
+        if (exists) {
+            throw new BadRequestException("Product category code already exists");
+        }
     }
 
     private void validateUniqueSku(String rawSku, UUID excludeProductId) {
@@ -121,8 +166,19 @@ public class ProductAdminService {
                 product.getSku(),
                 product.getName(),
                 product.getDescription(),
+                product.getImageUrl(),
                 product.getPrice(),
                 product.isActive()
+        );
+    }
+
+    private ProductCategorySummaryResponse toCategorySummary(ProductCategoryEntity category) {
+        return new ProductCategorySummaryResponse(
+                category.getId(),
+                category.getCode(),
+                category.getName(),
+                category.getDisplayOrder(),
+                category.isActive()
         );
     }
 }

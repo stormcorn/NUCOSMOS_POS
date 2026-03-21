@@ -30,6 +30,7 @@ public class ProductQueryService {
                 product.getSku(),
                 product.getName(),
                 product.getDescription(),
+                product.getImageUrl(),
                 product.getCategory().getCode(),
                 product.getCategory().getName(),
                 product.getPrice(),

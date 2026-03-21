@@ -21,6 +21,25 @@ public class ProductCategoryEntity extends BaseEntity {
     @Column(nullable = false)
     private boolean active;
 
+    public static ProductCategoryEntity create(String code, String name, Integer displayOrder) {
+        ProductCategoryEntity entity = new ProductCategoryEntity();
+        entity.code = code;
+        entity.name = name;
+        entity.displayOrder = displayOrder;
+        entity.active = true;
+        return entity;
+    }
+
+    public void update(String code, String name, Integer displayOrder) {
+        this.code = code;
+        this.name = name;
+        this.displayOrder = displayOrder;
+    }
+
+    public void deactivate() {
+        this.active = false;
+    }
+
     public String getCode() {
         return code;
     }

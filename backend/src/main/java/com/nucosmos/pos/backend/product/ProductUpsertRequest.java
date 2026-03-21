@@ -13,6 +13,7 @@ public record ProductUpsertRequest(
         @NotBlank @Size(max = 50) String sku,
         @NotBlank @Size(max = 120) String name,
         @Size(max = 500) String description,
+        @Size(max = 500) String imageUrl,
         @NotNull @DecimalMin(value = "0.01") BigDecimal price
 ) {
 }

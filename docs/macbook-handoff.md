@@ -19,7 +19,7 @@
 
 但目前這個 repo 實際已包含的是：
 
-- React + Vite 的前端原型
+- Vue 3 + Vite 的管理後台前端
 - Spring Boot 後端
 - PostgreSQL + Flyway migration
 - POS PIN + JWT 登入第一版
@@ -32,18 +32,18 @@ MacBook 建議先準備：
 - Git
 - Node.js
 - npm
-- Java 17+
+- Java 17
 - Docker Desktop
 
 ### 建議版本
 
 - Node.js：20+ 或接近目前開發機版本
-- Java：17+
+- Java：17
 
 目前這台開發機實際使用版本：
 
 - Node.js：`v24.14.0`
-- Java：`17+`
+- Java：`17`
 
 ## 4. 從 GitHub 下載專案
 
@@ -58,11 +58,11 @@ cd NUCOSMOS_POS
 git pull origin main
 ```
 
-## 5. 目前 repo 內前端原型啟動方式
+## 5. 目前 repo 內前端啟動方式
 
 ### 5.1 安裝依賴
 
-目前 repo 根目錄是 Node.js 前端原型，已包含 `package-lock.json`，所以直接執行：
+目前 repo 根目錄是 Vue 管理後台，已包含 `package-lock.json`，所以直接執行：
 
 ```bash
 npm install
@@ -74,7 +74,7 @@ npm install
 npm run dev
 ```
 
-預設原型前端位置：
+預設前端位置：
 
 - `http://localhost:5173`
 
@@ -112,12 +112,12 @@ chmod +x mvnw
 
 預設後端位置：
 
-- `http://localhost:8080`
+- `http://localhost:8081`
 
-如果你本機已有其他服務佔用 `8080`，可以改用 `8081`：
+如果你本機已有其他服務佔用 `8081`，可以改用 `8082`：
 
 ```bash
-SERVER_PORT=8081 ./mvnw spring-boot:run
+SERVER_PORT=8082 ./mvnw spring-boot:run
 ```
 
 如果你同時也要指定這份 handoff 使用的 PostgreSQL `5433`，可直接執行：
@@ -131,7 +131,7 @@ DB_PORT=5433 SERVER_PORT=8081 ./mvnw spring-boot:run
 ### 7.1 健康檢查
 
 ```bash
-curl http://localhost:8080/api/v1/health
+curl http://localhost:8081/api/v1/health
 ```
 
 如果後端是用 `8081` 啟動，請改成：
@@ -143,7 +143,7 @@ curl http://localhost:8081/api/v1/health
 ### 7.2 PIN 登入
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/auth/pin-login \
+curl -X POST http://localhost:8081/api/v1/auth/pin-login \
   -H "Content-Type: application/json" \
   -d '{
     "storeCode": "TW001",
@@ -160,7 +160,7 @@ curl -X POST http://localhost:8080/api/v1/auth/pin-login \
 先把登入回傳的 `accessToken` 存起來，再呼叫：
 
 ```bash
-curl http://localhost:8080/api/v1/auth/me \
+curl http://localhost:8081/api/v1/auth/me \
   -H "Authorization: Bearer <your-token>"
 ```
 
@@ -169,7 +169,7 @@ curl http://localhost:8080/api/v1/auth/me \
 ### 7.4 取得商品列表
 
 ```bash
-curl http://localhost:8080/api/v1/products \
+curl http://localhost:8081/api/v1/products \
   -H "Authorization: Bearer <your-token>"
 ```
 
@@ -247,9 +247,9 @@ cd backend
 docker compose ps
 ```
 
-### 11.5 後端 `8080` 已被占用
+### 11.5 後端 `8081` 已被占用
 
-如果看到 `Port 8080 was already in use`，代表本機已有其他服務使用 `8080`。
+如果看到 `Port 8081 was already in use`，代表本機已有其他服務使用 `8081`。
 
 可改用：
 

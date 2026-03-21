@@ -12,7 +12,7 @@
 
 ## 環境需求
 
-- Java 17+
+- Java 17
 - Docker Desktop
 
 ## 啟動方式
@@ -24,12 +24,12 @@ cd backend
 
 預設服務位址：
 
-- `http://localhost:8080`
+- `http://localhost:8081`
 
-如果本機 `8080` 已被其他服務占用，可改用：
+如果本機 `8081` 已被其他服務占用，可改用：
 
 ```bash
-SERVER_PORT=8081 ./mvnw spring-boot:run
+SERVER_PORT=8082 ./mvnw spring-boot:run
 ```
 
 如果你也要使用這個 repo 預設的 PostgreSQL `5433`：

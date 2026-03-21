@@ -15,7 +15,7 @@
 
 ### 2.1 後端框架
 
-- Java 17+
+- Java 17
 - Spring Boot 3.5
 - Maven
 
@@ -453,7 +453,7 @@ cd backend
 ./mvnw spring-boot:run
 ```
 
-如果本機 `5432` 或 `8080` 已被其他服務占用，可改用：
+如果本機 `5432` 或 `8081` 已被其他服務占用，可改用：
 
 ```bash
 cd backend

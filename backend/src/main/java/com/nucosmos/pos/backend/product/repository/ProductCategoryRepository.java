@@ -17,4 +17,8 @@ public interface ProductCategoryRepository extends JpaRepository<ProductCategory
     List<ProductCategoryEntity> findAllByActiveTrueAndUpdatedAtAfterOrderByDisplayOrderAscNameAsc(OffsetDateTime updatedAt);
 
     Optional<ProductCategoryEntity> findByIdAndActiveTrue(UUID id);
+
+    boolean existsByCodeIgnoreCase(String code);
+
+    boolean existsByCodeIgnoreCaseAndIdNot(String code, UUID id);
 }

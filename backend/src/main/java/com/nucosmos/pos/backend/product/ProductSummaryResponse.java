@@ -8,6 +8,7 @@ public record ProductSummaryResponse(
         String sku,
         String name,
         String description,
+        String imageUrl,
         String categoryCode,
         String categoryName,
         BigDecimal price,

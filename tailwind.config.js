@@ -2,7 +2,7 @@ export default {
   darkMode: ["class"],
   content: [
     "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
+    "./src/**/*.{vue,js,ts}",
   ],
   theme: {
     extend: {
@@ -62,34 +62,38 @@ export default {
           border: 'hsl(var(--sidebar-border))',
           ring: 'hsl(var(--sidebar-ring))'
         },
-        neon: {
-          'cyan': '#00ffff',
-          'pink': '#ff00ff',
-          'purple': '#8b5cf6',
+        brand: {
+          ink: "#08131d",
+          panel: "#0f1d2b",
+          line: "#203446",
+          aqua: "#51f5d6",
+          amber: "#ffb55e",
+          coral: "#ff7a6b",
+          mist: "#d7f4ff",
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],},
+        sans: ["Space Grotesk", "Noto Sans TC", "sans-serif"],
+      },
       keyframes: {
-        'accordion-down': {
-          from: { height: '0' },
-          to: { height: 'var(--radix-accordion-content-height)' }
+        "fade-up": {
+          "0%": { opacity: "0", transform: "translateY(18px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
         },
-        'accordion-up': {
-          from: { height: 'var(--radix-accordion-content-height)' },
-          to: { height: '0' }
-        }
+        "pulse-line": {
+          "0%, 100%": { boxShadow: "0 0 0 rgba(81, 245, 214, 0)" },
+          "50%": { boxShadow: "0 0 24px rgba(81, 245, 214, 0.25)" },
+        },
       },
       animation: {
-        'accordion-down': 'accordion-down 0.2s ease-out',
-        'accordion-up': 'accordion-up 0.2s ease-out'
+        "fade-up": "fade-up 0.55s ease-out both",
+        "pulse-line": "pulse-line 3.2s ease-in-out infinite",
       },
-    
       boxShadow: {
-        neon: '0 0 20px rgba(0, 255, 255, 0.5)',
-        'neon-purple': '0 0 20px rgba(139, 92, 246, 0.5)',
-        'neon-pink': '0 0 20px rgba(255, 0, 255, 0.5)',
-      },}
+        soft: "0 24px 60px rgba(0, 0, 0, 0.28)",
+        glow: "0 0 0 1px rgba(81, 245, 214, 0.18), 0 18px 50px rgba(6, 16, 25, 0.45)",
+      },
+    }
   },
-  plugins: [require("tailwindcss-animate")],
-}
+  plugins: [],
+};

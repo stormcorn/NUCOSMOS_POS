@@ -31,6 +31,26 @@ public class ProductAdminController {
         return ApiResponse.ok(productAdminService.listProductCategories());
     }
 
+    @PostMapping("/product-categories")
+    public ApiResponse<ProductCategorySummaryResponse> createProductCategory(
+            @Valid @RequestBody ProductCategoryUpsertRequest request
+    ) {
+        return ApiResponse.ok(productAdminService.createProductCategory(request));
+    }
+
+    @PutMapping("/product-categories/{categoryId}")
+    public ApiResponse<ProductCategorySummaryResponse> updateProductCategory(
+            @PathVariable UUID categoryId,
+            @Valid @RequestBody ProductCategoryUpsertRequest request
+    ) {
+        return ApiResponse.ok(productAdminService.updateProductCategory(categoryId, request));
+    }
+
+    @PostMapping("/product-categories/{categoryId}/deactivate")
+    public ApiResponse<ProductCategorySummaryResponse> deactivateProductCategory(@PathVariable UUID categoryId) {
+        return ApiResponse.ok(productAdminService.deactivateProductCategory(categoryId));
+    }
+
     @GetMapping("/products")
     public ApiResponse<List<ProductAdminResponse>> listProducts(@RequestParam(required = false) Boolean active) {
         return ApiResponse.ok(productAdminService.listProducts(active));

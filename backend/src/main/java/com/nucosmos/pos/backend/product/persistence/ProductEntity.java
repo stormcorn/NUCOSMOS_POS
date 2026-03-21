@@ -27,6 +27,9 @@ public class ProductEntity extends BaseEntity {
     @Column(length = 500)
     private String description;
 
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
@@ -41,6 +44,7 @@ public class ProductEntity extends BaseEntity {
             String sku,
             String name,
             String description,
+            String imageUrl,
             BigDecimal price
     ) {
         ProductEntity entity = new ProductEntity();
@@ -48,6 +52,7 @@ public class ProductEntity extends BaseEntity {
         entity.sku = sku;
         entity.name = name;
         entity.description = normalizeDescription(description);
+        entity.imageUrl = normalizeImageUrl(imageUrl);
         entity.price = price;
         entity.active = true;
         return entity;
@@ -58,12 +63,14 @@ public class ProductEntity extends BaseEntity {
             String sku,
             String name,
             String description,
+            String imageUrl,
             BigDecimal price
     ) {
         this.category = category;
         this.sku = sku;
         this.name = name;
         this.description = normalizeDescription(description);
+        this.imageUrl = normalizeImageUrl(imageUrl);
         this.price = price;
     }
 
@@ -91,6 +98,10 @@ public class ProductEntity extends BaseEntity {
         return price;
     }
 
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
     public boolean isActive() {
         return active;
     }
@@ -100,6 +111,14 @@ public class ProductEntity extends BaseEntity {
             return null;
         }
         String trimmed = description.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static String normalizeImageUrl(String imageUrl) {
+        if (imageUrl == null) {
+            return null;
+        }
+        String trimmed = imageUrl.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
 }
