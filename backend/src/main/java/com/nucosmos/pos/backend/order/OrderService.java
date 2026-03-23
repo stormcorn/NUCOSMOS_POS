@@ -91,7 +91,7 @@ public class OrderService {
         Map<UUID, ProductEntity> products = loadProducts(request.items());
 
         OffsetDateTime orderedAt = OffsetDateTime.now();
-        OrderTotals totals = calculateTotals(request.items(), products);
+        OrderTotals totals = calculateTotals(request.items(), products, orderedAt);
 
         OrderEntity order = new OrderEntity(
                 store,
@@ -113,14 +113,15 @@ public class OrderService {
         int lineNumber = 1;
         for (OrderCreateItemRequest itemRequest : request.items()) {
             ProductEntity product = products.get(itemRequest.productId());
-            BigDecimal lineTotal = product.getPrice().multiply(BigDecimal.valueOf(itemRequest.quantity()));
+            BigDecimal displayPrice = product.getDisplayPrice(orderedAt);
+            BigDecimal lineTotal = displayPrice.multiply(BigDecimal.valueOf(itemRequest.quantity()));
             OrderItemEntity item = new OrderItemEntity(
                     order,
                     product,
                     lineNumber++,
                     product.getSku(),
                     product.getName(),
-                    product.getPrice(),
+                    displayPrice,
                     itemRequest.quantity(),
                     lineTotal,
                     blankToNull(itemRequest.note())
@@ -438,14 +439,15 @@ public class OrderService {
         return products;
     }
 
-    private OrderTotals calculateTotals(List<OrderCreateItemRequest> items, Map<UUID, ProductEntity> products) {
+    private OrderTotals calculateTotals(List<OrderCreateItemRequest> items, Map<UUID, ProductEntity> products, OffsetDateTime orderedAt) {
         int itemCount = 0;
         BigDecimal subtotal = BigDecimal.ZERO;
 
         for (OrderCreateItemRequest item : items) {
             ProductEntity product = products.get(item.productId());
+            BigDecimal displayPrice = product.getDisplayPrice(orderedAt);
             itemCount += item.quantity();
-            subtotal = subtotal.add(product.getPrice().multiply(BigDecimal.valueOf(item.quantity())));
+            subtotal = subtotal.add(displayPrice.multiply(BigDecimal.valueOf(item.quantity())));
         }
 
         return new OrderTotals(itemCount, subtotal, subtotal);

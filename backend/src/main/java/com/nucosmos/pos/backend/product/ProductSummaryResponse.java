@@ -1,6 +1,7 @@
 package com.nucosmos.pos.backend.product;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 public record ProductSummaryResponse(
@@ -11,7 +12,14 @@ public record ProductSummaryResponse(
         String imageUrl,
         String categoryCode,
         String categoryName,
+        BigDecimal originalPrice,
         BigDecimal price,
+        boolean campaignEnabled,
+        boolean campaignActive,
+        String campaignLabel,
+        BigDecimal campaignPrice,
+        OffsetDateTime campaignStartsAt,
+        OffsetDateTime campaignEndsAt,
         boolean available
 ) {
 }

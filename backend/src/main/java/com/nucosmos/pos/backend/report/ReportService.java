@@ -7,8 +7,15 @@ import com.nucosmos.pos.backend.inventory.persistence.InventoryStockEntity;
 import com.nucosmos.pos.backend.inventory.repository.InventoryMovementRepository;
 import com.nucosmos.pos.backend.inventory.repository.InventoryStockRepository;
 import com.nucosmos.pos.backend.order.persistence.OrderEntity;
+import com.nucosmos.pos.backend.order.persistence.OrderItemEntity;
+import com.nucosmos.pos.backend.order.persistence.RefundEntity;
+import com.nucosmos.pos.backend.order.persistence.RefundItemEntity;
 import com.nucosmos.pos.backend.order.persistence.PaymentEntity;
 import com.nucosmos.pos.backend.order.repository.OrderRepository;
+import com.nucosmos.pos.backend.product.persistence.ProductMaterialRecipeEntity;
+import com.nucosmos.pos.backend.product.persistence.ProductPackagingRecipeEntity;
+import com.nucosmos.pos.backend.product.repository.ProductMaterialRecipeRepository;
+import com.nucosmos.pos.backend.product.repository.ProductPackagingRecipeRepository;
 import com.nucosmos.pos.backend.store.persistence.StoreEntity;
 import com.nucosmos.pos.backend.store.repository.StoreRepository;
 import com.nucosmos.pos.backend.supply.persistence.MaterialItemEntity;
@@ -33,8 +40,11 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -45,6 +55,8 @@ public class ReportService {
     private final StoreRepository storeRepository;
     private final InventoryStockRepository inventoryStockRepository;
     private final InventoryMovementRepository inventoryMovementRepository;
+    private final ProductMaterialRecipeRepository productMaterialRecipeRepository;
+    private final ProductPackagingRecipeRepository productPackagingRecipeRepository;
     private final MaterialItemRepository materialItemRepository;
     private final MaterialMovementRepository materialMovementRepository;
     private final MaterialStockLotRepository materialStockLotRepository;
@@ -57,6 +69,8 @@ public class ReportService {
             StoreRepository storeRepository,
             InventoryStockRepository inventoryStockRepository,
             InventoryMovementRepository inventoryMovementRepository,
+            ProductMaterialRecipeRepository productMaterialRecipeRepository,
+            ProductPackagingRecipeRepository productPackagingRecipeRepository,
             MaterialItemRepository materialItemRepository,
             MaterialMovementRepository materialMovementRepository,
             MaterialStockLotRepository materialStockLotRepository,
@@ -68,6 +82,8 @@ public class ReportService {
         this.storeRepository = storeRepository;
         this.inventoryStockRepository = inventoryStockRepository;
         this.inventoryMovementRepository = inventoryMovementRepository;
+        this.productMaterialRecipeRepository = productMaterialRecipeRepository;
+        this.productPackagingRecipeRepository = productPackagingRecipeRepository;
         this.materialItemRepository = materialItemRepository;
         this.materialMovementRepository = materialMovementRepository;
         this.materialStockLotRepository = materialStockLotRepository;
@@ -348,6 +364,373 @@ public class ReportService {
                 "DAY",
                 points
         );
+    }
+
+    @Transactional(readOnly = true)
+    public ProfitabilityAnalyticsResponse profitabilityAnalysis(AuthenticatedUser user, OffsetDateTime from, OffsetDateTime to) {
+        if (from.isAfter(to)) {
+            throw new BadRequestException("from must be before or equal to to");
+        }
+
+        List<OrderEntity> orders = orderRepository.findAllByStore_CodeAndOrderedAtBetweenOrderByOrderedAtAsc(
+                user.storeCode(),
+                from,
+                to
+        );
+
+        List<OrderEntity> effectiveOrders = orders.stream()
+                .filter(order -> !"VOIDED".equals(order.getStatus()))
+                .toList();
+
+        Map<UUID, List<ProductMaterialRecipeEntity>> materialRecipesByProductId = new HashMap<>();
+        Map<UUID, List<ProductPackagingRecipeEntity>> packagingRecipesByProductId = new HashMap<>();
+
+        for (OrderEntity order : effectiveOrders) {
+            for (OrderItemEntity item : order.getItems()) {
+                materialRecipesByProductId.computeIfAbsent(
+                        item.getProduct().getId(),
+                        productId -> productMaterialRecipeRepository.findAllByProduct_IdOrderByCreatedAtAsc(productId)
+                );
+                packagingRecipesByProductId.computeIfAbsent(
+                        item.getProduct().getId(),
+                        productId -> productPackagingRecipeRepository.findAllByProduct_IdOrderByCreatedAtAsc(productId)
+                );
+            }
+        }
+
+        Map<UUID, ProfitabilityProductAccumulator> products = new HashMap<>();
+        Map<String, ProfitabilityCategoryAccumulator> categories = new HashMap<>();
+        List<OrderProfitabilityResponse> orderRows = new ArrayList<>();
+
+        BigDecimal grossSalesAmount = zeroMoney();
+        BigDecimal refundedAmount = zeroMoney();
+        BigDecimal realizedCogsAmount = zeroMoney();
+        BigDecimal realizedRefundedCogsAmount = zeroMoney();
+        BigDecimal standardCogsAmount = zeroMoney();
+        BigDecimal standardRefundedCogsAmount = zeroMoney();
+
+        for (OrderEntity order : effectiveOrders) {
+            grossSalesAmount = grossSalesAmount.add(order.getTotalAmount()).setScale(2, RoundingMode.HALF_UP);
+            refundedAmount = refundedAmount.add(order.getRefundedAmount()).setScale(2, RoundingMode.HALF_UP);
+            realizedCogsAmount = realizedCogsAmount.add(order.getCogsAmount()).setScale(2, RoundingMode.HALF_UP);
+            realizedRefundedCogsAmount = realizedRefundedCogsAmount.add(order.getRefundedCogsAmount()).setScale(2, RoundingMode.HALF_UP);
+
+            BigDecimal orderStandardCogs = zeroMoney();
+            BigDecimal orderStandardRefundedCogs = zeroMoney();
+
+            Map<UUID, Integer> refundedQuantityByOrderItemId = buildRefundedQuantityByOrderItemId(order);
+
+            for (OrderItemEntity item : order.getItems()) {
+                int refundedQuantity = refundedQuantityByOrderItemId.getOrDefault(item.getId(), 0);
+                int effectiveRefundedQuantity = Math.min(refundedQuantity, item.getQuantity());
+
+                BigDecimal actualUnitCost = item.getQuantity() == 0
+                        ? zeroMoney()
+                        : item.getLineCostAmount().divide(BigDecimal.valueOf(item.getQuantity()), 6, RoundingMode.HALF_UP);
+                BigDecimal actualRefundedCost = actualUnitCost.multiply(BigDecimal.valueOf(effectiveRefundedQuantity)).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal actualNetCogs = item.getLineCostAmount().subtract(actualRefundedCost).setScale(2, RoundingMode.HALF_UP);
+
+                BigDecimal standardUnitCost = calculateStandardUnitCost(item, materialRecipesByProductId, packagingRecipesByProductId);
+                BigDecimal standardLineCost = standardUnitCost.multiply(BigDecimal.valueOf(item.getQuantity())).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal standardRefundedCost = standardUnitCost.multiply(BigDecimal.valueOf(effectiveRefundedQuantity)).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal standardNetCogs = standardLineCost.subtract(standardRefundedCost).setScale(2, RoundingMode.HALF_UP);
+
+                BigDecimal refundedSales = item.getQuantity() == 0
+                        ? zeroMoney()
+                        : item.getLineTotalAmount()
+                                .divide(BigDecimal.valueOf(item.getQuantity()), 6, RoundingMode.HALF_UP)
+                                .multiply(BigDecimal.valueOf(effectiveRefundedQuantity))
+                                .setScale(2, RoundingMode.HALF_UP);
+                BigDecimal netSales = item.getLineTotalAmount().subtract(refundedSales).setScale(2, RoundingMode.HALF_UP);
+
+                orderStandardCogs = orderStandardCogs.add(standardLineCost).setScale(2, RoundingMode.HALF_UP);
+                orderStandardRefundedCogs = orderStandardRefundedCogs.add(standardRefundedCost).setScale(2, RoundingMode.HALF_UP);
+
+                products.compute(
+                        item.getProduct().getId(),
+                        (productId, current) -> {
+                            ProfitabilityProductAccumulator base = current != null
+                                    ? current
+                                    : new ProfitabilityProductAccumulator(
+                                    item.getProduct().getId(),
+                                    item.getProductSku(),
+                                    item.getProductName(),
+                                    item.getProduct().getCategory().getName(),
+                                    0,
+                                    0,
+                                    zeroMoney(),
+                                    zeroMoney(),
+                                    zeroMoney()
+                            );
+                            return base.add(item.getQuantity(), effectiveRefundedQuantity, netSales, actualNetCogs, standardNetCogs);
+                        }
+                );
+
+                categories.compute(
+                        item.getProduct().getCategory().getName(),
+                        (categoryName, current) -> {
+                            ProfitabilityCategoryAccumulator base = current != null
+                                    ? current
+                                    : new ProfitabilityCategoryAccumulator(categoryName, 0, 0, zeroMoney(), zeroMoney(), zeroMoney());
+                            return base.add(item.getQuantity(), effectiveRefundedQuantity, netSales, actualNetCogs, standardNetCogs);
+                        }
+                );
+            }
+
+            standardCogsAmount = standardCogsAmount.add(orderStandardCogs).setScale(2, RoundingMode.HALF_UP);
+            standardRefundedCogsAmount = standardRefundedCogsAmount.add(orderStandardRefundedCogs).setScale(2, RoundingMode.HALF_UP);
+
+            BigDecimal orderNetSales = order.getTotalAmount().subtract(order.getRefundedAmount()).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal orderStandardNetCogs = orderStandardCogs.subtract(orderStandardRefundedCogs).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal orderStandardGrossProfit = orderNetSales.subtract(orderStandardNetCogs).setScale(2, RoundingMode.HALF_UP);
+
+            orderRows.add(new OrderProfitabilityResponse(
+                    order.getId(),
+                    order.getOrderNumber(),
+                    order.getOrderedAt(),
+                    order.getItemCount(),
+                    orderNetSales,
+                    order.getNetCogsAmount(),
+                    orderStandardNetCogs,
+                    order.getNetCogsAmount().subtract(orderStandardNetCogs).setScale(2, RoundingMode.HALF_UP),
+                    order.getGrossProfitAmount(),
+                    orderStandardGrossProfit,
+                    calculateMarginRate(order.getGrossProfitAmount(), orderNetSales),
+                    calculateMarginRate(orderStandardGrossProfit, orderNetSales)
+            ));
+        }
+
+        BigDecimal netSalesAmount = grossSalesAmount.subtract(refundedAmount).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal realizedNetCogsAmount = realizedCogsAmount.subtract(realizedRefundedCogsAmount).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal standardNetCogsAmount = standardCogsAmount.subtract(standardRefundedCogsAmount).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal realizedGrossProfitAmount = netSalesAmount.subtract(realizedNetCogsAmount).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal standardGrossProfitAmount = netSalesAmount.subtract(standardNetCogsAmount).setScale(2, RoundingMode.HALF_UP);
+
+        CostTransferSummaryResponse costTransferSummary = new CostTransferSummaryResponse(
+                grossSalesAmount,
+                refundedAmount,
+                netSalesAmount,
+                realizedCogsAmount,
+                realizedRefundedCogsAmount,
+                realizedNetCogsAmount,
+                standardCogsAmount,
+                standardRefundedCogsAmount,
+                standardNetCogsAmount,
+                realizedNetCogsAmount.subtract(standardNetCogsAmount).setScale(2, RoundingMode.HALF_UP),
+                calculateVarianceRate(realizedNetCogsAmount, standardNetCogsAmount),
+                realizedGrossProfitAmount,
+                standardGrossProfitAmount,
+                calculateMarginRate(realizedGrossProfitAmount, netSalesAmount),
+                calculateMarginRate(standardGrossProfitAmount, netSalesAmount)
+        );
+
+        List<ProductProfitabilityResponse> productRows = products.values().stream()
+                .map(this::toProductProfitabilityResponse)
+                .toList();
+        List<CategoryProfitabilityResponse> categoryRows = categories.values().stream()
+                .map(this::toCategoryProfitabilityResponse)
+                .sorted(Comparator.comparing(CategoryProfitabilityResponse::realizedGrossProfitAmount).reversed())
+                .toList();
+
+        return new ProfitabilityAnalyticsResponse(
+                user.storeCode(),
+                from,
+                to,
+                costTransferSummary,
+                productRows.stream()
+                        .sorted(Comparator.comparing(ProductProfitabilityResponse::realizedGrossProfitAmount).reversed())
+                        .limit(8)
+                        .toList(),
+                productRows.stream()
+                        .sorted(Comparator.comparing(ProductProfitabilityResponse::realizedGrossMarginRate))
+                        .limit(8)
+                        .toList(),
+                categoryRows,
+                orderRows.stream()
+                        .sorted(Comparator.comparing(OrderProfitabilityResponse::realizedGrossProfitAmount).reversed())
+                        .limit(8)
+                        .toList(),
+                orderRows.stream()
+                        .sorted(Comparator.comparing(OrderProfitabilityResponse::realizedGrossMarginRate))
+                        .limit(8)
+                        .toList()
+        );
+    }
+
+    private ProductProfitabilityResponse toProductProfitabilityResponse(ProfitabilityProductAccumulator accumulator) {
+        int netQuantity = accumulator.soldQuantity() - accumulator.refundedQuantity();
+        BigDecimal cogsVarianceAmount = accumulator.realizedNetCogsAmount()
+                .subtract(accumulator.standardNetCogsAmount())
+                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal realizedGrossProfitAmount = accumulator.netSalesAmount()
+                .subtract(accumulator.realizedNetCogsAmount())
+                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal standardGrossProfitAmount = accumulator.netSalesAmount()
+                .subtract(accumulator.standardNetCogsAmount())
+                .setScale(2, RoundingMode.HALF_UP);
+
+        return new ProductProfitabilityResponse(
+                accumulator.productId(),
+                accumulator.sku(),
+                accumulator.name(),
+                accumulator.categoryName(),
+                accumulator.soldQuantity(),
+                accumulator.refundedQuantity(),
+                netQuantity,
+                accumulator.netSalesAmount(),
+                accumulator.realizedNetCogsAmount(),
+                accumulator.standardNetCogsAmount(),
+                cogsVarianceAmount,
+                realizedGrossProfitAmount,
+                standardGrossProfitAmount,
+                calculateMarginRate(realizedGrossProfitAmount, accumulator.netSalesAmount()),
+                calculateMarginRate(standardGrossProfitAmount, accumulator.netSalesAmount())
+        );
+    }
+
+    private CategoryProfitabilityResponse toCategoryProfitabilityResponse(ProfitabilityCategoryAccumulator accumulator) {
+        int netQuantity = accumulator.soldQuantity() - accumulator.refundedQuantity();
+        BigDecimal cogsVarianceAmount = accumulator.realizedNetCogsAmount()
+                .subtract(accumulator.standardNetCogsAmount())
+                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal realizedGrossProfitAmount = accumulator.netSalesAmount()
+                .subtract(accumulator.realizedNetCogsAmount())
+                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal standardGrossProfitAmount = accumulator.netSalesAmount()
+                .subtract(accumulator.standardNetCogsAmount())
+                .setScale(2, RoundingMode.HALF_UP);
+
+        return new CategoryProfitabilityResponse(
+                accumulator.categoryName(),
+                accumulator.soldQuantity(),
+                accumulator.refundedQuantity(),
+                netQuantity,
+                accumulator.netSalesAmount(),
+                accumulator.realizedNetCogsAmount(),
+                accumulator.standardNetCogsAmount(),
+                cogsVarianceAmount,
+                realizedGrossProfitAmount,
+                standardGrossProfitAmount,
+                calculateMarginRate(realizedGrossProfitAmount, accumulator.netSalesAmount()),
+                calculateMarginRate(standardGrossProfitAmount, accumulator.netSalesAmount())
+        );
+    }
+
+    private Map<UUID, Integer> buildRefundedQuantityByOrderItemId(OrderEntity order) {
+        Map<UUID, Integer> refundedQuantityByOrderItemId = new HashMap<>();
+        for (RefundEntity refund : order.getRefunds()) {
+            for (RefundItemEntity refundItem : refund.getRefundItems()) {
+                refundedQuantityByOrderItemId.merge(refundItem.getOrderItem().getId(), refundItem.getQuantity(), Integer::sum);
+            }
+        }
+        return refundedQuantityByOrderItemId;
+    }
+
+    private BigDecimal calculateStandardUnitCost(
+            OrderItemEntity item,
+            Map<UUID, List<ProductMaterialRecipeEntity>> materialRecipesByProductId,
+            Map<UUID, List<ProductPackagingRecipeEntity>> packagingRecipesByProductId
+    ) {
+        BigDecimal materialCost = materialRecipesByProductId.getOrDefault(item.getProduct().getId(), List.of()).stream()
+                .map(recipe -> calculateStandardRecipeCost(recipe.getQuantity(), recipe.getMaterialItem().getLatestUnitCost()))
+                .reduce(zeroMoney(), BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+
+        BigDecimal packagingCost = packagingRecipesByProductId.getOrDefault(item.getProduct().getId(), List.of()).stream()
+                .map(recipe -> calculateStandardRecipeCost(recipe.getQuantity(), recipe.getPackagingItem().getLatestUnitCost()))
+                .reduce(zeroMoney(), BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+
+        return materialCost.add(packagingCost).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal calculateStandardRecipeCost(BigDecimal quantity, BigDecimal unitCost) {
+        if (quantity == null || unitCost == null) {
+            return zeroMoney();
+        }
+
+        return quantity.multiply(unitCost).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal calculateMarginRate(BigDecimal profitAmount, BigDecimal salesAmount) {
+        if (salesAmount.compareTo(BigDecimal.ZERO) == 0) {
+            return zeroMoney();
+        }
+
+        return profitAmount.multiply(BigDecimal.valueOf(100))
+                .divide(salesAmount, 2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal calculateVarianceRate(BigDecimal actualAmount, BigDecimal baseAmount) {
+        if (baseAmount.compareTo(BigDecimal.ZERO) == 0) {
+            return zeroMoney();
+        }
+
+        return actualAmount.subtract(baseAmount)
+                .multiply(BigDecimal.valueOf(100))
+                .divide(baseAmount, 2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal zeroMoney() {
+        return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private record ProfitabilityProductAccumulator(
+            UUID productId,
+            String sku,
+            String name,
+            String categoryName,
+            int soldQuantity,
+            int refundedQuantity,
+            BigDecimal netSalesAmount,
+            BigDecimal realizedNetCogsAmount,
+            BigDecimal standardNetCogsAmount
+    ) {
+        private ProfitabilityProductAccumulator add(
+                int soldQuantityDelta,
+                int refundedQuantityDelta,
+                BigDecimal netSalesDelta,
+                BigDecimal realizedNetCogsDelta,
+                BigDecimal standardNetCogsDelta
+        ) {
+            return new ProfitabilityProductAccumulator(
+                    productId,
+                    sku,
+                    name,
+                    categoryName,
+                    soldQuantity + soldQuantityDelta,
+                    refundedQuantity + refundedQuantityDelta,
+                    netSalesAmount.add(netSalesDelta).setScale(2, RoundingMode.HALF_UP),
+                    realizedNetCogsAmount.add(realizedNetCogsDelta).setScale(2, RoundingMode.HALF_UP),
+                    standardNetCogsAmount.add(standardNetCogsDelta).setScale(2, RoundingMode.HALF_UP)
+            );
+        }
+    }
+
+    private record ProfitabilityCategoryAccumulator(
+            String categoryName,
+            int soldQuantity,
+            int refundedQuantity,
+            BigDecimal netSalesAmount,
+            BigDecimal realizedNetCogsAmount,
+            BigDecimal standardNetCogsAmount
+    ) {
+        private ProfitabilityCategoryAccumulator add(
+                int soldQuantityDelta,
+                int refundedQuantityDelta,
+                BigDecimal netSalesDelta,
+                BigDecimal realizedNetCogsDelta,
+                BigDecimal standardNetCogsDelta
+        ) {
+            return new ProfitabilityCategoryAccumulator(
+                    categoryName,
+                    soldQuantity + soldQuantityDelta,
+                    refundedQuantity + refundedQuantityDelta,
+                    netSalesAmount.add(netSalesDelta).setScale(2, RoundingMode.HALF_UP),
+                    realizedNetCogsAmount.add(realizedNetCogsDelta).setScale(2, RoundingMode.HALF_UP),
+                    standardNetCogsAmount.add(standardNetCogsDelta).setScale(2, RoundingMode.HALF_UP)
+            );
+        }
     }
 
     private StoreEntity resolveActiveStore(AuthenticatedUser user) {

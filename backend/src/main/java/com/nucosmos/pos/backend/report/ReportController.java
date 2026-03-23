@@ -49,4 +49,13 @@ public class ReportController {
     ) {
         return ApiResponse.ok(reportService.salesTrend((AuthenticatedUser) authentication.getPrincipal(), from, to));
     }
+
+    @GetMapping("/profitability-analysis")
+    public ApiResponse<ProfitabilityAnalyticsResponse> profitabilityAnalysis(
+            Authentication authentication,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime to
+    ) {
+        return ApiResponse.ok(reportService.profitabilityAnalysis((AuthenticatedUser) authentication.getPrincipal(), from, to));
+    }
 }

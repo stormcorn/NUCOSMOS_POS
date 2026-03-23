@@ -223,6 +223,70 @@ class ReportAndShiftControllerTest {
                 .andExpect(jsonPath("$.data.points[0].netSalesAmount").isNumber());
     }
 
+    @Test
+    void shouldReturnProfitabilityAnalysisForManager() throws Exception {
+        String cashierToken = TestLoginSupport.loginAndExtractToken(mockMvc, """
+                {
+                  "storeCode": "TW001",
+                  "roleCode": "CASHIER",
+                  "pin": "1234",
+                  "deviceCode": "POS-TABLET-001"
+                }
+                """);
+        String managerToken = TestLoginSupport.loginAndExtractToken(mockMvc, """
+                {
+                  "storeCode": "TW001",
+                  "roleCode": "MANAGER",
+                  "pin": "9999",
+                  "deviceCode": "POS-TABLET-001"
+                }
+                """);
+
+        UUID orderId = TestLoginSupport.extractDataFieldAsUuid(createOrder(cashierToken, "44444444-4444-4444-4444-444444444441", 2), "id");
+        payCash(cashierToken, orderId, "17.00", "20.00");
+
+        OffsetDateTime now = OffsetDateTime.now();
+        String from = now.minusDays(1).toString();
+        String to = now.plusDays(1).toString();
+
+        mockMvc.perform(get("/api/v1/reports/profitability-analysis")
+                        .header("Authorization", "Bearer " + managerToken)
+                        .param("from", from)
+                        .param("to", to))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.storeCode").value("TW001"))
+                .andExpect(jsonPath("$.data.costTransferSummary.netSalesAmount").isNumber())
+                .andExpect(jsonPath("$.data.costTransferSummary.realizedNetCogsAmount").isNumber())
+                .andExpect(jsonPath("$.data.costTransferSummary.standardNetCogsAmount").isNumber())
+                .andExpect(jsonPath("$.data.topProductsByGrossProfit").isArray())
+                .andExpect(jsonPath("$.data.lowestProductsByMargin").isArray())
+                .andExpect(jsonPath("$.data.categoryProfitability").isArray())
+                .andExpect(jsonPath("$.data.topOrdersByGrossProfit").isArray())
+                .andExpect(jsonPath("$.data.lowestOrdersByMargin").isArray());
+    }
+
+    @Test
+    void shouldRejectCashierFromViewingProfitabilityAnalysis() throws Exception {
+        String cashierToken = TestLoginSupport.loginAndExtractToken(mockMvc, """
+                {
+                  "storeCode": "TW001",
+                  "roleCode": "CASHIER",
+                  "pin": "1234",
+                  "deviceCode": "POS-TABLET-001"
+                }
+                """);
+
+        OffsetDateTime now = OffsetDateTime.now();
+        String from = now.minusDays(1).toString();
+        String to = now.plusDays(1).toString();
+
+        mockMvc.perform(get("/api/v1/reports/profitability-analysis")
+                        .header("Authorization", "Bearer " + cashierToken)
+                        .param("from", from)
+                        .param("to", to))
+                .andExpect(status().isForbidden());
+    }
+
     private MvcResult createOrder(String token, String productId, int quantity) throws Exception {
         return mockMvc.perform(post("/api/v1/orders")
                         .header("Authorization", "Bearer " + token)

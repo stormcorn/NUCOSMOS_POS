@@ -126,6 +126,7 @@ public class ProductAdminService {
     public ProductAdminResponse createProduct(AuthenticatedUser user, ProductUpsertRequest request) {
         validateUniqueSku(request.sku(), null);
         ProductCategoryEntity category = loadActiveCategory(request.categoryId());
+        validateCampaignSettings(request);
 
         ProductEntity product = ProductEntity.create(
                 category,
@@ -133,7 +134,12 @@ public class ProductAdminService {
                 request.name().trim(),
                 request.description(),
                 request.imageUrl(),
-                request.price()
+                request.price(),
+                request.campaignEnabled(),
+                request.campaignLabel(),
+                request.campaignPrice(),
+                request.campaignStartsAt(),
+                request.campaignEndsAt()
         );
 
         ProductEntity savedProduct = productRepository.save(product);
@@ -146,6 +152,7 @@ public class ProductAdminService {
         ProductEntity product = loadProduct(productId);
         validateUniqueSku(request.sku(), productId);
         ProductCategoryEntity category = loadActiveCategory(request.categoryId());
+        validateCampaignSettings(request);
 
         product.update(
                 category,
@@ -153,7 +160,12 @@ public class ProductAdminService {
                 request.name().trim(),
                 request.description(),
                 request.imageUrl(),
-                request.price()
+                request.price(),
+                request.campaignEnabled(),
+                request.campaignLabel(),
+                request.campaignPrice(),
+                request.campaignStartsAt(),
+                request.campaignEndsAt()
         );
 
         syncRecipeComponents(product, user.storeCode(), request, false);
@@ -201,6 +213,26 @@ public class ProductAdminService {
 
         if (exists) {
             throw new BadRequestException("Product SKU already exists");
+        }
+    }
+
+    private void validateCampaignSettings(ProductUpsertRequest request) {
+        if (!request.campaignEnabled()) {
+            return;
+        }
+
+        if (request.campaignPrice() == null) {
+            throw new BadRequestException("Campaign price is required when campaign is enabled");
+        }
+
+        if (request.campaignPrice().compareTo(request.price()) > 0) {
+            throw new BadRequestException("Campaign price cannot be greater than regular price");
+        }
+
+        if (request.campaignStartsAt() != null
+                && request.campaignEndsAt() != null
+                && request.campaignStartsAt().isAfter(request.campaignEndsAt())) {
+            throw new BadRequestException("Campaign starts at must be before campaign ends at");
         }
     }
 
@@ -321,6 +353,7 @@ public class ProductAdminService {
     }
 
     private ProductAdminResponse toAdminResponse(ProductEntity product, String fallbackStoreCode) {
+        OffsetDateTime now = OffsetDateTime.now();
         List<ProductMaterialRecipeEntity> materialRecipes = productMaterialRecipeRepository.findAllByProduct_IdOrderByCreatedAtAsc(product.getId());
         List<ProductPackagingRecipeEntity> packagingRecipes = productPackagingRecipeRepository.findAllByProduct_IdOrderByCreatedAtAsc(product.getId());
 
@@ -352,6 +385,13 @@ public class ProductAdminService {
                 product.getDescription(),
                 product.getImageUrl(),
                 product.getPrice(),
+                product.isCampaignEnabled(),
+                product.isCampaignActive(now),
+                product.getCampaignLabel(),
+                product.getCampaignPrice(),
+                product.getCampaignStartsAt(),
+                product.getCampaignEndsAt(),
+                product.getDisplayPrice(now),
                 product.isActive(),
                 materialComponents,
                 packagingComponents,

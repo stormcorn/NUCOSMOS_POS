@@ -25,6 +25,7 @@ const isFormOpen = ref(false);
 const editingProductId = ref<string | null>(null);
 const formError = ref("");
 const selectedCategoryId = ref("all");
+const selectedCampaignFilter = ref<"all" | "campaign" | "regular">("all");
 const canEditProducts = computed(() => authStore.hasPermission(PERMISSIONS.PRODUCTS_EDIT));
 
 const form = reactive({
@@ -34,6 +35,11 @@ const form = reactive({
   description: "",
   imageUrl: "",
   price: "0.00",
+  campaignEnabled: false,
+  campaignLabel: "",
+  campaignPrice: "",
+  campaignStartsAt: "",
+  campaignEndsAt: "",
   recipeNote: "",
   materialComponents: [] as EditableMaterialComponent[],
   packagingComponents: [] as EditablePackagingComponent[],
@@ -42,9 +48,15 @@ const form = reactive({
 const titleText = computed(() => (editingProductId.value ? "編輯商品" : "新增商品"));
 
 const filteredProducts = computed(() =>
-  selectedCategoryId.value === "all"
-    ? productStore.products
-    : productStore.products.filter((product) => product.categoryId === selectedCategoryId.value),
+  productStore.products.filter((product) => {
+    const categoryMatched = selectedCategoryId.value === "all" || product.categoryId === selectedCategoryId.value;
+    const campaignMatched =
+      selectedCampaignFilter.value === "all"
+      || (selectedCampaignFilter.value === "campaign" && product.campaignEnabled)
+      || (selectedCampaignFilter.value === "regular" && !product.campaignEnabled);
+
+    return categoryMatched && campaignMatched;
+  }),
 );
 
 function formatCurrency(value: number | null | undefined) {
@@ -59,6 +71,20 @@ function formatCurrency(value: number | null | undefined) {
   }).format(value);
 }
 
+function formatDateTime(value: string | null | undefined) {
+  if (!value) {
+    return "--";
+  }
+
+  return new Intl.DateTimeFormat("zh-TW", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
 function resetForm() {
   editingProductId.value = null;
   formError.value = "";
@@ -68,6 +94,11 @@ function resetForm() {
   form.description = "";
   form.imageUrl = "";
   form.price = "0.00";
+  form.campaignEnabled = false;
+  form.campaignLabel = "";
+  form.campaignPrice = "";
+  form.campaignStartsAt = "";
+  form.campaignEndsAt = "";
   form.recipeNote = "";
   form.materialComponents = [];
   form.packagingComponents = [];
@@ -77,6 +108,7 @@ function openCreateForm() {
   if (!canEditProducts.value) {
     return;
   }
+
   resetForm();
   isFormOpen.value = true;
 }
@@ -85,6 +117,7 @@ function openEditForm(product: ProductAdminItem) {
   if (!canEditProducts.value) {
     return;
   }
+
   editingProductId.value = product.id;
   formError.value = "";
   form.categoryId = product.categoryId;
@@ -93,6 +126,11 @@ function openEditForm(product: ProductAdminItem) {
   form.description = product.description ?? "";
   form.imageUrl = product.imageUrl ?? "";
   form.price = product.price.toFixed(2);
+  form.campaignEnabled = product.campaignEnabled;
+  form.campaignLabel = product.campaignLabel ?? "";
+  form.campaignPrice = product.campaignPrice?.toFixed(2) ?? "";
+  form.campaignStartsAt = product.campaignStartsAt ? product.campaignStartsAt.slice(0, 16) : "";
+  form.campaignEndsAt = product.campaignEndsAt ? product.campaignEndsAt.slice(0, 16) : "";
   form.recipeNote = "";
   form.materialComponents = product.materialComponents.map((component) => ({
     materialItemId: component.materialItemId,
@@ -109,6 +147,7 @@ function addMaterialComponent() {
   if (!canEditProducts.value) {
     return;
   }
+
   form.materialComponents.push({
     materialItemId: productStore.materials[0]?.id ?? "",
     quantity: "1",
@@ -119,6 +158,7 @@ function addPackagingComponent() {
   if (!canEditProducts.value) {
     return;
   }
+
   form.packagingComponents.push({
     packagingItemId: productStore.packagingItems[0]?.id ?? "",
     quantity: "1",
@@ -129,6 +169,7 @@ function removeMaterialComponent(index: number) {
   if (!canEditProducts.value) {
     return;
   }
+
   form.materialComponents.splice(index, 1);
 }
 
@@ -136,6 +177,7 @@ function removePackagingComponent(index: number) {
   if (!canEditProducts.value) {
     return;
   }
+
   form.packagingComponents.splice(index, 1);
 }
 
@@ -156,11 +198,31 @@ function lineCost(item: MaterialAdminItem | PackagingAdminItem | null, quantityT
   return item.latestUnitCost * quantity;
 }
 
+function campaignStatus(product: ProductAdminItem) {
+  if (!product.campaignEnabled) {
+    return "一般商品";
+  }
+
+  const now = new Date();
+  const startsAt = product.campaignStartsAt ? new Date(product.campaignStartsAt) : null;
+  const endsAt = product.campaignEndsAt ? new Date(product.campaignEndsAt) : null;
+
+  if (startsAt && now < startsAt) {
+    return "尚未開始";
+  }
+
+  if (endsAt && now > endsAt) {
+    return "已結束";
+  }
+
+  return product.campaignActive ? "活動中" : "活動設定";
+}
+
 function validateComponents() {
   const materialIds = new Set<string>();
   for (const component of form.materialComponents) {
     if (!component.materialItemId) {
-      formError.value = "請選擇原料。";
+      formError.value = "請選擇原料項目。";
       return false;
     }
 
@@ -171,7 +233,7 @@ function validateComponents() {
     }
 
     if (materialIds.has(component.materialItemId)) {
-      formError.value = "同一個原料不能重複加入。";
+      formError.value = "原料不可重複加入。";
       return false;
     }
     materialIds.add(component.materialItemId);
@@ -180,7 +242,7 @@ function validateComponents() {
   const packagingIds = new Set<string>();
   for (const component of form.packagingComponents) {
     if (!component.packagingItemId) {
-      formError.value = "請選擇包裝。";
+      formError.value = "請選擇包裝項目。";
       return false;
     }
 
@@ -191,7 +253,7 @@ function validateComponents() {
     }
 
     if (packagingIds.has(component.packagingItemId)) {
-      formError.value = "同一個包裝不能重複加入。";
+      formError.value = "包裝不可重複加入。";
       return false;
     }
     packagingIds.add(component.packagingItemId);
@@ -204,21 +266,39 @@ async function submitForm() {
   if (!canEditProducts.value) {
     return;
   }
+
   formError.value = "";
 
   if (!form.categoryId) {
-    formError.value = "請先選擇商品分類。";
+    formError.value = "請選擇商品分類。";
     return;
   }
 
   if (!form.sku.trim() || !form.name.trim()) {
-    formError.value = "SKU 與商品名稱為必填欄位。";
+    formError.value = "SKU 與商品名稱為必填。";
     return;
   }
 
   if (Number(form.price) <= 0) {
     formError.value = "商品售價必須大於 0。";
     return;
+  }
+
+  if (form.campaignEnabled) {
+    if (!form.campaignPrice || Number(form.campaignPrice) <= 0) {
+      formError.value = "活動價必須大於 0。";
+      return;
+    }
+
+    if (Number(form.campaignPrice) > Number(form.price)) {
+      formError.value = "活動價不可高於原價。";
+      return;
+    }
+
+    if (form.campaignStartsAt && form.campaignEndsAt && new Date(form.campaignStartsAt) > new Date(form.campaignEndsAt)) {
+      formError.value = "活動開始時間不可晚於結束時間。";
+      return;
+    }
   }
 
   if (!validateComponents()) {
@@ -232,6 +312,11 @@ async function submitForm() {
     description: form.description.trim(),
     imageUrl: form.imageUrl.trim(),
     price: Number(form.price),
+    campaignEnabled: form.campaignEnabled,
+    campaignLabel: form.campaignEnabled ? form.campaignLabel.trim() || undefined : undefined,
+    campaignPrice: form.campaignEnabled && form.campaignPrice ? Number(form.campaignPrice) : undefined,
+    campaignStartsAt: form.campaignEnabled && form.campaignStartsAt ? new Date(form.campaignStartsAt).toISOString() : undefined,
+    campaignEndsAt: form.campaignEnabled && form.campaignEndsAt ? new Date(form.campaignEndsAt).toISOString() : undefined,
     recipeNote: form.recipeNote.trim() || undefined,
     materialComponents: form.materialComponents.map((component) => ({
       materialItemId: component.materialItemId,
@@ -257,6 +342,7 @@ async function deactivate(product: ProductAdminItem) {
   if (!canEditProducts.value) {
     return;
   }
+
   if (!window.confirm(`確定要停用商品「${product.name}」嗎？`)) {
     return;
   }
@@ -273,7 +359,10 @@ const packagingCost = computed(() =>
 );
 
 const totalCost = computed(() => materialCost.value + packagingCost.value);
-const grossProfit = computed(() => Number(form.price || 0) - totalCost.value);
+const currentDisplayPrice = computed(() =>
+  form.campaignEnabled && form.campaignPrice ? Number(form.campaignPrice) : Number(form.price || 0),
+);
+const grossProfit = computed(() => currentDisplayPrice.value - totalCost.value);
 
 onMounted(async () => {
   await productStore.loadCatalog();
@@ -288,17 +377,34 @@ onMounted(async () => {
         <div>
           <p class="text-xs uppercase tracking-[0.28em] text-brand-aqua/70">Catalog</p>
           <h3 class="mt-2 text-2xl font-semibold text-white">商品管理</h3>
-          <p class="mt-2 text-sm text-slate-400">維護商品資料、圖片、配方與成本，同時保留配方版本歷史。</p>
+          <p class="mt-2 text-sm text-slate-400">
+            維護商品資料、配方、活動價格與成本，方便前台與報表共用同一份商品主檔。
+          </p>
         </div>
         <div class="flex flex-wrap gap-3">
-          <button v-if="canEditProducts" class="rounded-2xl bg-brand-aqua px-5 py-3 text-sm font-semibold text-slate-950" @click="openCreateForm">
+          <button
+            v-if="canEditProducts"
+            class="rounded-2xl bg-brand-aqua px-5 py-3 text-sm font-semibold text-slate-950"
+            @click="openCreateForm"
+          >
             新增商品
           </button>
-          <select v-model="selectedCategoryId" class="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none">
+          <select
+            v-model="selectedCategoryId"
+            class="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none"
+          >
             <option value="all">全部分類</option>
             <option v-for="category in productStore.categories" :key="category.id" :value="category.id">
               {{ category.name }}
             </option>
+          </select>
+          <select
+            v-model="selectedCampaignFilter"
+            class="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none"
+          >
+            <option value="all">全部商品</option>
+            <option value="campaign">只看活動商品</option>
+            <option value="regular">只看一般商品</option>
           </select>
         </div>
       </div>
@@ -313,8 +419,8 @@ onMounted(async () => {
               <th class="px-4 py-3 font-medium">商品</th>
               <th class="px-4 py-3 font-medium">分類</th>
               <th class="px-4 py-3 font-medium">售價</th>
+              <th class="px-4 py-3 font-medium">活動</th>
               <th class="px-4 py-3 font-medium">成本</th>
-              <th class="px-4 py-3 font-medium">配方版本</th>
               <th class="px-4 py-3 font-medium">圖片</th>
               <th class="px-4 py-3 font-medium">操作</th>
             </tr>
@@ -327,35 +433,66 @@ onMounted(async () => {
               <td class="px-4 py-4 text-slate-300">{{ product.sku }}</td>
               <td class="px-4 py-4">
                 <p class="font-medium text-white">{{ product.name }}</p>
-                <p class="mt-1 text-xs text-slate-400">{{ product.description || "無描述" }}</p>
+                <p class="mt-1 text-xs text-slate-400">{{ product.description || "無商品描述" }}</p>
               </td>
               <td class="px-4 py-4 text-slate-300">{{ product.categoryName }}</td>
-              <td class="px-4 py-4 text-white">{{ formatCurrency(product.price) }}</td>
-              <td class="px-4 py-4 text-white">{{ formatCurrency(product.totalCost) }}</td>
-              <td class="px-4 py-4 text-slate-300">
-                <div v-if="product.recipeVersions.length > 0">
-                  <p class="font-medium text-white">v{{ product.recipeVersions[0].versionNumber }}</p>
-                  <p class="mt-1 text-xs text-slate-400">{{ product.recipeVersions[0].status }}</p>
-                </div>
-                <span v-else>--</span>
+              <td class="px-4 py-4">
+                <p class="font-medium text-white">{{ formatCurrency(product.displayPrice) }}</p>
+                <p
+                  v-if="product.campaignEnabled && product.displayPrice !== product.price"
+                  class="mt-1 text-xs text-slate-500 line-through"
+                >
+                  原價 {{ formatCurrency(product.price) }}
+                </p>
               </td>
+              <td class="px-4 py-4">
+                <div class="rounded-2xl border border-white/8 bg-white/4 px-3 py-2">
+                  <p class="text-sm font-medium text-white">{{ campaignStatus(product) }}</p>
+                  <p v-if="product.campaignEnabled" class="mt-1 text-xs text-slate-400">
+                    {{ product.campaignLabel || "未設定標籤" }}
+                  </p>
+                  <p v-if="product.campaignEnabled && product.campaignStartsAt" class="mt-1 text-xs text-slate-500">
+                    起：{{ formatDateTime(product.campaignStartsAt) }}
+                  </p>
+                  <p v-if="product.campaignEnabled && product.campaignEndsAt" class="mt-1 text-xs text-slate-500">
+                    迄：{{ formatDateTime(product.campaignEndsAt) }}
+                  </p>
+                </div>
+              </td>
+              <td class="px-4 py-4 text-white">{{ formatCurrency(product.totalCost) }}</td>
               <td class="px-4 py-4">
                 <div v-if="product.imageUrl" class="h-16 w-16 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/70">
                   <img :src="product.imageUrl" :alt="product.name" class="h-full w-full object-cover" />
                 </div>
-                <div v-else class="flex h-16 w-16 items-center justify-center rounded-2xl border border-dashed border-white/10 bg-slate-900/50 text-[11px] text-slate-500">
+                <div
+                  v-else
+                  class="flex h-16 w-16 items-center justify-center rounded-2xl border border-dashed border-white/10 bg-slate-900/50 text-[11px] text-slate-500"
+                >
                   No Image
                 </div>
               </td>
               <td class="px-4 py-4">
                 <div class="flex gap-2">
-                  <button v-if="canEditProducts" class="rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-200" @click="openEditForm(product)">編輯</button>
-                  <button v-if="canEditProducts" class="rounded-xl border border-brand-coral/20 px-3 py-2 text-xs text-brand-coral" :disabled="!product.active" @click="deactivate(product)">停用</button>
+                  <button
+                    v-if="canEditProducts"
+                    class="rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-200"
+                    @click="openEditForm(product)"
+                  >
+                    編輯
+                  </button>
+                  <button
+                    v-if="canEditProducts"
+                    class="rounded-xl border border-brand-coral/20 px-3 py-2 text-xs text-brand-coral"
+                    :disabled="!product.active"
+                    @click="deactivate(product)"
+                  >
+                    停用
+                  </button>
                 </div>
               </td>
             </tr>
             <tr v-if="!productStore.loading && filteredProducts.length === 0">
-              <td colspan="8" class="px-4 py-12 text-center text-slate-400">目前沒有符合條件的商品。</td>
+              <td colspan="8" class="px-4 py-12 text-center text-slate-400">目前沒有符合篩選條件的商品。</td>
             </tr>
           </tbody>
         </table>
@@ -386,26 +523,73 @@ onMounted(async () => {
 
         <input v-model="form.sku" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="SKU" />
         <input v-model="form.name" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="商品名稱" />
-        <input v-model="form.price" type="number" min="0.01" step="0.01" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="售價" />
-        <textarea v-model="form.description" rows="3" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="描述" />
+        <input v-model="form.price" type="number" min="0.01" step="0.01" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="原價" />
+        <textarea v-model="form.description" rows="3" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="商品描述" />
         <input v-model="form.imageUrl" type="url" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="圖片網址" />
-        <input v-model="form.recipeNote" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="本次配方版本說明" />
+
+        <div class="rounded-[1.5rem] border border-brand-aqua/15 bg-brand-aqua/5 p-4">
+          <label class="flex items-center gap-3 text-sm font-medium text-white">
+            <input v-model="form.campaignEnabled" type="checkbox" class="h-4 w-4 rounded border-white/20 bg-slate-900/80" />
+            設定為活動商品
+          </label>
+
+          <div class="mt-4 grid gap-3">
+            <input
+              v-model="form.campaignLabel"
+              :disabled="!form.campaignEnabled"
+              class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none disabled:cursor-not-allowed disabled:opacity-40"
+              placeholder="活動標籤，例如：春季限定"
+            />
+            <input
+              v-model="form.campaignPrice"
+              :disabled="!form.campaignEnabled"
+              type="number"
+              min="0.01"
+              step="0.01"
+              class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none disabled:cursor-not-allowed disabled:opacity-40"
+              placeholder="活動價"
+            />
+            <div class="grid gap-3 md:grid-cols-2">
+              <label class="block">
+                <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-500">Campaign Start</span>
+                <input
+                  v-model="form.campaignStartsAt"
+                  :disabled="!form.campaignEnabled"
+                  type="datetime-local"
+                  class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none disabled:cursor-not-allowed disabled:opacity-40"
+                />
+              </label>
+              <label class="block">
+                <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-500">Campaign End</span>
+                <input
+                  v-model="form.campaignEndsAt"
+                  :disabled="!form.campaignEnabled"
+                  type="datetime-local"
+                  class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none disabled:cursor-not-allowed disabled:opacity-40"
+                />
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <input v-model="form.recipeNote" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="本次配方調整備註" />
 
         <div class="rounded-[1.5rem] border border-white/8 bg-white/4 p-4">
           <div class="flex items-center justify-between">
-            <p class="text-sm font-semibold text-white">原料配方</p>
+            <p class="text-sm font-semibold text-white">商品配方：原料</p>
             <button v-if="canEditProducts" class="rounded-xl border border-brand-aqua/30 px-3 py-2 text-xs text-brand-aqua" @click="addMaterialComponent">新增原料</button>
           </div>
           <div v-for="(component, index) in form.materialComponents" :key="`material-${index}`" class="mt-4 rounded-2xl border border-white/8 bg-slate-900/50 p-4">
             <select v-model="component.materialItemId" class="w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 py-2 text-sm text-white outline-none">
-              <option value="" disabled>請選擇原料</option>
+              <option value="" disabled>選擇原料</option>
               <option v-for="item in productStore.materials" :key="item.id" :value="item.id">
                 {{ item.name }} ({{ item.unit }})
               </option>
             </select>
             <input v-model="component.quantity" type="number" min="0.001" step="0.001" class="mt-3 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 py-2 text-sm text-white outline-none" placeholder="用量" />
             <p class="mt-3 text-xs text-slate-400">
-              單位成本 {{ formatCurrency(materialItemById(component.materialItemId)?.latestUnitCost) }} / 行成本 {{ formatCurrency(lineCost(materialItemById(component.materialItemId), component.quantity)) }}
+              單位成本 {{ formatCurrency(materialItemById(component.materialItemId)?.latestUnitCost) }}
+              / 該項成本 {{ formatCurrency(lineCost(materialItemById(component.materialItemId), component.quantity)) }}
             </p>
             <button v-if="canEditProducts" class="mt-3 rounded-xl border border-brand-coral/20 px-3 py-2 text-xs text-brand-coral" @click="removeMaterialComponent(index)">移除原料</button>
           </div>
@@ -413,26 +597,27 @@ onMounted(async () => {
 
         <div class="rounded-[1.5rem] border border-white/8 bg-white/4 p-4">
           <div class="flex items-center justify-between">
-            <p class="text-sm font-semibold text-white">包裝配方</p>
+            <p class="text-sm font-semibold text-white">商品配方：包裝</p>
             <button v-if="canEditProducts" class="rounded-xl border border-brand-aqua/30 px-3 py-2 text-xs text-brand-aqua" @click="addPackagingComponent">新增包裝</button>
           </div>
           <div v-for="(component, index) in form.packagingComponents" :key="`packaging-${index}`" class="mt-4 rounded-2xl border border-white/8 bg-slate-900/50 p-4">
             <select v-model="component.packagingItemId" class="w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 py-2 text-sm text-white outline-none">
-              <option value="" disabled>請選擇包裝</option>
+              <option value="" disabled>選擇包裝</option>
               <option v-for="item in productStore.packagingItems" :key="item.id" :value="item.id">
                 {{ item.name }} ({{ item.unit }})
               </option>
             </select>
             <input v-model="component.quantity" type="number" min="0.001" step="0.001" class="mt-3 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 py-2 text-sm text-white outline-none" placeholder="用量" />
             <p class="mt-3 text-xs text-slate-400">
-              單位成本 {{ formatCurrency(packagingItemById(component.packagingItemId)?.latestUnitCost) }} / 行成本 {{ formatCurrency(lineCost(packagingItemById(component.packagingItemId), component.quantity)) }}
+              單位成本 {{ formatCurrency(packagingItemById(component.packagingItemId)?.latestUnitCost) }}
+              / 該項成本 {{ formatCurrency(lineCost(packagingItemById(component.packagingItemId), component.quantity)) }}
             </p>
             <button v-if="canEditProducts" class="mt-3 rounded-xl border border-brand-coral/20 px-3 py-2 text-xs text-brand-coral" @click="removePackagingComponent(index)">移除包裝</button>
           </div>
         </div>
 
         <div class="rounded-[1.5rem] border border-brand-aqua/20 bg-brand-aqua/5 p-4">
-          <p class="text-sm font-semibold text-white">成本摘要</p>
+          <p class="text-sm font-semibold text-white">成本與毛利試算</p>
           <div class="mt-4 grid gap-3 sm:grid-cols-2">
             <div class="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
               <p class="text-xs uppercase tracking-[0.18em] text-slate-400">原料成本</p>
@@ -454,30 +639,51 @@ onMounted(async () => {
         </div>
 
         <div v-if="editingProductId" class="rounded-[1.5rem] border border-white/8 bg-white/4 p-4">
-          <p class="text-sm font-semibold text-white">配方版本歷史</p>
+          <p class="text-sm font-semibold text-white">配方版本紀錄</p>
           <div class="mt-4 space-y-3">
-            <div v-for="version in productStore.products.find((item) => item.id === editingProductId)?.recipeVersions ?? []" :key="`${version.versionNumber}-${version.effectiveAt}`" class="rounded-2xl border border-white/8 bg-slate-950/50 p-3 text-sm">
+            <div
+              v-for="version in productStore.products.find((item) => item.id === editingProductId)?.recipeVersions ?? []"
+              :key="`${version.versionNumber}-${version.effectiveAt}`"
+              class="rounded-2xl border border-white/8 bg-slate-950/50 p-3 text-sm"
+            >
               <div class="flex items-center justify-between">
                 <p class="font-medium text-white">v{{ version.versionNumber }} / {{ version.status }}</p>
-                <p class="text-xs text-slate-400">{{ new Date(version.effectiveAt).toLocaleString("zh-TW") }}</p>
+                <p class="text-xs text-slate-400">{{ formatDateTime(version.effectiveAt) }}</p>
               </div>
-              <p class="mt-2 text-slate-300">{{ version.note || "無版本備註" }}</p>
-              <p class="mt-2 text-xs text-slate-400">原料 {{ version.materialComponentCount }} 項 / 包裝 {{ version.packagingComponentCount }} 項 / 成本 {{ formatCurrency(version.totalCost) }}</p>
+              <p class="mt-2 text-slate-300">{{ version.note || "無備註" }}</p>
+              <p class="mt-2 text-xs text-slate-400">
+                原料 {{ version.materialComponentCount }} 項 / 包裝 {{ version.packagingComponentCount }} 項 /
+                總成本 {{ formatCurrency(version.totalCost) }}
+              </p>
             </div>
           </div>
         </div>
 
         <div class="flex gap-3">
-          <button v-if="canEditProducts" class="flex-1 rounded-2xl bg-brand-aqua px-5 py-3 text-sm font-semibold text-slate-950" :disabled="productStore.saving" @click="submitForm">
+          <button
+            v-if="canEditProducts"
+            class="flex-1 rounded-2xl bg-brand-aqua px-5 py-3 text-sm font-semibold text-slate-950"
+            :disabled="productStore.saving"
+            @click="submitForm"
+          >
             {{ productStore.saving ? "儲存中..." : editingProductId ? "更新商品" : "建立商品" }}
           </button>
-          <button v-if="canEditProducts" class="rounded-2xl border border-white/10 px-4 py-3 text-sm text-slate-200" @click="resetForm">清空</button>
+          <button
+            v-if="canEditProducts"
+            class="rounded-2xl border border-white/10 px-4 py-3 text-sm text-slate-200"
+            @click="resetForm"
+          >
+            清空
+          </button>
         </div>
-        <p v-if="!canEditProducts" class="text-sm text-slate-400">你目前只有查看商品資料的權限，不能編輯商品、配方或成本。</p>
+
+        <p v-if="!canEditProducts" class="text-sm text-slate-400">
+          你目前只有檢視權限，無法修改商品、配方與成本設定。
+        </p>
       </div>
 
       <div v-else class="mt-6 rounded-[1.5rem] border border-white/8 bg-white/4 p-4 text-sm text-slate-300">
-        展開右側編輯器後，可以維護商品圖片、配方用量、配方版本說明與成本資料。
+        展開右側編輯區後，可以設定商品資訊、活動價格、配方原料、包裝與成本。
       </div>
     </aside>
   </section>

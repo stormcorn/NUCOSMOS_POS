@@ -56,6 +56,13 @@ export type ProductAdminItem = {
   description: string | null;
   imageUrl: string | null;
   price: number;
+  campaignEnabled: boolean;
+  campaignActive: boolean;
+  campaignLabel: string | null;
+  campaignPrice: number | null;
+  campaignStartsAt: string | null;
+  campaignEndsAt: string | null;
+  displayPrice: number;
   active: boolean;
   materialComponents: ProductMaterialComponent[];
   packagingComponents: ProductPackagingComponent[];
@@ -72,6 +79,11 @@ export type ProductUpsertRequest = {
   description: string;
   imageUrl: string;
   price: number;
+  campaignEnabled: boolean;
+  campaignLabel?: string;
+  campaignPrice?: number;
+  campaignStartsAt?: string;
+  campaignEndsAt?: string;
   recipeNote?: string;
   materialComponents: Array<{
     materialItemId: string;

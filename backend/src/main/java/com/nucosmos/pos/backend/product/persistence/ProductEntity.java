@@ -9,6 +9,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "products")
@@ -33,6 +34,21 @@ public class ProductEntity extends BaseEntity {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
 
+    @Column(name = "campaign_enabled", nullable = false)
+    private boolean campaignEnabled;
+
+    @Column(name = "campaign_label", length = 80)
+    private String campaignLabel;
+
+    @Column(name = "campaign_price", precision = 10, scale = 2)
+    private BigDecimal campaignPrice;
+
+    @Column(name = "campaign_starts_at")
+    private OffsetDateTime campaignStartsAt;
+
+    @Column(name = "campaign_ends_at")
+    private OffsetDateTime campaignEndsAt;
+
     @Column(nullable = false)
     private boolean active;
 
@@ -45,7 +61,12 @@ public class ProductEntity extends BaseEntity {
             String name,
             String description,
             String imageUrl,
-            BigDecimal price
+            BigDecimal price,
+            boolean campaignEnabled,
+            String campaignLabel,
+            BigDecimal campaignPrice,
+            OffsetDateTime campaignStartsAt,
+            OffsetDateTime campaignEndsAt
     ) {
         ProductEntity entity = new ProductEntity();
         entity.category = category;
@@ -54,6 +75,7 @@ public class ProductEntity extends BaseEntity {
         entity.description = normalizeDescription(description);
         entity.imageUrl = normalizeImageUrl(imageUrl);
         entity.price = price;
+        entity.applyCampaignSettings(campaignEnabled, campaignLabel, campaignPrice, campaignStartsAt, campaignEndsAt);
         entity.active = true;
         return entity;
     }
@@ -64,7 +86,12 @@ public class ProductEntity extends BaseEntity {
             String name,
             String description,
             String imageUrl,
-            BigDecimal price
+            BigDecimal price,
+            boolean campaignEnabled,
+            String campaignLabel,
+            BigDecimal campaignPrice,
+            OffsetDateTime campaignStartsAt,
+            OffsetDateTime campaignEndsAt
     ) {
         this.category = category;
         this.sku = sku;
@@ -72,6 +99,7 @@ public class ProductEntity extends BaseEntity {
         this.description = normalizeDescription(description);
         this.imageUrl = normalizeImageUrl(imageUrl);
         this.price = price;
+        this.applyCampaignSettings(campaignEnabled, campaignLabel, campaignPrice, campaignStartsAt, campaignEndsAt);
     }
 
     public void deactivate() {
@@ -102,6 +130,40 @@ public class ProductEntity extends BaseEntity {
         return imageUrl;
     }
 
+    public boolean isCampaignEnabled() {
+        return campaignEnabled;
+    }
+
+    public String getCampaignLabel() {
+        return campaignLabel;
+    }
+
+    public BigDecimal getCampaignPrice() {
+        return campaignPrice;
+    }
+
+    public OffsetDateTime getCampaignStartsAt() {
+        return campaignStartsAt;
+    }
+
+    public OffsetDateTime getCampaignEndsAt() {
+        return campaignEndsAt;
+    }
+
+    public boolean isCampaignActive(OffsetDateTime now) {
+        if (!campaignEnabled || campaignPrice == null) {
+            return false;
+        }
+
+        boolean afterStart = campaignStartsAt == null || !now.isBefore(campaignStartsAt);
+        boolean beforeEnd = campaignEndsAt == null || !now.isAfter(campaignEndsAt);
+        return afterStart && beforeEnd;
+    }
+
+    public BigDecimal getDisplayPrice(OffsetDateTime now) {
+        return isCampaignActive(now) ? campaignPrice : price;
+    }
+
     public boolean isActive() {
         return active;
     }
@@ -120,5 +182,28 @@ public class ProductEntity extends BaseEntity {
         }
         String trimmed = imageUrl.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static String normalizeCampaignLabel(String campaignLabel) {
+        if (campaignLabel == null) {
+            return null;
+        }
+
+        String trimmed = campaignLabel.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private void applyCampaignSettings(
+            boolean campaignEnabled,
+            String campaignLabel,
+            BigDecimal campaignPrice,
+            OffsetDateTime campaignStartsAt,
+            OffsetDateTime campaignEndsAt
+    ) {
+        this.campaignEnabled = campaignEnabled;
+        this.campaignLabel = campaignEnabled ? normalizeCampaignLabel(campaignLabel) : null;
+        this.campaignPrice = campaignEnabled ? campaignPrice : null;
+        this.campaignStartsAt = campaignEnabled ? campaignStartsAt : null;
+        this.campaignEndsAt = campaignEnabled ? campaignEndsAt : null;
     }
 }

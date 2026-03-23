@@ -2,8 +2,18 @@ import { ref } from "vue";
 import { defineStore } from "pinia";
 
 import { ApiError } from "@/api/http";
-import { fetchInventoryAnalytics, fetchSalesSummary, fetchSalesTrend } from "@/api/reports";
-import type { InventoryAnalytics, SalesSummary, SalesTrend } from "@/types/report";
+import {
+  fetchInventoryAnalytics,
+  fetchProfitabilityAnalysis,
+  fetchSalesSummary,
+  fetchSalesTrend,
+} from "@/api/reports";
+import type {
+  InventoryAnalytics,
+  ProfitabilityAnalytics,
+  SalesSummary,
+  SalesTrend,
+} from "@/types/report";
 
 function getTodayRange() {
   const now = new Date();
@@ -23,6 +33,7 @@ export const useReportStore = defineStore("reports", () => {
   const salesSummary = ref<SalesSummary | null>(null);
   const salesTrend = ref<SalesTrend | null>(null);
   const inventoryAnalytics = ref<InventoryAnalytics | null>(null);
+  const profitabilityAnalysis = ref<ProfitabilityAnalytics | null>(null);
   const loading = ref(false);
   const errorMessage = ref("");
 
@@ -35,17 +46,25 @@ export const useReportStore = defineStore("reports", () => {
       const finalFrom = from ?? range.from;
       const finalTo = to ?? range.to;
 
-      const [nextSalesSummary, nextSalesTrend, nextInventoryAnalytics] = await Promise.all([
+      const [
+        nextSalesSummary,
+        nextSalesTrend,
+        nextInventoryAnalytics,
+        nextProfitabilityAnalysis,
+      ] = await Promise.all([
         fetchSalesSummary(finalFrom, finalTo),
         fetchSalesTrend(finalFrom, finalTo),
         fetchInventoryAnalytics(finalFrom, finalTo),
+        fetchProfitabilityAnalysis(finalFrom, finalTo),
       ]);
 
       salesSummary.value = nextSalesSummary;
       salesTrend.value = nextSalesTrend;
       inventoryAnalytics.value = nextInventoryAnalytics;
+      profitabilityAnalysis.value = nextProfitabilityAnalysis;
     } catch (error) {
-      errorMessage.value = error instanceof ApiError ? error.message : "載入報表資料時發生錯誤。";
+      errorMessage.value =
+        error instanceof ApiError ? error.message : "載入營運報表失敗。";
     } finally {
       loading.value = false;
     }
@@ -56,6 +75,7 @@ export const useReportStore = defineStore("reports", () => {
     inventoryAnalytics,
     loadAllReports,
     loading,
+    profitabilityAnalysis,
     salesSummary,
     salesTrend,
   };

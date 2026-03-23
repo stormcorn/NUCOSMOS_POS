@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.time.OffsetDateTime;
 
 @Service
 public class ProductQueryService {
@@ -25,6 +26,7 @@ public class ProductQueryService {
     }
 
     private ProductSummaryResponse toSummaryResponse(ProductEntity product) {
+        OffsetDateTime now = OffsetDateTime.now();
         return new ProductSummaryResponse(
                 product.getId(),
                 product.getSku(),
@@ -34,6 +36,13 @@ public class ProductQueryService {
                 product.getCategory().getCode(),
                 product.getCategory().getName(),
                 product.getPrice(),
+                product.getDisplayPrice(now),
+                product.isCampaignEnabled(),
+                product.isCampaignActive(now),
+                product.getCampaignLabel(),
+                product.getCampaignPrice(),
+                product.getCampaignStartsAt(),
+                product.getCampaignEndsAt(),
                 product.isActive()
         );
     }

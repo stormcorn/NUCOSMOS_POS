@@ -34,6 +34,84 @@ export type SalesTrend = {
   points: SalesTrendPoint[];
 };
 
+export type CostTransferSummary = {
+  grossSalesAmount: number;
+  refundedAmount: number;
+  netSalesAmount: number;
+  realizedCogsAmount: number;
+  realizedRefundedCogsAmount: number;
+  realizedNetCogsAmount: number;
+  standardCogsAmount: number;
+  standardRefundedCogsAmount: number;
+  standardNetCogsAmount: number;
+  cogsVarianceAmount: number;
+  cogsVarianceRate: number;
+  realizedGrossProfitAmount: number;
+  standardGrossProfitAmount: number;
+  realizedGrossMarginRate: number;
+  standardGrossMarginRate: number;
+};
+
+export type ProductProfitability = {
+  productId: string;
+  sku: string;
+  name: string;
+  categoryName: string;
+  soldQuantity: number;
+  refundedQuantity: number;
+  netQuantity: number;
+  netSalesAmount: number;
+  realizedNetCogsAmount: number;
+  standardNetCogsAmount: number;
+  cogsVarianceAmount: number;
+  realizedGrossProfitAmount: number;
+  standardGrossProfitAmount: number;
+  realizedGrossMarginRate: number;
+  standardGrossMarginRate: number;
+};
+
+export type CategoryProfitability = {
+  categoryName: string;
+  soldQuantity: number;
+  refundedQuantity: number;
+  netQuantity: number;
+  netSalesAmount: number;
+  realizedNetCogsAmount: number;
+  standardNetCogsAmount: number;
+  cogsVarianceAmount: number;
+  realizedGrossProfitAmount: number;
+  standardGrossProfitAmount: number;
+  realizedGrossMarginRate: number;
+  standardGrossMarginRate: number;
+};
+
+export type OrderProfitability = {
+  orderId: string;
+  orderNumber: string;
+  orderedAt: string;
+  itemCount: number;
+  netSalesAmount: number;
+  realizedNetCogsAmount: number;
+  standardNetCogsAmount: number;
+  cogsVarianceAmount: number;
+  realizedGrossProfitAmount: number;
+  standardGrossProfitAmount: number;
+  realizedGrossMarginRate: number;
+  standardGrossMarginRate: number;
+};
+
+export type ProfitabilityAnalytics = {
+  storeCode: string;
+  from: string;
+  to: string;
+  costTransferSummary: CostTransferSummary;
+  topProductsByGrossProfit: ProductProfitability[];
+  lowestProductsByMargin: ProductProfitability[];
+  categoryProfitability: CategoryProfitability[];
+  topOrdersByGrossProfit: OrderProfitability[];
+  lowestOrdersByMargin: OrderProfitability[];
+};
+
 export type InventoryKpiSummary = {
   productSkuCount: number;
   productLowStockCount: number;

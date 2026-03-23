@@ -40,7 +40,9 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$.data.length()").value(5))
                 .andExpect(jsonPath("$.data[0].categoryName").value("Tea & Drinks"))
                 .andExpect(jsonPath("$.data[0].name").value("Cold Brew Coffee"))
-                .andExpect(jsonPath("$.data[0].imageUrl").isNotEmpty());
+                .andExpect(jsonPath("$.data[0].imageUrl").isNotEmpty())
+                .andExpect(jsonPath("$.data[0].campaignEnabled").value(false))
+                .andExpect(jsonPath("$.data[0].campaignActive").value(false));
     }
 
     @Test
@@ -70,6 +72,11 @@ class ProductControllerTest {
                                   "description": "Limited spring batch",
                                   "imageUrl": "https://example.com/seasonal-jasmine-tea.jpg",
                                   "price": 9.50,
+                                  "campaignEnabled": true,
+                                  "campaignLabel": "春季限定",
+                                  "campaignPrice": 8.80,
+                                  "campaignStartsAt": "2026-03-23T00:00:00+08:00",
+                                  "campaignEndsAt": "2026-04-01T23:59:59+08:00",
                                   "materialComponents": [
                                     {
                                       "materialItemId": "91500000-0000-0000-0000-000000000001",
@@ -87,6 +94,11 @@ class ProductControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.sku").value("drink-999"))
                 .andExpect(jsonPath("$.data.imageUrl").value("https://example.com/seasonal-jasmine-tea.jpg"))
+                .andExpect(jsonPath("$.data.campaignEnabled").value(true))
+                .andExpect(jsonPath("$.data.campaignActive").value(true))
+                .andExpect(jsonPath("$.data.campaignLabel").value("春季限定"))
+                .andExpect(jsonPath("$.data.campaignPrice").value(8.8))
+                .andExpect(jsonPath("$.data.displayPrice").value(8.8))
                 .andExpect(jsonPath("$.data.active").value(true))
                 .andExpect(jsonPath("$.data.materialComponents.length()").value(1))
                 .andExpect(jsonPath("$.data.packagingComponents.length()").value(1))
@@ -110,6 +122,11 @@ class ProductControllerTest {
                                   "description": "Updated admin product",
                                   "imageUrl": "https://example.com/workshop-pass.jpg",
                                   "price": 29.00,
+                                  "campaignEnabled": true,
+                                  "campaignLabel": "活動票券",
+                                  "campaignPrice": 24.00,
+                                  "campaignStartsAt": "2026-03-23T00:00:00+08:00",
+                                  "campaignEndsAt": "2026-03-31T23:59:59+08:00",
                                   "recipeNote": "Switch to event recipe",
                                   "materialComponents": [
                                     {
@@ -130,6 +147,10 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$.data.sku").value("event-999"))
                 .andExpect(jsonPath("$.data.imageUrl").value("https://example.com/workshop-pass.jpg"))
                 .andExpect(jsonPath("$.data.price").value(29.0))
+                .andExpect(jsonPath("$.data.campaignEnabled").value(true))
+                .andExpect(jsonPath("$.data.campaignLabel").value("活動票券"))
+                .andExpect(jsonPath("$.data.campaignPrice").value(24.0))
+                .andExpect(jsonPath("$.data.displayPrice").value(24.0))
                 .andExpect(jsonPath("$.data.materialComponents[0].materialItemId").value("91500000-0000-0000-0000-000000000002"))
                 .andExpect(jsonPath("$.data.packagingComponents[0].packagingItemId").value("91700000-0000-0000-0000-000000000002"))
                 .andExpect(jsonPath("$.data.recipeVersions.length()").value(2))
