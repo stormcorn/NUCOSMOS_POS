@@ -16,6 +16,9 @@ public record OrderSummaryResponse(
         BigDecimal totalAmount,
         BigDecimal paidAmount,
         BigDecimal refundedAmount,
+        BigDecimal cogsAmount,
+        BigDecimal netCogsAmount,
+        BigDecimal grossProfitAmount,
         OffsetDateTime orderedAt,
         OffsetDateTime closedAt
 ) {

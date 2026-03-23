@@ -7,11 +7,13 @@ import {
   createPackagingMovement,
   deactivatePackagingItem,
   fetchPackagingItems,
+  fetchPackagingLots,
   fetchPackagingMovements,
   updatePackagingItem,
 } from "@/api/packaging";
 import type {
   PackagingAdminItem,
+  PackagingLotItem,
   PackagingMovementItem,
   PackagingMovementRequest,
   PackagingUpsertRequest,
@@ -19,6 +21,7 @@ import type {
 
 export const usePackagingStore = defineStore("packaging", () => {
   const items = ref<PackagingAdminItem[]>([]);
+  const lots = ref<PackagingLotItem[]>([]);
   const movements = ref<PackagingMovementItem[]>([]);
   const loading = ref(false);
   const saving = ref(false);
@@ -31,14 +34,16 @@ export const usePackagingStore = defineStore("packaging", () => {
     errorMessage.value = "";
 
     try {
-      const [nextItems, nextMovements] = await Promise.all([
+      const [nextItems, nextMovements, nextLots] = await Promise.all([
         fetchPackagingItems(),
         fetchPackagingMovements(),
+        fetchPackagingLots(),
       ]);
       items.value = nextItems;
       movements.value = nextMovements;
+      lots.value = nextLots;
     } catch (error) {
-      errorMessage.value = error instanceof ApiError ? error.message : "載入包裝管理資料失敗";
+      errorMessage.value = error instanceof ApiError ? error.message : "載入包裝資料失敗。";
     } finally {
       loading.value = false;
     }
@@ -52,7 +57,7 @@ export const usePackagingStore = defineStore("packaging", () => {
       await loadPackaging();
       return true;
     } catch (error) {
-      errorMessage.value = error instanceof ApiError ? error.message : "建立包裝品項失敗";
+      errorMessage.value = error instanceof ApiError ? error.message : "建立包裝失敗。";
       return false;
     } finally {
       saving.value = false;
@@ -67,7 +72,7 @@ export const usePackagingStore = defineStore("packaging", () => {
       await loadPackaging();
       return true;
     } catch (error) {
-      errorMessage.value = error instanceof ApiError ? error.message : "更新包裝品項失敗";
+      errorMessage.value = error instanceof ApiError ? error.message : "更新包裝失敗。";
       return false;
     } finally {
       saving.value = false;
@@ -82,7 +87,7 @@ export const usePackagingStore = defineStore("packaging", () => {
       await loadPackaging();
       return true;
     } catch (error) {
-      errorMessage.value = error instanceof ApiError ? error.message : "停用包裝品項失敗";
+      errorMessage.value = error instanceof ApiError ? error.message : "停用包裝失敗。";
       return false;
     } finally {
       saving.value = false;
@@ -97,7 +102,7 @@ export const usePackagingStore = defineStore("packaging", () => {
       await loadPackaging();
       return true;
     } catch (error) {
-      errorMessage.value = error instanceof ApiError ? error.message : "建立包裝異動失敗";
+      errorMessage.value = error instanceof ApiError ? error.message : "建立包裝異動失敗。";
       return false;
     } finally {
       saving.value = false;
@@ -110,6 +115,7 @@ export const usePackagingStore = defineStore("packaging", () => {
     deactivateItem,
     errorMessage,
     items,
+    lots,
     loadPackaging,
     loading,
     movements,

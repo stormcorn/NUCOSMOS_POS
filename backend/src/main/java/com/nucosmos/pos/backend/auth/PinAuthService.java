@@ -2,6 +2,7 @@ package com.nucosmos.pos.backend.auth;
 
 import com.nucosmos.pos.backend.auth.persistence.RoleEntity;
 import com.nucosmos.pos.backend.auth.persistence.UserEntity;
+import com.nucosmos.pos.backend.auth.repository.RolePermissionRepository;
 import com.nucosmos.pos.backend.auth.repository.RoleRepository;
 import com.nucosmos.pos.backend.auth.repository.UserRepository;
 import com.nucosmos.pos.backend.common.exception.UnauthorizedException;
@@ -24,6 +25,7 @@ public class PinAuthService {
     private final RoleRepository roleRepository;
     private final StoreRepository storeRepository;
     private final DeviceRepository deviceRepository;
+    private final RolePermissionRepository rolePermissionRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
@@ -32,6 +34,7 @@ public class PinAuthService {
             RoleRepository roleRepository,
             StoreRepository storeRepository,
             DeviceRepository deviceRepository,
+            RolePermissionRepository rolePermissionRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService
     ) {
@@ -39,6 +42,7 @@ public class PinAuthService {
         this.roleRepository = roleRepository;
         this.storeRepository = storeRepository;
         this.deviceRepository = deviceRepository;
+        this.rolePermissionRepository = rolePermissionRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
     }
@@ -62,6 +66,7 @@ public class PinAuthService {
         matchedUser.markLoggedIn();
 
         List<String> roleCodes = roleRepository.findActiveRoleCodesByUserId(matchedUser.getId());
+        List<String> permissionKeys = rolePermissionRepository.findPermissionKeysByRoleCode(selectedRole.getCode());
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("employeeCode", matchedUser.getEmployeeCode());
@@ -69,6 +74,7 @@ public class PinAuthService {
         claims.put("storeCode", store.getCode());
         claims.put("roleCodes", roleCodes);
         claims.put("activeRole", selectedRole.getCode());
+        claims.put("permissionKeys", permissionKeys);
         if (StringUtils.hasText(request.deviceCode())) {
             claims.put("deviceCode", request.deviceCode());
         }
@@ -84,7 +90,8 @@ public class PinAuthService {
                         matchedUser.getEmployeeCode(),
                         matchedUser.getDisplayName(),
                         roleCodes,
-                        selectedRole.getCode()
+                        selectedRole.getCode(),
+                        permissionKeys
                 )
         );
     }
@@ -97,6 +104,7 @@ public class PinAuthService {
                 user.storeCode(),
                 user.activeRole(),
                 user.roleCodes(),
+                user.permissionKeys(),
                 user.deviceCode()
         );
     }

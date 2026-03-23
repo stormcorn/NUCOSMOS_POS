@@ -1,6 +1,7 @@
 import { apiRequest } from "@/api/http";
 import type {
   MaterialAdminItem,
+  MaterialLotItem,
   MaterialMovementItem,
   MaterialMovementRequest,
   MaterialUpsertRequest,
@@ -12,6 +13,10 @@ export function fetchMaterials() {
 
 export function fetchMaterialMovements() {
   return apiRequest<MaterialMovementItem[]>("/api/v1/admin/materials/movements");
+}
+
+export function fetchMaterialLots() {
+  return apiRequest<MaterialLotItem[]>("/api/v1/admin/materials/lots");
 }
 
 export function createMaterial(payload: MaterialUpsertRequest) {

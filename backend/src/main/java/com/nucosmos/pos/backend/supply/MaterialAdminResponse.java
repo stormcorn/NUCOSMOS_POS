@@ -8,10 +8,13 @@ public record MaterialAdminResponse(
         String sku,
         String name,
         String unit,
+        String purchaseUnit,
+        int purchaseToStockRatio,
         String description,
         int quantityOnHand,
         int reorderLevel,
         BigDecimal latestUnitCost,
+        BigDecimal latestPurchaseUnitCost,
         boolean lowStock,
         boolean active
 ) {

@@ -14,6 +14,7 @@ import com.nucosmos.pos.backend.order.persistence.PaymentEntity;
 import com.nucosmos.pos.backend.order.persistence.RefundEntity;
 import com.nucosmos.pos.backend.order.repository.OrderRepository;
 import com.nucosmos.pos.backend.order.repository.PaymentRepository;
+import com.nucosmos.pos.backend.order.repository.RefundItemRepository;
 import com.nucosmos.pos.backend.order.repository.RefundRepository;
 import com.nucosmos.pos.backend.product.persistence.ProductEntity;
 import com.nucosmos.pos.backend.product.repository.ProductRepository;
@@ -50,7 +51,9 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final PaymentRepository paymentRepository;
     private final RefundRepository refundRepository;
+    private final RefundItemRepository refundItemRepository;
     private final CardTerminalService cardTerminalService;
+    private final OrderInventoryWorkflowService orderInventoryWorkflowService;
 
     public OrderService(
             OrderRepository orderRepository,
@@ -60,7 +63,9 @@ public class OrderService {
             ProductRepository productRepository,
             PaymentRepository paymentRepository,
             RefundRepository refundRepository,
-            CardTerminalService cardTerminalService
+            RefundItemRepository refundItemRepository,
+            CardTerminalService cardTerminalService,
+            OrderInventoryWorkflowService orderInventoryWorkflowService
     ) {
         this.orderRepository = orderRepository;
         this.storeRepository = storeRepository;
@@ -69,7 +74,9 @@ public class OrderService {
         this.productRepository = productRepository;
         this.paymentRepository = paymentRepository;
         this.refundRepository = refundRepository;
+        this.refundItemRepository = refundItemRepository;
         this.cardTerminalService = cardTerminalService;
+        this.orderInventoryWorkflowService = orderInventoryWorkflowService;
     }
 
     @Transactional
@@ -180,6 +187,9 @@ public class OrderService {
 
         boolean fullyPaid = totalCaptured.compareTo(order.getTotalAmount()) >= 0;
         order.applyPayment(totalCaptured, totalChange, fullyPaid ? paidAt : null, fullyPaid);
+        if (fullyPaid) {
+            orderInventoryWorkflowService.commitOrderInventory(order, createdByUser);
+        }
 
         return toResponse(order);
     }
@@ -273,6 +283,9 @@ public class OrderService {
 
         boolean fullyPaid = totalCaptured.compareTo(order.getTotalAmount()) >= 0;
         order.applyPayment(totalCaptured, totalChange, fullyPaid ? capturedAt : null, fullyPaid);
+        if (fullyPaid) {
+            orderInventoryWorkflowService.commitOrderInventory(order, payment.getCreatedByUser());
+        }
 
         return toResponse(order);
     }
@@ -326,6 +339,7 @@ public class OrderService {
 
         refundRepository.save(refund);
         order.addRefund(refund);
+        orderInventoryWorkflowService.restoreRefundInventory(order, refund, request.items(), createdByUser);
 
         boolean fullyRefundedPayment = request.amount().compareTo(remainingPaymentRefundable) >= 0;
         payment.applyCardRefundLifecycle(refundedAt, fullyRefundedPayment);
@@ -457,6 +471,10 @@ public class OrderService {
                 order.getPaidAmount(),
                 order.getChangeAmount(),
                 order.getRefundedAmount(),
+                order.getCogsAmount(),
+                order.getRefundedCogsAmount(),
+                order.getNetCogsAmount(),
+                order.getGrossProfitAmount(),
                 order.getNote(),
                 order.getOrderedAt(),
                 order.getClosedAt(),
@@ -472,6 +490,9 @@ public class OrderService {
                                 item.getUnitPrice(),
                                 item.getQuantity(),
                                 item.getLineTotalAmount(),
+                                item.getUnitCostAmount(),
+                                item.getLineCostAmount(),
+                                item.getRefundedCostAmount(),
                                 item.getNote()
                         ))
                         .toList(),
@@ -509,7 +530,18 @@ public class OrderService {
                                 refund.getReason(),
                                 refund.getStatus(),
                                 refund.getCreatedByUser().getEmployeeCode(),
-                                refund.getRefundedAt()
+                                refund.getRefundedAt(),
+                                refund.getRefundItems().stream()
+                                        .map(item -> new RefundItemResponse(
+                                                item.getId(),
+                                                item.getOrderItem().getId(),
+                                                item.getProduct().getId(),
+                                                item.getProduct().getSku(),
+                                                item.getProduct().getName(),
+                                                item.getQuantity(),
+                                                item.getInventoryDisposition()
+                                        ))
+                                        .toList()
                         ))
                         .toList()
         );
@@ -528,6 +560,9 @@ public class OrderService {
                 order.getTotalAmount(),
                 order.getPaidAmount(),
                 order.getRefundedAmount(),
+                order.getCogsAmount(),
+                order.getNetCogsAmount(),
+                order.getGrossProfitAmount(),
                 order.getOrderedAt(),
                 order.getClosedAt()
         );

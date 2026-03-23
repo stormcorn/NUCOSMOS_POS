@@ -22,7 +22,7 @@ export function formatDateTime(value: string | null) {
 
 export function formatRelativeTime(value: string | null) {
   if (!value) {
-    return "尚未回報";
+    return "尚未設定";
   }
 
   const now = Date.now();

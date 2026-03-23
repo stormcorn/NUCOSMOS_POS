@@ -7,16 +7,22 @@ import com.nucosmos.pos.backend.common.exception.BadRequestException;
 import com.nucosmos.pos.backend.common.exception.NotFoundException;
 import com.nucosmos.pos.backend.store.repository.StoreRepository;
 import com.nucosmos.pos.backend.supply.persistence.MaterialItemEntity;
+import com.nucosmos.pos.backend.supply.persistence.MaterialStockLotEntity;
 import com.nucosmos.pos.backend.supply.persistence.MaterialMovementEntity;
 import com.nucosmos.pos.backend.supply.persistence.PackagingItemEntity;
+import com.nucosmos.pos.backend.supply.persistence.PackagingStockLotEntity;
 import com.nucosmos.pos.backend.supply.persistence.PackagingMovementEntity;
 import com.nucosmos.pos.backend.supply.repository.MaterialItemRepository;
+import com.nucosmos.pos.backend.supply.repository.MaterialStockLotRepository;
 import com.nucosmos.pos.backend.supply.repository.MaterialMovementRepository;
 import com.nucosmos.pos.backend.supply.repository.PackagingItemRepository;
+import com.nucosmos.pos.backend.supply.repository.PackagingStockLotRepository;
 import com.nucosmos.pos.backend.supply.repository.PackagingMovementRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -28,23 +34,32 @@ public class SupplyAdminService {
     private final UserRepository userRepository;
     private final MaterialItemRepository materialItemRepository;
     private final MaterialMovementRepository materialMovementRepository;
+    private final MaterialStockLotRepository materialStockLotRepository;
     private final PackagingItemRepository packagingItemRepository;
     private final PackagingMovementRepository packagingMovementRepository;
+    private final PackagingStockLotRepository packagingStockLotRepository;
+    private final SupplyProcurementService supplyProcurementService;
 
     public SupplyAdminService(
             StoreRepository storeRepository,
             UserRepository userRepository,
             MaterialItemRepository materialItemRepository,
             MaterialMovementRepository materialMovementRepository,
+            MaterialStockLotRepository materialStockLotRepository,
             PackagingItemRepository packagingItemRepository,
-            PackagingMovementRepository packagingMovementRepository
+            PackagingMovementRepository packagingMovementRepository,
+            PackagingStockLotRepository packagingStockLotRepository,
+            SupplyProcurementService supplyProcurementService
     ) {
         this.storeRepository = storeRepository;
         this.userRepository = userRepository;
         this.materialItemRepository = materialItemRepository;
         this.materialMovementRepository = materialMovementRepository;
+        this.materialStockLotRepository = materialStockLotRepository;
         this.packagingItemRepository = packagingItemRepository;
         this.packagingMovementRepository = packagingMovementRepository;
+        this.packagingStockLotRepository = packagingStockLotRepository;
+        this.supplyProcurementService = supplyProcurementService;
     }
 
     @Transactional(readOnly = true)
@@ -65,6 +80,15 @@ public class SupplyAdminService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<MaterialLotResponse> listMaterialLots(AuthenticatedUser user) {
+        ensureStoreExists(user.storeCode());
+        return materialStockLotRepository.findAllByMaterial_Store_CodeOrderByExpiryDateAscReceivedAtAscCreatedAtAsc(user.storeCode())
+                .stream()
+                .map(this::toMaterialLotResponse)
+                .toList();
+    }
+
     @Transactional
     public MaterialAdminResponse createMaterial(AuthenticatedUser user, MaterialUpsertRequest request) {
         validateUniqueMaterialSku(user.storeCode(), request.sku(), null);
@@ -73,6 +97,8 @@ public class SupplyAdminService {
                 request.sku().trim(),
                 request.name().trim(),
                 request.unit().trim(),
+                request.purchaseUnit().trim(),
+                request.purchaseToStockRatio(),
                 request.description(),
                 request.reorderLevel(),
                 request.latestUnitCost()
@@ -88,6 +114,8 @@ public class SupplyAdminService {
                 request.sku().trim(),
                 request.name().trim(),
                 request.unit().trim(),
+                request.purchaseUnit().trim(),
+                request.purchaseToStockRatio(),
                 request.description(),
                 request.reorderLevel(),
                 request.latestUnitCost()
@@ -127,8 +155,23 @@ public class SupplyAdminService {
                 quantityAfter,
                 request.unitCost(),
                 blankToNull(request.note()),
+                null,
+                null,
                 OffsetDateTime.now()
         );
+        if (movementType == SupplyMovementType.PURCHASE_IN) {
+            materialStockLotRepository.save(MaterialStockLotEntity.create(
+                    item,
+                    "MANUAL",
+                    null,
+                    request.batchCode(),
+                    request.expiryDate(),
+                    request.manufacturedAt(),
+                    request.quantity(),
+                    request.unitCost(),
+                    movement.getOccurredAt()
+            ));
+        }
         return toMaterialMovementResponse(materialMovementRepository.save(movement));
     }
 
@@ -150,6 +193,15 @@ public class SupplyAdminService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<PackagingLotResponse> listPackagingLots(AuthenticatedUser user) {
+        ensureStoreExists(user.storeCode());
+        return packagingStockLotRepository.findAllByPackagingItem_Store_CodeOrderByExpiryDateAscReceivedAtAscCreatedAtAsc(user.storeCode())
+                .stream()
+                .map(this::toPackagingLotResponse)
+                .toList();
+    }
+
     @Transactional
     public PackagingAdminResponse createPackagingItem(AuthenticatedUser user, PackagingUpsertRequest request) {
         validateUniquePackagingSku(user.storeCode(), request.sku(), null);
@@ -158,6 +210,8 @@ public class SupplyAdminService {
                 request.sku().trim(),
                 request.name().trim(),
                 request.unit().trim(),
+                request.purchaseUnit().trim(),
+                request.purchaseToStockRatio(),
                 request.specification(),
                 request.description(),
                 request.reorderLevel(),
@@ -178,6 +232,8 @@ public class SupplyAdminService {
                 request.sku().trim(),
                 request.name().trim(),
                 request.unit().trim(),
+                request.purchaseUnit().trim(),
+                request.purchaseToStockRatio(),
                 request.specification(),
                 request.description(),
                 request.reorderLevel(),
@@ -218,9 +274,68 @@ public class SupplyAdminService {
                 quantityAfter,
                 request.unitCost(),
                 blankToNull(request.note()),
+                null,
+                null,
                 OffsetDateTime.now()
         );
+        if (movementType == SupplyMovementType.PURCHASE_IN) {
+            packagingStockLotRepository.save(PackagingStockLotEntity.create(
+                    item,
+                    "MANUAL",
+                    null,
+                    request.batchCode(),
+                    request.expiryDate(),
+                    request.manufacturedAt(),
+                    request.quantity(),
+                    request.unitCost(),
+                    movement.getOccurredAt()
+            ));
+        }
         return toPackagingMovementResponse(packagingMovementRepository.save(movement));
+    }
+
+    @Transactional(readOnly = true)
+    public List<SupplierResponse> listSuppliers(AuthenticatedUser user) {
+        return supplyProcurementService.listSuppliers(user);
+    }
+
+    @Transactional
+    public SupplierResponse createSupplier(AuthenticatedUser user, SupplierUpsertRequest request) {
+        return supplyProcurementService.createSupplier(user, request);
+    }
+
+    @Transactional
+    public SupplierResponse updateSupplier(AuthenticatedUser user, UUID supplierId, SupplierUpsertRequest request) {
+        return supplyProcurementService.updateSupplier(user, supplierId, request);
+    }
+
+    @Transactional
+    public SupplierResponse deactivateSupplier(AuthenticatedUser user, UUID supplierId) {
+        return supplyProcurementService.deactivateSupplier(user, supplierId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReplenishmentSuggestionResponse> listReplenishmentSuggestions(AuthenticatedUser user) {
+        return supplyProcurementService.listReplenishmentSuggestions(user);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PurchaseOrderResponse> listPurchaseOrders(AuthenticatedUser user) {
+        return supplyProcurementService.listPurchaseOrders(user);
+    }
+
+    @Transactional
+    public PurchaseOrderResponse createPurchaseOrder(AuthenticatedUser user, PurchaseOrderCreateRequest request) {
+        return supplyProcurementService.createPurchaseOrder(user, request);
+    }
+
+    @Transactional
+    public PurchaseOrderResponse receivePurchaseOrder(
+            AuthenticatedUser user,
+            UUID purchaseOrderId,
+            PurchaseOrderReceiveRequest request
+    ) {
+        return supplyProcurementService.receivePurchaseOrder(user, purchaseOrderId, request);
     }
 
     private void ensureStoreExists(String storeCode) {
@@ -289,10 +404,13 @@ public class SupplyAdminService {
                 item.getSku(),
                 item.getName(),
                 item.getUnit(),
+                item.getPurchaseUnit(),
+                item.getPurchaseToStockRatio(),
                 item.getDescription(),
                 item.getQuantityOnHand(),
                 item.getReorderLevel(),
                 item.getLatestUnitCost(),
+                toPurchaseUnitCost(item.getLatestUnitCost(), item.getPurchaseToStockRatio()),
                 item.getQuantityOnHand() <= item.getReorderLevel(),
                 item.isActive()
         );
@@ -315,17 +433,39 @@ public class SupplyAdminService {
         );
     }
 
+    private MaterialLotResponse toMaterialLotResponse(MaterialStockLotEntity lot) {
+        return new MaterialLotResponse(
+                lot.getId(),
+                lot.getMaterial().getId(),
+                lot.getMaterial().getSku(),
+                lot.getMaterial().getName(),
+                lot.getMaterial().getUnit(),
+                lot.getBatchCode(),
+                lot.getExpiryDate(),
+                lot.getManufacturedAt(),
+                lot.getReceivedQuantity(),
+                lot.getRemainingQuantity(),
+                lot.getUnitCost(),
+                lot.getSourceType(),
+                lot.getSourceId(),
+                lot.getReceivedAt()
+        );
+    }
+
     private PackagingAdminResponse toPackagingResponse(PackagingItemEntity item) {
         return new PackagingAdminResponse(
                 item.getId(),
                 item.getSku(),
                 item.getName(),
                 item.getUnit(),
+                item.getPurchaseUnit(),
+                item.getPurchaseToStockRatio(),
                 item.getSpecification(),
                 item.getDescription(),
                 item.getQuantityOnHand(),
                 item.getReorderLevel(),
                 item.getLatestUnitCost(),
+                toPurchaseUnitCost(item.getLatestUnitCost(), item.getPurchaseToStockRatio()),
                 item.getQuantityOnHand() <= item.getReorderLevel(),
                 item.isActive()
         );
@@ -346,5 +486,32 @@ public class SupplyAdminService {
                 movement.getNote(),
                 movement.getOccurredAt()
         );
+    }
+
+    private PackagingLotResponse toPackagingLotResponse(PackagingStockLotEntity lot) {
+        return new PackagingLotResponse(
+                lot.getId(),
+                lot.getPackagingItem().getId(),
+                lot.getPackagingItem().getSku(),
+                lot.getPackagingItem().getName(),
+                lot.getPackagingItem().getUnit(),
+                lot.getBatchCode(),
+                lot.getExpiryDate(),
+                lot.getManufacturedAt(),
+                lot.getReceivedQuantity(),
+                lot.getRemainingQuantity(),
+                lot.getUnitCost(),
+                lot.getSourceType(),
+                lot.getSourceId(),
+                lot.getReceivedAt()
+        );
+    }
+
+    private BigDecimal toPurchaseUnitCost(BigDecimal latestUnitCost, int purchaseToStockRatio) {
+        if (latestUnitCost == null) {
+            return null;
+        }
+
+        return latestUnitCost.multiply(BigDecimal.valueOf(purchaseToStockRatio)).setScale(2, RoundingMode.HALF_UP);
     }
 }

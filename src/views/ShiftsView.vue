@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import { onMounted, reactive } from "vue";
+import { computed, onMounted, reactive } from "vue";
 
+import { PERMISSIONS } from "@/constants/permissions";
+import { useAuthStore } from "@/stores/auth";
 import { useShiftStore } from "@/stores/shifts";
 import { formatCurrency, formatDateTime } from "@/utils/format";
 
+const authStore = useAuthStore();
 const shiftStore = useShiftStore();
+const canManageShifts = computed(() => authStore.hasPermission(PERMISSIONS.SHIFTS_EDIT));
 
 const openForm = reactive({
   openingCashAmount: "0.00",
@@ -17,10 +21,16 @@ const closeForm = reactive({
 });
 
 async function submitOpenShift() {
+  if (!canManageShifts.value) {
+    return;
+  }
   await shiftStore.submitOpenShift(Number(openForm.openingCashAmount), openForm.note.trim());
 }
 
 async function submitCloseShift() {
+  if (!canManageShifts.value) {
+    return;
+  }
   await shiftStore.submitCloseShift(Number(closeForm.closingCashAmount), closeForm.note.trim());
 }
 
@@ -81,7 +91,10 @@ onMounted(() => {
     </article>
 
     <aside class="space-y-6">
-      <article class="rounded-[2rem] border border-white/10 bg-slate-950/55 p-6 shadow-soft shadow-black/20">
+      <article v-if="!canManageShifts" class="rounded-[2rem] border border-white/10 bg-slate-950/55 p-6 text-sm text-slate-300 shadow-soft shadow-black/20">
+        你目前只有查看班次資訊的權限，不能執行開班或交班。
+      </article>
+      <article v-if="canManageShifts" class="rounded-[2rem] border border-white/10 bg-slate-950/55 p-6 shadow-soft shadow-black/20">
         <p class="text-xs uppercase tracking-[0.28em] text-brand-aqua/70">Open Shift</p>
         <h3 class="mt-2 text-2xl font-semibold text-white">建立班次</h3>
 
@@ -100,7 +113,7 @@ onMounted(() => {
         </div>
       </article>
 
-      <article class="rounded-[2rem] border border-white/10 bg-slate-950/55 p-6 shadow-soft shadow-black/20">
+      <article v-if="canManageShifts" class="rounded-[2rem] border border-white/10 bg-slate-950/55 p-6 shadow-soft shadow-black/20">
         <p class="text-xs uppercase tracking-[0.28em] text-brand-aqua/70">Close Shift</p>
         <h3 class="mt-2 text-2xl font-semibold text-white">關班結算</h3>
 

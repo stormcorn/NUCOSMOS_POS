@@ -12,6 +12,8 @@ public record PackagingUpsertRequest(
         @NotBlank @Size(max = 50) String sku,
         @NotBlank @Size(max = 120) String name,
         @NotBlank @Size(max = 30) String unit,
+        @NotBlank @Size(max = 30) String purchaseUnit,
+        @NotNull @Min(1) Integer purchaseToStockRatio,
         @Size(max = 120) String specification,
         @Size(max = 500) String description,
         @NotNull @Min(0) Integer reorderLevel,

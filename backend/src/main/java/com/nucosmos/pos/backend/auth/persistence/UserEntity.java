@@ -46,6 +46,22 @@ public class UserEntity extends BaseEntity {
         return lastLoginAt;
     }
 
+    public void setEmployeeCode(String employeeCode) {
+        this.employeeCode = employeeCode;
+    }
+
+    public void setDisplayName(String displayName) {
+        this.displayName = displayName;
+    }
+
+    public void setPinHash(String pinHash) {
+        this.pinHash = pinHash;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
     public void markLoggedIn() {
         this.lastLoginAt = OffsetDateTime.now();
     }

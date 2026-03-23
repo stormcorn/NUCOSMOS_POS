@@ -115,6 +115,36 @@ public class InventoryService {
     }
 
     @Transactional
+    public InventoryMovementResponse recordSystemMovement(
+            StoreEntity store,
+            ProductEntity product,
+            UserEntity createdByUser,
+            InventoryMovementType movementType,
+            int quantity,
+            java.math.BigDecimal unitCost,
+            String reasonCode,
+            String note,
+            String referenceType,
+            UUID referenceId
+    ) {
+        InventoryStockEntity stock = inventoryStockRepository.findByStore_IdAndProduct_Id(store.getId(), product.getId())
+                .orElseGet(() -> inventoryStockRepository.save(InventoryStockEntity.create(store, product)));
+
+        return saveMovement(
+                stock,
+                product,
+                createdByUser,
+                movementType,
+                quantity,
+                unitCost,
+                reasonCode,
+                note,
+                referenceType,
+                referenceId
+        );
+    }
+
+    @Transactional
     public InventoryMovementResponse scrapDefectiveStock(
             AuthenticatedUser user,
             UUID productId,

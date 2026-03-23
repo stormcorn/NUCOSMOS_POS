@@ -40,7 +40,7 @@ export const useOrderStore = defineStore("orders", () => {
       totalPages.value = response.totalPages;
       hasNext.value = response.hasNext;
     } catch (error) {
-      errorMessage.value = error instanceof ApiError ? error.message : "無法取得訂單資料";
+      errorMessage.value = error instanceof ApiError ? error.message : "無法載入訂單列表";
     } finally {
       loading.value = false;
     }
@@ -57,7 +57,7 @@ export const useOrderStore = defineStore("orders", () => {
     try {
       detail.value = await fetchOrderDetail(orderId);
     } catch (error) {
-      detailErrorMessage.value = error instanceof ApiError ? error.message : "無法取得訂單詳情";
+      detailErrorMessage.value = error instanceof ApiError ? error.message : "無法載入訂單明細";
     } finally {
       detailLoading.value = false;
     }

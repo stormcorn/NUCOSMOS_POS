@@ -10,7 +10,17 @@ import java.util.UUID;
 
 public interface RoleRepository extends JpaRepository<RoleEntity, UUID> {
 
+    List<RoleEntity> findAllByOrderByCodeAsc();
+
+    List<RoleEntity> findAllByCodeInAndActiveTrue(List<String> codes);
+
     Optional<RoleEntity> findByCodeAndActiveTrue(String code);
+
+    Optional<RoleEntity> findByCode(String code);
+
+    boolean existsByCode(String code);
+
+    boolean existsByCodeAndIdNot(String code, UUID id);
 
     @Query("""
             select role.code

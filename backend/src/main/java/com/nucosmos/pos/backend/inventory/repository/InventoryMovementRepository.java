@@ -17,4 +17,11 @@ public interface InventoryMovementRepository extends JpaRepository<InventoryMove
             UUID storeId,
             String stockBucket
     );
+
+    @EntityGraph(attributePaths = {"product", "product.category"})
+    List<InventoryMovementEntity> findAllByStore_CodeAndOccurredAtBetweenOrderByOccurredAtAsc(
+            String storeCode,
+            java.time.OffsetDateTime from,
+            java.time.OffsetDateTime to
+    );
 }

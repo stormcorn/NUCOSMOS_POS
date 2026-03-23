@@ -8,11 +8,14 @@ public record PackagingAdminResponse(
         String sku,
         String name,
         String unit,
+        String purchaseUnit,
+        int purchaseToStockRatio,
         String specification,
         String description,
         int quantityOnHand,
         int reorderLevel,
         BigDecimal latestUnitCost,
+        BigDecimal latestPurchaseUnitCost,
         boolean lowStock,
         boolean active
 ) {

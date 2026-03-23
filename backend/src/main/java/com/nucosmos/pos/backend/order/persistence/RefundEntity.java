@@ -7,10 +7,14 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "refunds")
@@ -43,6 +47,10 @@ public class RefundEntity extends BaseEntity {
     @Column(nullable = false)
     private OffsetDateTime refundedAt;
 
+    @OneToMany(mappedBy = "refund", orphanRemoval = true)
+    @OrderBy("createdAt ASC")
+    private List<RefundItemEntity> refundItems = new ArrayList<>();
+
     protected RefundEntity() {
     }
 
@@ -70,6 +78,10 @@ public class RefundEntity extends BaseEntity {
         return createdByUser;
     }
 
+    public void addRefundItem(RefundItemEntity refundItem) {
+        refundItems.add(refundItem);
+    }
+
     public PaymentEntity getPayment() {
         return payment;
     }
@@ -92,5 +104,9 @@ public class RefundEntity extends BaseEntity {
 
     public OffsetDateTime getRefundedAt() {
         return refundedAt;
+    }
+
+    public List<RefundItemEntity> getRefundItems() {
+        return refundItems;
     }
 }

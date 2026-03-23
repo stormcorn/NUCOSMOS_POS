@@ -6,12 +6,14 @@ import {
   createMaterial,
   createMaterialMovement,
   deactivateMaterial,
+  fetchMaterialLots,
   fetchMaterialMovements,
   fetchMaterials,
   updateMaterial,
 } from "@/api/materials";
 import type {
   MaterialAdminItem,
+  MaterialLotItem,
   MaterialMovementItem,
   MaterialMovementRequest,
   MaterialUpsertRequest,
@@ -19,6 +21,7 @@ import type {
 
 export const useMaterialsStore = defineStore("materials", () => {
   const items = ref<MaterialAdminItem[]>([]);
+  const lots = ref<MaterialLotItem[]>([]);
   const movements = ref<MaterialMovementItem[]>([]);
   const loading = ref(false);
   const saving = ref(false);
@@ -31,14 +34,16 @@ export const useMaterialsStore = defineStore("materials", () => {
     errorMessage.value = "";
 
     try {
-      const [nextItems, nextMovements] = await Promise.all([
+      const [nextItems, nextMovements, nextLots] = await Promise.all([
         fetchMaterials(),
         fetchMaterialMovements(),
+        fetchMaterialLots(),
       ]);
       items.value = nextItems;
       movements.value = nextMovements;
+      lots.value = nextLots;
     } catch (error) {
-      errorMessage.value = error instanceof ApiError ? error.message : "載入原料管理資料失敗";
+      errorMessage.value = error instanceof ApiError ? error.message : "載入原料資料失敗。";
     } finally {
       loading.value = false;
     }
@@ -52,7 +57,7 @@ export const useMaterialsStore = defineStore("materials", () => {
       await loadMaterials();
       return true;
     } catch (error) {
-      errorMessage.value = error instanceof ApiError ? error.message : "建立原料失敗";
+      errorMessage.value = error instanceof ApiError ? error.message : "建立原料失敗。";
       return false;
     } finally {
       saving.value = false;
@@ -67,7 +72,7 @@ export const useMaterialsStore = defineStore("materials", () => {
       await loadMaterials();
       return true;
     } catch (error) {
-      errorMessage.value = error instanceof ApiError ? error.message : "更新原料失敗";
+      errorMessage.value = error instanceof ApiError ? error.message : "更新原料失敗。";
       return false;
     } finally {
       saving.value = false;
@@ -82,7 +87,7 @@ export const useMaterialsStore = defineStore("materials", () => {
       await loadMaterials();
       return true;
     } catch (error) {
-      errorMessage.value = error instanceof ApiError ? error.message : "停用原料失敗";
+      errorMessage.value = error instanceof ApiError ? error.message : "停用原料失敗。";
       return false;
     } finally {
       saving.value = false;
@@ -97,7 +102,7 @@ export const useMaterialsStore = defineStore("materials", () => {
       await loadMaterials();
       return true;
     } catch (error) {
-      errorMessage.value = error instanceof ApiError ? error.message : "建立原料異動失敗";
+      errorMessage.value = error instanceof ApiError ? error.message : "建立原料異動失敗。";
       return false;
     } finally {
       saving.value = false;
@@ -110,6 +115,7 @@ export const useMaterialsStore = defineStore("materials", () => {
     deactivateItem,
     errorMessage,
     items,
+    lots,
     loadMaterials,
     loading,
     movements,

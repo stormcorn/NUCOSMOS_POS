@@ -38,9 +38,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 Claims claims = jwtService.parse(token);
                 AuthenticatedUser user = toAuthenticatedUser(claims);
-                Collection<? extends GrantedAuthority> authorities = user.roleCodes()
-                        .stream()
-                        .map(this::toAuthority)
+                Collection<? extends GrantedAuthority> authorities = java.util.stream.Stream.concat(
+                                extractActiveRoleCodes(user).stream().map(this::toRoleAuthority),
+                                user.permissionKeys().stream().map(this::toPermissionAuthority)
+                        )
                         .toList();
 
                 UsernamePasswordAuthenticationToken authentication =
@@ -62,17 +63,39 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 claims.get("storeCode", String.class),
                 claims.get("activeRole", String.class),
                 extractRoleCodes(claims),
+                extractPermissionKeys(claims),
                 claims.get("deviceCode", String.class)
         );
     }
 
-    private GrantedAuthority toAuthority(String roleCode) {
+    private GrantedAuthority toRoleAuthority(String roleCode) {
         return new SimpleGrantedAuthority("ROLE_" + roleCode.toUpperCase().replace('-', '_'));
+    }
+
+    private GrantedAuthority toPermissionAuthority(String permissionKey) {
+        return new SimpleGrantedAuthority("PERM_" + permissionKey.toUpperCase().replace('-', '_'));
+    }
+
+    private List<String> extractActiveRoleCodes(AuthenticatedUser user) {
+        if (StringUtils.hasText(user.activeRole())) {
+            return List.of(user.activeRole());
+        }
+
+        return user.roleCodes();
     }
 
     @SuppressWarnings("unchecked")
     private List<String> extractRoleCodes(Claims claims) {
         Object raw = claims.get("roleCodes");
+        if (raw instanceof List<?> list) {
+            return list.stream().map(String::valueOf).toList();
+        }
+        return List.of();
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> extractPermissionKeys(Claims claims) {
+        Object raw = claims.get("permissionKeys");
         if (raw instanceof List<?> list) {
             return list.stream().map(String::valueOf).toList();
         }

@@ -154,6 +154,75 @@ class ReportAndShiftControllerTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void shouldReturnInventoryAnalyticsForManager() throws Exception {
+        String managerToken = TestLoginSupport.loginAndExtractToken(mockMvc, """
+                {
+                  "storeCode": "TW001",
+                  "roleCode": "MANAGER",
+                  "pin": "9999",
+                  "deviceCode": "POS-TABLET-001"
+                }
+                """);
+
+        OffsetDateTime now = OffsetDateTime.now();
+        String from = now.minusDays(1).toString();
+        String to = now.plusDays(1).toString();
+
+        mockMvc.perform(get("/api/v1/reports/inventory-analytics")
+                        .header("Authorization", "Bearer " + managerToken)
+                        .param("from", from)
+                        .param("to", to))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.storeCode").value("TW001"))
+                .andExpect(jsonPath("$.data.summary.productSkuCount").isNumber())
+                .andExpect(jsonPath("$.data.summary.materialSkuCount").isNumber())
+                .andExpect(jsonPath("$.data.summary.packagingSkuCount").isNumber())
+                .andExpect(jsonPath("$.data.lowStockProducts").isArray())
+                .andExpect(jsonPath("$.data.productMovementTotals").isArray())
+                .andExpect(jsonPath("$.data.materialConsumption").isArray())
+                .andExpect(jsonPath("$.data.defectiveAndWaste").isArray());
+    }
+
+    @Test
+    void shouldReturnSalesTrendForManager() throws Exception {
+        String cashierToken = TestLoginSupport.loginAndExtractToken(mockMvc, """
+                {
+                  "storeCode": "TW001",
+                  "roleCode": "CASHIER",
+                  "pin": "1234",
+                  "deviceCode": "POS-TABLET-001"
+                }
+                """);
+        String managerToken = TestLoginSupport.loginAndExtractToken(mockMvc, """
+                {
+                  "storeCode": "TW001",
+                  "roleCode": "MANAGER",
+                  "pin": "9999",
+                  "deviceCode": "POS-TABLET-001"
+                }
+                """);
+
+        UUID orderId = TestLoginSupport.extractDataFieldAsUuid(createOrder(cashierToken, "44444444-4444-4444-4444-444444444441", 1), "id");
+        payCash(cashierToken, orderId, "8.50", "10.00");
+
+        OffsetDateTime now = OffsetDateTime.now();
+        String from = now.minusDays(2).toString();
+        String to = now.plusDays(1).toString();
+
+        mockMvc.perform(get("/api/v1/reports/sales-trend")
+                        .header("Authorization", "Bearer " + managerToken)
+                        .param("from", from)
+                        .param("to", to))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.storeCode").value("TW001"))
+                .andExpect(jsonPath("$.data.granularity").value("DAY"))
+                .andExpect(jsonPath("$.data.points").isArray())
+                .andExpect(jsonPath("$.data.points.length()").value(4))
+                .andExpect(jsonPath("$.data.points[0].bucketLabel").exists())
+                .andExpect(jsonPath("$.data.points[0].netSalesAmount").isNumber());
+    }
+
     private MvcResult createOrder(String token, String productId, int quantity) throws Exception {
         return mockMvc.perform(post("/api/v1/orders")
                         .header("Authorization", "Bearer " + token)

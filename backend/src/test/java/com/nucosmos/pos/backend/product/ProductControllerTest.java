@@ -69,13 +69,32 @@ class ProductControllerTest {
                                   "name": "Seasonal Jasmine Tea",
                                   "description": "Limited spring batch",
                                   "imageUrl": "https://example.com/seasonal-jasmine-tea.jpg",
-                                  "price": 9.50
+                                  "price": 9.50,
+                                  "materialComponents": [
+                                    {
+                                      "materialItemId": "91500000-0000-0000-0000-000000000001",
+                                      "quantity": 10
+                                    }
+                                  ],
+                                  "packagingComponents": [
+                                    {
+                                      "packagingItemId": "91700000-0000-0000-0000-000000000001",
+                                      "quantity": 1
+                                    }
+                                  ]
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.sku").value("drink-999"))
                 .andExpect(jsonPath("$.data.imageUrl").value("https://example.com/seasonal-jasmine-tea.jpg"))
                 .andExpect(jsonPath("$.data.active").value(true))
+                .andExpect(jsonPath("$.data.materialComponents.length()").value(1))
+                .andExpect(jsonPath("$.data.packagingComponents.length()").value(1))
+                .andExpect(jsonPath("$.data.recipeVersions.length()").value(1))
+                .andExpect(jsonPath("$.data.recipeVersions[0].versionNumber").value(1))
+                .andExpect(jsonPath("$.data.materialCost").value(4.5))
+                .andExpect(jsonPath("$.data.packagingCost").value(2.3))
+                .andExpect(jsonPath("$.data.totalCost").value(6.8))
                 .andReturn();
 
         String productId = TestLoginSupport.extractDataFieldAsUuid(createResult, "id").toString();
@@ -90,14 +109,33 @@ class ProductControllerTest {
                                   "name": "Workshop Pass",
                                   "description": "Updated admin product",
                                   "imageUrl": "https://example.com/workshop-pass.jpg",
-                                  "price": 29.00
+                                  "price": 29.00,
+                                  "recipeNote": "Switch to event recipe",
+                                  "materialComponents": [
+                                    {
+                                      "materialItemId": "91500000-0000-0000-0000-000000000002",
+                                      "quantity": 100
+                                    }
+                                  ],
+                                  "packagingComponents": [
+                                    {
+                                      "packagingItemId": "91700000-0000-0000-0000-000000000002",
+                                      "quantity": 1
+                                    }
+                                  ]
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.categoryCode").value("events"))
                 .andExpect(jsonPath("$.data.sku").value("event-999"))
                 .andExpect(jsonPath("$.data.imageUrl").value("https://example.com/workshop-pass.jpg"))
-                .andExpect(jsonPath("$.data.price").value(29.0));
+                .andExpect(jsonPath("$.data.price").value(29.0))
+                .andExpect(jsonPath("$.data.materialComponents[0].materialItemId").value("91500000-0000-0000-0000-000000000002"))
+                .andExpect(jsonPath("$.data.packagingComponents[0].packagingItemId").value("91700000-0000-0000-0000-000000000002"))
+                .andExpect(jsonPath("$.data.recipeVersions.length()").value(2))
+                .andExpect(jsonPath("$.data.recipeVersions[0].versionNumber").value(2))
+                .andExpect(jsonPath("$.data.recipeVersions[0].note").value("Switch to event recipe"))
+                .andExpect(jsonPath("$.data.totalCost").value(6.9));
 
         mockMvc.perform(post("/api/v1/admin/products/{productId}/deactivate", productId)
                         .header("Authorization", "Bearer " + managerToken))

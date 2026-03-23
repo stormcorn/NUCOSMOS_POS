@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 
 import { fetchCurrentSession, loginWithPin } from "@/api/auth";
 import { ApiError, setStoredAccessToken } from "@/api/http";
+import type { PermissionKey } from "@/constants/permissions";
 import type { CurrentSession, LoginRequest } from "@/types/auth";
 
 const ACCESS_TOKEN_KEY = "nucosmos.admin.accessToken";
@@ -18,10 +19,22 @@ export const useAuthStore = defineStore("auth", () => {
   const errorMessage = ref("");
 
   const isAuthenticated = computed(() => Boolean(accessToken.value && session.value));
-
   const userDisplayName = computed(() => session.value?.displayName ?? "未登入");
   const activeRole = computed(() => session.value?.activeRole ?? "");
   const currentStoreCode = computed(() => session.value?.storeCode ?? "");
+  const permissionKeys = computed(() => session.value?.permissionKeys ?? []);
+
+  function hasPermission(permissionKey: PermissionKey | string) {
+    return permissionKeys.value.includes(permissionKey as PermissionKey);
+  }
+
+  function hasAnyPermission(requiredPermissionKeys: readonly string[] = []) {
+    if (requiredPermissionKeys.length === 0) {
+      return true;
+    }
+
+    return requiredPermissionKeys.some((permissionKey) => hasPermission(permissionKey));
+  }
 
   function persistToken(token: string | null, nextExpiresAt: string | null) {
     accessToken.value = token;
@@ -104,9 +117,12 @@ export const useAuthStore = defineStore("auth", () => {
     currentStoreCode,
     errorMessage,
     expiresAt,
+    hasAnyPermission,
+    hasPermission,
     initialized,
     isAuthenticated,
     loading,
+    permissionKeys,
     session,
     signIn,
     signOut,

@@ -50,6 +50,16 @@ export type PaymentDetail = {
   paidAt: string | null;
 };
 
+export type RefundItemDetail = {
+  id: string;
+  orderItemId: string;
+  productId: string;
+  productSku: string;
+  productName: string;
+  quantity: number;
+  inventoryDisposition: string;
+};
+
 export type RefundDetail = {
   id: string;
   paymentId: string | null;
@@ -59,6 +69,7 @@ export type RefundDetail = {
   status: string;
   createdByEmployeeCode: string;
   refundedAt: string | null;
+  items: RefundItemDetail[];
 };
 
 export type OrderDetail = {

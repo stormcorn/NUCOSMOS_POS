@@ -1,3 +1,5 @@
+import type { PermissionKey } from "@/constants/permissions";
+
 export type RoleCode = "MANAGER" | "ADMIN";
 
 export type LoginRequest = {
@@ -18,6 +20,7 @@ export type AuthStaff = {
   displayName: string;
   roleCodes: string[];
   activeRole: string;
+  permissionKeys: PermissionKey[];
 };
 
 export type LoginResponse = {
@@ -36,5 +39,6 @@ export type CurrentSession = {
   storeCode: string;
   activeRole: string;
   roleCodes: string[];
+  permissionKeys: PermissionKey[];
   deviceCode: string | null;
 };

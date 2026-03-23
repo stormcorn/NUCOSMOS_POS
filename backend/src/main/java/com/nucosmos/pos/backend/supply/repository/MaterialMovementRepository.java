@@ -11,4 +11,11 @@ public interface MaterialMovementRepository extends JpaRepository<MaterialMoveme
 
     @EntityGraph(attributePaths = {"material"})
     List<MaterialMovementEntity> findTop100ByMaterial_Store_CodeOrderByOccurredAtDescCreatedAtDesc(String storeCode);
+
+    @EntityGraph(attributePaths = {"material"})
+    List<MaterialMovementEntity> findAllByMaterial_Store_CodeAndOccurredAtBetweenOrderByOccurredAtAsc(
+            String storeCode,
+            java.time.OffsetDateTime from,
+            java.time.OffsetDateTime to
+    );
 }

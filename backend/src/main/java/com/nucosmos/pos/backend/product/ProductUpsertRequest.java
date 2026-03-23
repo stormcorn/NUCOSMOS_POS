@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 public record ProductUpsertRequest(
@@ -14,6 +15,9 @@ public record ProductUpsertRequest(
         @NotBlank @Size(max = 120) String name,
         @Size(max = 500) String description,
         @Size(max = 500) String imageUrl,
-        @NotNull @DecimalMin(value = "0.01") BigDecimal price
+        @NotNull @DecimalMin(value = "0.01") BigDecimal price,
+        @Size(max = 255) String recipeNote,
+        List<ProductMaterialComponentRequest> materialComponents,
+        List<ProductPackagingComponentRequest> packagingComponents
 ) {
 }

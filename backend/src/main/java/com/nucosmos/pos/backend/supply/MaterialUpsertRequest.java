@@ -12,6 +12,8 @@ public record MaterialUpsertRequest(
         @NotBlank @Size(max = 50) String sku,
         @NotBlank @Size(max = 120) String name,
         @NotBlank @Size(max = 30) String unit,
+        @NotBlank @Size(max = 30) String purchaseUnit,
+        @NotNull @Min(1) Integer purchaseToStockRatio,
         @Size(max = 500) String description,
         @NotNull @Min(0) Integer reorderLevel,
         @DecimalMin("0.0") BigDecimal latestUnitCost

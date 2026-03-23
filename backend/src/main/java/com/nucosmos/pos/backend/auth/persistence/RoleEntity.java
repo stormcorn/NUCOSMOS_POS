@@ -36,4 +36,20 @@ public class RoleEntity extends BaseEntity {
     public boolean isActive() {
         return active;
     }
+
+    public void setCode(String code) {
+        this.code = code;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
 }

@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from "vue";
 
+import { PERMISSIONS } from "@/constants/permissions";
+import { useAuthStore } from "@/stores/auth";
 import { useInventoryStore } from "@/stores/inventory";
 import type { InventoryMovementType } from "@/types/inventory";
 
+const authStore = useAuthStore();
 const inventoryStore = useInventoryStore();
+const canEditInventory = computed(() => authStore.hasPermission(PERMISSIONS.INVENTORY_EDIT));
 
 const formError = ref("");
 const reorderDrafts = reactive<Record<string, string>>({});
@@ -80,6 +84,10 @@ function resetMovementForm() {
 }
 
 async function submitMovement() {
+  if (!canEditInventory.value) {
+    return;
+  }
+
   formError.value = "";
 
   if (!movementForm.productId) {
@@ -106,6 +114,10 @@ async function submitMovement() {
 }
 
 async function saveReorderLevel(productId: string) {
+  if (!canEditInventory.value) {
+    return;
+  }
+
   const nextValue = Number(reorderDrafts[productId] ?? "0");
   if (nextValue < 0) {
     formError.value = "補貨門檻不能小於 0";
@@ -140,6 +152,7 @@ onMounted(async () => {
       </div>
 
       <p v-if="inventoryStore.errorMessage" class="mt-4 text-sm text-brand-coral">{{ inventoryStore.errorMessage }}</p>
+      <p v-if="!canEditInventory" class="mt-4 text-sm text-amber-200">你目前只有檢視權限，不能調整補貨門檻或建立庫存異動。</p>
 
       <div class="mt-6 overflow-hidden rounded-[1.5rem] border border-white/8">
         <table class="min-w-full divide-y divide-white/8 text-left text-sm">
@@ -179,7 +192,7 @@ onMounted(async () => {
               <td class="px-4 py-4 text-white">{{ stock.quantityOnHand }}</td>
               <td class="px-4 py-4">
                 <div class="flex items-center gap-2">
-                  <input v-model="reorderDrafts[stock.productId]" type="number" min="0" class="w-20 rounded-xl border border-white/10 bg-slate-900/80 px-3 py-2 text-white outline-none" />
+                  <input v-model="reorderDrafts[stock.productId]" :disabled="!canEditInventory" type="number" min="0" class="w-20 rounded-xl border border-white/10 bg-slate-900/80 px-3 py-2 text-white outline-none disabled:cursor-not-allowed disabled:opacity-50" />
                   <button class="rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-200" @click="saveReorderLevel(stock.productId)">更新</button>
                 </div>
               </td>
@@ -292,9 +305,13 @@ onMounted(async () => {
           <p class="mt-1">補貨門檻：{{ selectedStock.reorderLevel }}</p>
         </div>
 
+        <p v-if="!canEditInventory" class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
+          目前帳號為唯讀模式，這裡僅可查看庫存資料。
+        </p>
+
         <button
           class="w-full rounded-2xl bg-brand-aqua px-5 py-3 text-sm font-semibold text-slate-950 transition hover:brightness-110 disabled:opacity-60"
-          :disabled="inventoryStore.saving"
+          :disabled="!canEditInventory || inventoryStore.saving"
           @click="submitMovement"
         >
           {{ inventoryStore.saving ? "送出中..." : "建立庫存異動" }}

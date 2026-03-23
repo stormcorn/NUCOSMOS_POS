@@ -2,6 +2,7 @@ package com.nucosmos.pos.backend.order;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public record RefundResponse(
@@ -12,6 +13,7 @@ public record RefundResponse(
         String reason,
         String status,
         String createdByEmployeeCode,
-        OffsetDateTime refundedAt
+        OffsetDateTime refundedAt,
+        List<RefundItemResponse> items
 ) {
 }

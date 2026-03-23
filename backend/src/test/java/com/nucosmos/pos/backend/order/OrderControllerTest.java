@@ -1,6 +1,23 @@
 package com.nucosmos.pos.backend.order;
 
 import com.nucosmos.pos.backend.auth.TestLoginSupport;
+import com.nucosmos.pos.backend.inventory.persistence.InventoryStockEntity;
+import com.nucosmos.pos.backend.inventory.repository.InventoryMovementRepository;
+import com.nucosmos.pos.backend.inventory.repository.InventoryStockRepository;
+import com.nucosmos.pos.backend.product.persistence.ProductEntity;
+import com.nucosmos.pos.backend.product.persistence.ProductMaterialRecipeEntity;
+import com.nucosmos.pos.backend.product.persistence.ProductPackagingRecipeEntity;
+import com.nucosmos.pos.backend.product.repository.ProductMaterialRecipeRepository;
+import com.nucosmos.pos.backend.product.repository.ProductPackagingRecipeRepository;
+import com.nucosmos.pos.backend.product.repository.ProductRepository;
+import com.nucosmos.pos.backend.store.persistence.StoreEntity;
+import com.nucosmos.pos.backend.store.repository.StoreRepository;
+import com.nucosmos.pos.backend.supply.persistence.MaterialItemEntity;
+import com.nucosmos.pos.backend.supply.persistence.PackagingItemEntity;
+import com.nucosmos.pos.backend.supply.repository.MaterialItemRepository;
+import com.nucosmos.pos.backend.supply.repository.MaterialMovementRepository;
+import com.nucosmos.pos.backend.supply.repository.PackagingItemRepository;
+import com.nucosmos.pos.backend.supply.repository.PackagingMovementRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -24,6 +41,26 @@ class OrderControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+    @Autowired
+    private StoreRepository storeRepository;
+    @Autowired
+    private ProductRepository productRepository;
+    @Autowired
+    private ProductMaterialRecipeRepository productMaterialRecipeRepository;
+    @Autowired
+    private ProductPackagingRecipeRepository productPackagingRecipeRepository;
+    @Autowired
+    private MaterialItemRepository materialItemRepository;
+    @Autowired
+    private PackagingItemRepository packagingItemRepository;
+    @Autowired
+    private InventoryStockRepository inventoryStockRepository;
+    @Autowired
+    private InventoryMovementRepository inventoryMovementRepository;
+    @Autowired
+    private MaterialMovementRepository materialMovementRepository;
+    @Autowired
+    private PackagingMovementRepository packagingMovementRepository;
 
     @Test
     void shouldCreateOrderForAuthenticatedCashier() throws Exception {
@@ -388,6 +425,84 @@ class OrderControllerTest {
     }
 
     @Test
+    void shouldCommitProductAndSupplyInventoryWhenOrderBecomesPaid() throws Exception {
+        seedRecipeForProduct(
+                UUID.fromString("44444444-4444-4444-4444-444444444441"),
+                UUID.fromString("91500000-0000-0000-0000-000000000001"),
+                UUID.fromString("91700000-0000-0000-0000-000000000001")
+        );
+
+        StoreEntity store = storeRepository.findByCodeAndStatus("TW001", "ACTIVE").orElseThrow();
+        UUID productId = UUID.fromString("44444444-4444-4444-4444-444444444441");
+        InventoryStockEntity stockBefore = inventoryStockRepository.findByStore_IdAndProduct_Id(store.getId(), productId).orElseThrow();
+        int sellableBefore = stockBefore.getSellableQuantity();
+        int materialBefore = materialItemRepository.findById(UUID.fromString("91500000-0000-0000-0000-000000000001")).orElseThrow().getQuantityOnHand();
+        int packagingBefore = packagingItemRepository.findById(UUID.fromString("91700000-0000-0000-0000-000000000001")).orElseThrow().getQuantityOnHand();
+
+        String token = TestLoginSupport.loginAndExtractToken(mockMvc, """
+                {
+                  "storeCode": "TW001",
+                  "roleCode": "CASHIER",
+                  "pin": "1234",
+                  "deviceCode": "POS-TABLET-001"
+                }
+                """);
+
+        MvcResult createResult = mockMvc.perform(post("/api/v1/orders")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "items": [
+                                    {
+                                      "productId": "44444444-4444-4444-4444-444444444441",
+                                      "quantity": 2
+                                    }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        UUID orderId = TestLoginSupport.extractDataFieldAsUuid(createResult, "id");
+
+        mockMvc.perform(post("/api/v1/orders/{orderId}/payments", orderId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "paymentMethod": "CASH",
+                                  "amount": 17.00
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.paymentStatus").value("PAID"));
+
+        InventoryStockEntity stockAfter = inventoryStockRepository.findByStore_IdAndProduct_Id(store.getId(), productId).orElseThrow();
+        MaterialItemEntity materialAfter = materialItemRepository.findById(UUID.fromString("91500000-0000-0000-0000-000000000001")).orElseThrow();
+        PackagingItemEntity packagingAfter = packagingItemRepository.findById(UUID.fromString("91700000-0000-0000-0000-000000000001")).orElseThrow();
+
+        org.assertj.core.api.Assertions.assertThat(stockAfter.getSellableQuantity()).isEqualTo(sellableBefore - 2);
+        org.assertj.core.api.Assertions.assertThat(materialAfter.getQuantityOnHand()).isEqualTo(materialBefore - 20);
+        org.assertj.core.api.Assertions.assertThat(packagingAfter.getQuantityOnHand()).isEqualTo(packagingBefore - 2);
+        org.assertj.core.api.Assertions.assertThat(
+                inventoryMovementRepository.findTop100ByStore_IdOrderByOccurredAtDescCreatedAtDesc(store.getId())
+                        .stream()
+                        .anyMatch(movement -> "ORDER".equals(movement.getReferenceType()) && orderId.equals(movement.getReferenceId()) && "SALE_OUT".equals(movement.getMovementType()))
+        ).isTrue();
+        org.assertj.core.api.Assertions.assertThat(
+                materialMovementRepository.findTop100ByMaterial_Store_CodeOrderByOccurredAtDescCreatedAtDesc("TW001")
+                        .stream()
+                        .anyMatch(movement -> "ORDER".equals(movement.getReferenceType()) && orderId.equals(movement.getReferenceId()) && "CONSUME_OUT".equals(movement.getMovementType()))
+        ).isTrue();
+        org.assertj.core.api.Assertions.assertThat(
+                packagingMovementRepository.findTop100ByPackagingItem_Store_CodeOrderByOccurredAtDescCreatedAtDesc("TW001")
+                        .stream()
+                        .anyMatch(movement -> "ORDER".equals(movement.getReferenceType()) && orderId.equals(movement.getReferenceId()) && "CONSUME_OUT".equals(movement.getMovementType()))
+        ).isTrue();
+    }
+
+    @Test
     void shouldRejectPaymentWhenReceivedAmountIsLessThanAppliedAmount() throws Exception {
         String token = TestLoginSupport.loginAndExtractToken(mockMvc, """
                 {
@@ -678,6 +793,88 @@ class OrderControllerTest {
     }
 
     @Test
+    void shouldRestoreInventoryWhenRefundIncludesRefundItems() throws Exception {
+        String token = TestLoginSupport.loginAndExtractToken(mockMvc, """
+                {
+                  "storeCode": "TW001",
+                  "roleCode": "MANAGER",
+                  "pin": "9999",
+                  "deviceCode": "POS-TABLET-001"
+                }
+                """);
+
+        StoreEntity store = storeRepository.findByCodeAndStatus("TW001", "ACTIVE").orElseThrow();
+        UUID productId = UUID.fromString("44444444-4444-4444-4444-444444444443");
+        int sellableBefore = inventoryStockRepository.findByStore_IdAndProduct_Id(store.getId(), productId)
+                .orElseThrow()
+                .getSellableQuantity();
+
+        MvcResult createResult = mockMvc.perform(post("/api/v1/orders")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "items": [
+                                    {
+                                      "productId": "44444444-4444-4444-4444-444444444443",
+                                      "quantity": 2
+                                    }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        UUID orderId = TestLoginSupport.extractDataFieldAsUuid(createResult, "id");
+        UUID orderItemId = TestLoginSupport.extractDataArrayFieldAsUuid(createResult, "items", 0, "id");
+
+        MvcResult paymentResult = mockMvc.perform(post("/api/v1/orders/{orderId}/payments", orderId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "paymentMethod": "CASH",
+                                  "amount": 10.50
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        UUID paymentId = TestLoginSupport.extractDataArrayFieldAsUuid(paymentResult, "payments", 0, "id");
+
+        mockMvc.perform(post("/api/v1/orders/{orderId}/refunds", orderId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "paymentId": "%s",
+                                  "refundMethod": "CASH",
+                                  "amount": 5.25,
+                                  "reason": "Customer returned one cup",
+                                  "items": [
+                                    {
+                                      "orderItemId": "%s",
+                                      "quantity": 1,
+                                      "inventoryDisposition": "SELLABLE"
+                                    }
+                                  ]
+                                }
+                                """.formatted(paymentId, orderItemId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.refunds[0].items.length()").value(1))
+                .andExpect(jsonPath("$.data.refunds[0].items[0].orderItemId").value(orderItemId.toString()))
+                .andExpect(jsonPath("$.data.refunds[0].items[0].inventoryDisposition").value("SELLABLE"));
+
+        InventoryStockEntity stockAfter = inventoryStockRepository.findByStore_IdAndProduct_Id(store.getId(), productId).orElseThrow();
+        org.assertj.core.api.Assertions.assertThat(stockAfter.getSellableQuantity()).isEqualTo(sellableBefore - 1);
+        org.assertj.core.api.Assertions.assertThat(
+                inventoryMovementRepository.findTop100ByStore_IdOrderByOccurredAtDescCreatedAtDesc(store.getId())
+                        .stream()
+                        .anyMatch(movement -> "REFUND".equals(movement.getReferenceType()) && "REFUND_IN".equals(movement.getMovementType()))
+        ).isTrue();
+    }
+
+    @Test
     void shouldRejectCashPaymentRefundWhenRefundMethodIsNotCash() throws Exception {
         String token = TestLoginSupport.loginAndExtractToken(mockMvc, """
                 {
@@ -794,5 +991,17 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.data.payments[0].voidedAt").isNotEmpty())
                 .andExpect(jsonPath("$.data.voidedAt").isNotEmpty())
                 .andExpect(jsonPath("$.data.voidNote").value("Cashier input mistake"));
+    }
+
+    private void seedRecipeForProduct(UUID productId, UUID materialId, UUID packagingId) {
+        ProductEntity product = productRepository.findById(productId).orElseThrow();
+        MaterialItemEntity material = materialItemRepository.findById(materialId).orElseThrow();
+        PackagingItemEntity packaging = packagingItemRepository.findById(packagingId).orElseThrow();
+
+        productMaterialRecipeRepository.deleteAllByProduct_Id(productId);
+        productPackagingRecipeRepository.deleteAllByProduct_Id(productId);
+
+        productMaterialRecipeRepository.save(ProductMaterialRecipeEntity.create(product, material, java.math.BigDecimal.valueOf(10)));
+        productPackagingRecipeRepository.save(ProductPackagingRecipeEntity.create(product, packaging, java.math.BigDecimal.ONE));
     }
 }

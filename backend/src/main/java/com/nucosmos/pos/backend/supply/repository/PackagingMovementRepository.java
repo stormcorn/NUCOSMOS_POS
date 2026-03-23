@@ -11,4 +11,11 @@ public interface PackagingMovementRepository extends JpaRepository<PackagingMove
 
     @EntityGraph(attributePaths = {"packagingItem"})
     List<PackagingMovementEntity> findTop100ByPackagingItem_Store_CodeOrderByOccurredAtDescCreatedAtDesc(String storeCode);
+
+    @EntityGraph(attributePaths = {"packagingItem"})
+    List<PackagingMovementEntity> findAllByPackagingItem_Store_CodeAndOccurredAtBetweenOrderByOccurredAtAsc(
+            String storeCode,
+            java.time.OffsetDateTime from,
+            java.time.OffsetDateTime to
+    );
 }

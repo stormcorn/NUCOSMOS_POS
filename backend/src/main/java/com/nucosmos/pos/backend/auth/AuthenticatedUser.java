@@ -10,6 +10,7 @@ public record AuthenticatedUser(
         String storeCode,
         String activeRole,
         List<String> roleCodes,
+        List<String> permissionKeys,
         String deviceCode
 ) {
 }

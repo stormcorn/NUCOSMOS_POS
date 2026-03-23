@@ -8,6 +8,7 @@ public record AuthStaffResponse(
         String employeeCode,
         String displayName,
         List<String> roleCodes,
-        String activeRole
+        String activeRole,
+        List<String> permissionKeys
 ) {
 }

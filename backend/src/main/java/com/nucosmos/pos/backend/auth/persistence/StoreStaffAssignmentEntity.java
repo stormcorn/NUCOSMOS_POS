@@ -35,4 +35,14 @@ public class StoreStaffAssignmentEntity extends BaseEntity {
     public boolean isActive() {
         return active;
     }
+
+    public void assign(StoreEntity store, UserEntity user, boolean active) {
+        this.store = store;
+        this.user = user;
+        this.active = active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
 }

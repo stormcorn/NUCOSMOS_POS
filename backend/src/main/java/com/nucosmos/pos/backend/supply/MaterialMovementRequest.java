@@ -7,11 +7,15 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 
 public record MaterialMovementRequest(
         @NotBlank String movementType,
         @NotNull @Min(1) Integer quantity,
         @DecimalMin("0.0") BigDecimal unitCost,
+        @Size(max = 80) String batchCode,
+        OffsetDateTime expiryDate,
+        OffsetDateTime manufacturedAt,
         @Size(max = 255) String note
 ) {
 }

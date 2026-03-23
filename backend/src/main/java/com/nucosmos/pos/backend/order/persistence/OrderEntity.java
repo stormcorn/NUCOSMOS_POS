@@ -15,6 +15,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -62,6 +63,18 @@ public class OrderEntity extends BaseEntity {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal refundedAmount;
 
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal cogsAmount;
+
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal refundedCogsAmount;
+
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal netCogsAmount;
+
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal grossProfitAmount;
+
     @Column(length = 500)
     private String note;
 
@@ -76,6 +89,9 @@ public class OrderEntity extends BaseEntity {
 
     @Column(length = 255)
     private String voidNote;
+
+    @Column(nullable = false)
+    private boolean inventoryCommitted;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("lineNumber ASC")
@@ -120,8 +136,13 @@ public class OrderEntity extends BaseEntity {
         this.paidAmount = paidAmount;
         this.changeAmount = changeAmount;
         this.refundedAmount = refundedAmount;
+        this.cogsAmount = BigDecimal.ZERO.setScale(2);
+        this.refundedCogsAmount = BigDecimal.ZERO.setScale(2);
+        this.netCogsAmount = BigDecimal.ZERO.setScale(2);
+        this.grossProfitAmount = totalAmount.setScale(2);
         this.note = note;
         this.orderedAt = orderedAt;
+        this.inventoryCommitted = false;
     }
 
     public void addItem(OrderItemEntity item) {
@@ -148,6 +169,7 @@ public class OrderEntity extends BaseEntity {
 
     public void applyRefund(BigDecimal refundedAmount, OffsetDateTime refundedAt) {
         this.refundedAmount = refundedAmount;
+        recalculateProfitMetrics();
         if (refundedAmount.compareTo(this.paidAmount) >= 0) {
             this.status = "REFUNDED";
             this.paymentStatus = "REFUNDED";
@@ -164,6 +186,20 @@ public class OrderEntity extends BaseEntity {
         this.voidedAt = voidedAt;
         this.voidNote = voidNote;
         this.closedAt = voidedAt;
+    }
+
+    public void markInventoryCommitted() {
+        this.inventoryCommitted = true;
+    }
+
+    public void applyCostOfGoods(BigDecimal cogsAmount) {
+        this.cogsAmount = cogsAmount;
+        recalculateProfitMetrics();
+    }
+
+    public void applyRefundedCostOfGoods(BigDecimal refundedCogsAmount) {
+        this.refundedCogsAmount = refundedCogsAmount;
+        recalculateProfitMetrics();
     }
 
     public StoreEntity getStore() {
@@ -214,6 +250,22 @@ public class OrderEntity extends BaseEntity {
         return refundedAmount;
     }
 
+    public BigDecimal getCogsAmount() {
+        return cogsAmount;
+    }
+
+    public BigDecimal getRefundedCogsAmount() {
+        return refundedCogsAmount;
+    }
+
+    public BigDecimal getNetCogsAmount() {
+        return netCogsAmount;
+    }
+
+    public BigDecimal getGrossProfitAmount() {
+        return grossProfitAmount;
+    }
+
     public String getNote() {
         return note;
     }
@@ -234,6 +286,10 @@ public class OrderEntity extends BaseEntity {
         return voidNote;
     }
 
+    public boolean isInventoryCommitted() {
+        return inventoryCommitted;
+    }
+
     public List<OrderItemEntity> getItems() {
         return items;
     }
@@ -244,5 +300,11 @@ public class OrderEntity extends BaseEntity {
 
     public List<RefundEntity> getRefunds() {
         return refunds;
+    }
+
+    private void recalculateProfitMetrics() {
+        this.netCogsAmount = cogsAmount.subtract(refundedCogsAmount).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal netSalesAmount = totalAmount.subtract(refundedAmount).setScale(2, RoundingMode.HALF_UP);
+        this.grossProfitAmount = netSalesAmount.subtract(netCogsAmount).setScale(2, RoundingMode.HALF_UP);
     }
 }

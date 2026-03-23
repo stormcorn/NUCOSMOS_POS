@@ -14,6 +14,11 @@ public record SalesSummaryResponse(
         BigDecimal netSalesAmount,
         BigDecimal cashSalesAmount,
         BigDecimal cardSalesAmount,
-        BigDecimal averageOrderAmount
+        BigDecimal averageOrderAmount,
+        BigDecimal cogsAmount,
+        BigDecimal refundedCogsAmount,
+        BigDecimal netCogsAmount,
+        BigDecimal grossProfitAmount,
+        BigDecimal grossMarginRate
 ) {
 }

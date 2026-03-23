@@ -26,4 +26,9 @@ public class UserRoleEntity extends BaseEntity {
     public RoleEntity getRole() {
         return role;
     }
+
+    public void assign(UserEntity user, RoleEntity role) {
+        this.user = user;
+        this.role = role;
+    }
 }

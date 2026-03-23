@@ -1,3 +1,37 @@
+export type ProductMaterialComponent = {
+  materialItemId: string;
+  sku: string;
+  name: string;
+  unit: string;
+  quantity: number;
+  latestUnitCost: number | null;
+  lineCost: number;
+};
+
+export type ProductPackagingComponent = {
+  packagingItemId: string;
+  sku: string;
+  name: string;
+  unit: string;
+  specification: string | null;
+  quantity: number;
+  latestUnitCost: number | null;
+  lineCost: number;
+};
+
+export type ProductRecipeVersion = {
+  id: string | null;
+  versionNumber: number;
+  status: string;
+  note: string | null;
+  effectiveAt: string;
+  materialComponentCount: number;
+  packagingComponentCount: number;
+  materialCost: number;
+  packagingCost: number;
+  totalCost: number;
+};
+
 export type ProductCategory = {
   id: string;
   code: string;
@@ -23,6 +57,12 @@ export type ProductAdminItem = {
   imageUrl: string | null;
   price: number;
   active: boolean;
+  materialComponents: ProductMaterialComponent[];
+  packagingComponents: ProductPackagingComponent[];
+  recipeVersions: ProductRecipeVersion[];
+  materialCost: number;
+  packagingCost: number;
+  totalCost: number;
 };
 
 export type ProductUpsertRequest = {
@@ -32,4 +72,13 @@ export type ProductUpsertRequest = {
   description: string;
   imageUrl: string;
   price: number;
+  recipeNote?: string;
+  materialComponents: Array<{
+    materialItemId: string;
+    quantity: number;
+  }>;
+  packagingComponents: Array<{
+    packagingItemId: string;
+    quantity: number;
+  }>;
 };

@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from "vue";
 
+import { PERMISSIONS } from "@/constants/permissions";
+import { useAuthStore } from "@/stores/auth";
 import { useInventoryStore } from "@/stores/inventory";
 
+const authStore = useAuthStore();
 const inventoryStore = useInventoryStore();
+const canEditInventory = computed(() => authStore.hasPermission(PERMISSIONS.INVENTORY_EDIT));
 
 const selectedProductId = ref("");
 const actionError = ref("");
@@ -58,6 +62,10 @@ function resetActionForm() {
 }
 
 async function handleScrap() {
+  if (!canEditInventory.value) {
+    return;
+  }
+
   actionError.value = "";
 
   if (!selectedProductId.value) {
@@ -82,6 +90,10 @@ async function handleScrap() {
 }
 
 async function handleRestore() {
+  if (!canEditInventory.value) {
+    return;
+  }
+
   actionError.value = "";
 
   if (!selectedProductId.value) {
@@ -137,6 +149,7 @@ onMounted(async () => {
       </div>
 
       <p v-if="inventoryStore.errorMessage" class="mt-4 text-sm text-brand-coral">{{ inventoryStore.errorMessage }}</p>
+      <p v-if="!canEditInventory" class="mt-4 text-sm text-amber-200">你目前只有檢視權限，不能執行瑕疵報廢或轉回可售。</p>
 
       <div class="mt-6 overflow-hidden rounded-[1.5rem] border border-white/8">
         <table class="min-w-full divide-y divide-white/8 text-left text-sm">
@@ -215,11 +228,15 @@ onMounted(async () => {
             <p class="mt-1">可售庫存：{{ selectedStock.sellableQuantity }}</p>
           </div>
 
+          <p v-if="!canEditInventory" class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
+            目前帳號為唯讀模式，這裡僅可查看瑕疵庫存資料。
+          </p>
+
           <div class="grid gap-3 sm:grid-cols-2">
-            <button class="rounded-2xl border border-brand-coral/20 bg-brand-coral/10 px-5 py-3 text-sm font-semibold text-brand-coral" :disabled="inventoryStore.saving" @click="handleScrap">
+            <button class="rounded-2xl border border-brand-coral/20 bg-brand-coral/10 px-5 py-3 text-sm font-semibold text-brand-coral" :disabled="!canEditInventory || inventoryStore.saving" @click="handleScrap">
               報廢處理
             </button>
-            <button class="rounded-2xl bg-brand-aqua px-5 py-3 text-sm font-semibold text-slate-950" :disabled="inventoryStore.saving" @click="handleRestore">
+            <button class="rounded-2xl bg-brand-aqua px-5 py-3 text-sm font-semibold text-slate-950" :disabled="!canEditInventory || inventoryStore.saving" @click="handleRestore">
               轉回可售
             </button>
           </div>

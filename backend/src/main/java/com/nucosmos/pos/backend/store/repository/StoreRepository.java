@@ -11,5 +11,7 @@ public interface StoreRepository extends JpaRepository<StoreEntity, UUID> {
 
     Optional<StoreEntity> findByCodeAndStatus(String code, String status);
 
+    List<StoreEntity> findAllByCodeIn(List<String> codes);
+
     List<StoreEntity> findAllByOrderByCodeAsc();
 }

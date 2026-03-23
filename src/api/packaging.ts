@@ -1,6 +1,7 @@
 import { apiRequest } from "@/api/http";
 import type {
   PackagingAdminItem,
+  PackagingLotItem,
   PackagingMovementItem,
   PackagingMovementRequest,
   PackagingUpsertRequest,
@@ -12,6 +13,10 @@ export function fetchPackagingItems() {
 
 export function fetchPackagingMovements() {
   return apiRequest<PackagingMovementItem[]>("/api/v1/admin/packaging-items/movements");
+}
+
+export function fetchPackagingLots() {
+  return apiRequest<PackagingLotItem[]>("/api/v1/admin/packaging-items/lots");
 }
 
 export function createPackagingItem(payload: PackagingUpsertRequest) {

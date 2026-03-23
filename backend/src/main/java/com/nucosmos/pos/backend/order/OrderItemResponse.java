@@ -12,6 +12,9 @@ public record OrderItemResponse(
         BigDecimal unitPrice,
         int quantity,
         BigDecimal lineTotalAmount,
+        BigDecimal unitCostAmount,
+        BigDecimal lineCostAmount,
+        BigDecimal refundedCostAmount,
         String note
 ) {
 }

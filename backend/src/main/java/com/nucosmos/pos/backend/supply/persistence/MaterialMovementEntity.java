@@ -11,6 +11,7 @@ import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "material_movements")
@@ -42,6 +43,12 @@ public class MaterialMovementEntity extends BaseEntity {
     @Column(length = 255)
     private String note;
 
+    @Column(length = 30)
+    private String referenceType;
+
+    @Column
+    private UUID referenceId;
+
     @Column(nullable = false)
     private OffsetDateTime occurredAt;
 
@@ -57,6 +64,8 @@ public class MaterialMovementEntity extends BaseEntity {
             int quantityAfter,
             BigDecimal unitCost,
             String note,
+            String referenceType,
+            UUID referenceId,
             OffsetDateTime occurredAt
     ) {
         this.material = material;
@@ -67,6 +76,8 @@ public class MaterialMovementEntity extends BaseEntity {
         this.quantityAfter = quantityAfter;
         this.unitCost = unitCost;
         this.note = note;
+        this.referenceType = referenceType;
+        this.referenceId = referenceId;
         this.occurredAt = occurredAt;
     }
 
@@ -96,6 +107,14 @@ public class MaterialMovementEntity extends BaseEntity {
 
     public String getNote() {
         return note;
+    }
+
+    public String getReferenceType() {
+        return referenceType;
+    }
+
+    public UUID getReferenceId() {
+        return referenceId;
     }
 
     public OffsetDateTime getOccurredAt() {

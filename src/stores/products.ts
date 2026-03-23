@@ -1,6 +1,9 @@
 import { computed, ref } from "vue";
 import { defineStore } from "pinia";
 
+import { ApiError } from "@/api/http";
+import { fetchMaterials } from "@/api/materials";
+import { fetchPackagingItems } from "@/api/packaging";
 import {
   createProduct as createProductRequest,
   deactivateProduct as deactivateProductRequest,
@@ -8,12 +11,15 @@ import {
   fetchProducts,
   updateProduct as updateProductRequest,
 } from "@/api/products";
-import { ApiError } from "@/api/http";
+import type { MaterialAdminItem } from "@/types/materials";
+import type { PackagingAdminItem } from "@/types/packaging";
 import type { ProductAdminItem, ProductCategory, ProductUpsertRequest } from "@/types/product";
 
 export const useProductStore = defineStore("products", () => {
   const categories = ref<ProductCategory[]>([]);
   const products = ref<ProductAdminItem[]>([]);
+  const materials = ref<MaterialAdminItem[]>([]);
+  const packagingItems = ref<PackagingAdminItem[]>([]);
   const loading = ref(false);
   const saving = ref(false);
   const errorMessage = ref("");
@@ -52,6 +58,21 @@ export const useProductStore = defineStore("products", () => {
     }
   }
 
+  async function loadRecipeOptions() {
+    errorMessage.value = "";
+
+    try {
+      const [nextMaterials, nextPackagingItems] = await Promise.all([
+        fetchMaterials(),
+        fetchPackagingItems(),
+      ]);
+      materials.value = nextMaterials.filter((item) => item.active);
+      packagingItems.value = nextPackagingItems.filter((item) => item.active);
+    } catch (error) {
+      errorMessage.value = error instanceof ApiError ? error.message : "無法取得原料或包裝資料";
+    }
+  }
+
   async function loadCatalog(filter = activeFilter.value) {
     loading.value = true;
     errorMessage.value = "";
@@ -59,14 +80,18 @@ export const useProductStore = defineStore("products", () => {
 
     try {
       const active = filter === "all" ? undefined : filter === "active";
-      const [nextCategories, nextProducts] = await Promise.all([
+      const [nextCategories, nextProducts, nextMaterials, nextPackagingItems] = await Promise.all([
         fetchProductCategories(),
         fetchProducts(active),
+        fetchMaterials(),
+        fetchPackagingItems(),
       ]);
       categories.value = nextCategories;
       products.value = nextProducts;
+      materials.value = nextMaterials.filter((item) => item.active);
+      packagingItems.value = nextPackagingItems.filter((item) => item.active);
     } catch (error) {
-      errorMessage.value = error instanceof ApiError ? error.message : "無法取得商品資料";
+      errorMessage.value = error instanceof ApiError ? error.message : "無法載入商品管理資料";
     } finally {
       loading.value = false;
     }
@@ -130,7 +155,10 @@ export const useProductStore = defineStore("products", () => {
     loadCatalog,
     loadCategories,
     loadProducts,
+    loadRecipeOptions,
     loading,
+    materials,
+    packagingItems,
     products,
     saving,
     updateProduct,

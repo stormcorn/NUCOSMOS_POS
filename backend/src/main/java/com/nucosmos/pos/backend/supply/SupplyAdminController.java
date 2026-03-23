@@ -37,6 +37,11 @@ public class SupplyAdminController {
         return ApiResponse.ok(supplyAdminService.listMaterialMovements(currentUser(authentication)));
     }
 
+    @GetMapping("/materials/lots")
+    public ApiResponse<List<MaterialLotResponse>> listMaterialLots(Authentication authentication) {
+        return ApiResponse.ok(supplyAdminService.listMaterialLots(currentUser(authentication)));
+    }
+
     @PostMapping("/materials")
     public ApiResponse<MaterialAdminResponse> createMaterial(
             Authentication authentication,
@@ -81,6 +86,11 @@ public class SupplyAdminController {
         return ApiResponse.ok(supplyAdminService.listPackagingMovements(currentUser(authentication)));
     }
 
+    @GetMapping("/packaging-items/lots")
+    public ApiResponse<List<PackagingLotResponse>> listPackagingLots(Authentication authentication) {
+        return ApiResponse.ok(supplyAdminService.listPackagingLots(currentUser(authentication)));
+    }
+
     @PostMapping("/packaging-items")
     public ApiResponse<PackagingAdminResponse> createPackagingItem(
             Authentication authentication,
@@ -113,6 +123,63 @@ public class SupplyAdminController {
             @Valid @RequestBody PackagingMovementRequest request
     ) {
         return ApiResponse.ok(supplyAdminService.createPackagingMovement(currentUser(authentication), packagingItemId, request));
+    }
+
+    @GetMapping("/suppliers")
+    public ApiResponse<List<SupplierResponse>> listSuppliers(Authentication authentication) {
+        return ApiResponse.ok(supplyAdminService.listSuppliers(currentUser(authentication)));
+    }
+
+    @PostMapping("/suppliers")
+    public ApiResponse<SupplierResponse> createSupplier(
+            Authentication authentication,
+            @Valid @RequestBody SupplierUpsertRequest request
+    ) {
+        return ApiResponse.ok(supplyAdminService.createSupplier(currentUser(authentication), request));
+    }
+
+    @PutMapping("/suppliers/{supplierId}")
+    public ApiResponse<SupplierResponse> updateSupplier(
+            Authentication authentication,
+            @PathVariable UUID supplierId,
+            @Valid @RequestBody SupplierUpsertRequest request
+    ) {
+        return ApiResponse.ok(supplyAdminService.updateSupplier(currentUser(authentication), supplierId, request));
+    }
+
+    @PostMapping("/suppliers/{supplierId}/deactivate")
+    public ApiResponse<SupplierResponse> deactivateSupplier(
+            Authentication authentication,
+            @PathVariable UUID supplierId
+    ) {
+        return ApiResponse.ok(supplyAdminService.deactivateSupplier(currentUser(authentication), supplierId));
+    }
+
+    @GetMapping("/replenishment-suggestions")
+    public ApiResponse<List<ReplenishmentSuggestionResponse>> listReplenishmentSuggestions(Authentication authentication) {
+        return ApiResponse.ok(supplyAdminService.listReplenishmentSuggestions(currentUser(authentication)));
+    }
+
+    @GetMapping("/purchase-orders")
+    public ApiResponse<List<PurchaseOrderResponse>> listPurchaseOrders(Authentication authentication) {
+        return ApiResponse.ok(supplyAdminService.listPurchaseOrders(currentUser(authentication)));
+    }
+
+    @PostMapping("/purchase-orders")
+    public ApiResponse<PurchaseOrderResponse> createPurchaseOrder(
+            Authentication authentication,
+            @Valid @RequestBody PurchaseOrderCreateRequest request
+    ) {
+        return ApiResponse.ok(supplyAdminService.createPurchaseOrder(currentUser(authentication), request));
+    }
+
+    @PostMapping("/purchase-orders/{purchaseOrderId}/receive")
+    public ApiResponse<PurchaseOrderResponse> receivePurchaseOrder(
+            Authentication authentication,
+            @PathVariable UUID purchaseOrderId,
+            @Valid @RequestBody PurchaseOrderReceiveRequest request
+    ) {
+        return ApiResponse.ok(supplyAdminService.receivePurchaseOrder(currentUser(authentication), purchaseOrderId, request));
     }
 
     private AuthenticatedUser currentUser(Authentication authentication) {

@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from "vue";
 
+import { PERMISSIONS } from "@/constants/permissions";
+import { useAuthStore } from "@/stores/auth";
 import { useProductCategoryStore } from "@/stores/product-categories";
 import type { ProductCategory } from "@/types/product";
 
+const authStore = useAuthStore();
 const categoryStore = useProductCategoryStore();
 
 const isFormOpen = ref(false);
@@ -14,6 +17,7 @@ const form = reactive({
   name: "",
   displayOrder: "0",
 });
+const canEditCategories = computed(() => authStore.hasPermission(PERMISSIONS.PRODUCTS_EDIT));
 
 const titleText = computed(() => (editingCategoryId.value ? "編輯分類" : "新增分類"));
 
@@ -26,11 +30,17 @@ function resetForm() {
 }
 
 function openCreateForm() {
+  if (!canEditCategories.value) {
+    return;
+  }
   resetForm();
   isFormOpen.value = true;
 }
 
 function openEditForm(category: ProductCategory) {
+  if (!canEditCategories.value) {
+    return;
+  }
   editingCategoryId.value = category.id;
   form.code = category.code;
   form.name = category.name;
@@ -39,6 +49,9 @@ function openEditForm(category: ProductCategory) {
 }
 
 async function submitForm() {
+  if (!canEditCategories.value) {
+    return;
+  }
   formError.value = "";
 
   if (!form.code.trim() || !form.name.trim()) {
@@ -68,6 +81,9 @@ async function submitForm() {
 }
 
 async function deactivate(category: ProductCategory) {
+  if (!canEditCategories.value) {
+    return;
+  }
   const confirmed = window.confirm(`確認要停用分類「${category.name}」嗎？`);
   if (!confirmed) {
     return;
@@ -90,7 +106,7 @@ onMounted(async () => {
           <h3 class="mt-2 text-2xl font-semibold text-white">商品分類管理</h3>
           <p class="mt-2 text-sm text-slate-400">集中維護商品分類代碼、名稱、排序與啟用狀態。</p>
         </div>
-        <button class="rounded-2xl bg-brand-aqua px-5 py-3 text-sm font-semibold text-slate-950 transition hover:brightness-110" @click="openCreateForm">
+        <button v-if="canEditCategories" class="rounded-2xl bg-brand-aqua px-5 py-3 text-sm font-semibold text-slate-950 transition hover:brightness-110" @click="openCreateForm">
           新增分類
         </button>
       </div>
@@ -126,10 +142,11 @@ onMounted(async () => {
               </td>
               <td class="px-4 py-4">
                 <div class="flex gap-2">
-                  <button class="rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-200 transition hover:border-brand-aqua/30 hover:text-white" @click="openEditForm(category)">
+                  <button v-if="canEditCategories" class="rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-200 transition hover:border-brand-aqua/30 hover:text-white" @click="openEditForm(category)">
                     編輯
                   </button>
                   <button
+                    v-if="canEditCategories"
                     class="rounded-xl border border-brand-coral/20 px-3 py-2 text-xs text-brand-coral transition hover:bg-brand-coral/10 disabled:opacity-40"
                     :disabled="!category.active"
                     @click="deactivate(category)"
@@ -161,7 +178,11 @@ onMounted(async () => {
         </button>
       </div>
 
-      <div v-if="isFormOpen" class="mt-6 space-y-4">
+      <div v-if="!canEditCategories" class="mt-6 rounded-[1.5rem] border border-white/8 bg-white/4 p-4 text-sm text-slate-300">
+        你目前只有查看商品分類的權限，不能新增、編輯或停用分類。
+      </div>
+
+      <div v-else-if="isFormOpen" class="mt-6 space-y-4">
         <div v-if="formError" class="rounded-2xl border border-brand-coral/20 bg-brand-coral/10 px-4 py-3 text-sm text-brand-coral">
           {{ formError }}
         </div>

@@ -28,6 +28,12 @@ public class MaterialItemEntity extends BaseEntity {
     @Column(nullable = false, length = 30)
     private String unit;
 
+    @Column(nullable = false, length = 30)
+    private String purchaseUnit;
+
+    @Column(nullable = false)
+    private int purchaseToStockRatio;
+
     @Column(length = 500)
     private String description;
 
@@ -51,6 +57,8 @@ public class MaterialItemEntity extends BaseEntity {
             String sku,
             String name,
             String unit,
+            String purchaseUnit,
+            int purchaseToStockRatio,
             String description,
             int reorderLevel,
             BigDecimal latestUnitCost
@@ -60,6 +68,8 @@ public class MaterialItemEntity extends BaseEntity {
         entity.sku = sku;
         entity.name = name;
         entity.unit = unit;
+        entity.purchaseUnit = purchaseUnit;
+        entity.purchaseToStockRatio = purchaseToStockRatio;
         entity.description = normalize(description);
         entity.quantityOnHand = 0;
         entity.reorderLevel = reorderLevel;
@@ -72,6 +82,8 @@ public class MaterialItemEntity extends BaseEntity {
             String sku,
             String name,
             String unit,
+            String purchaseUnit,
+            int purchaseToStockRatio,
             String description,
             int reorderLevel,
             BigDecimal latestUnitCost
@@ -79,6 +91,8 @@ public class MaterialItemEntity extends BaseEntity {
         this.sku = sku;
         this.name = name;
         this.unit = unit;
+        this.purchaseUnit = purchaseUnit;
+        this.purchaseToStockRatio = purchaseToStockRatio;
         this.description = normalize(description);
         this.reorderLevel = reorderLevel;
         this.latestUnitCost = latestUnitCost;
@@ -113,6 +127,14 @@ public class MaterialItemEntity extends BaseEntity {
 
     public String getDescription() {
         return description;
+    }
+
+    public String getPurchaseUnit() {
+        return purchaseUnit;
+    }
+
+    public int getPurchaseToStockRatio() {
+        return purchaseToStockRatio;
     }
 
     public int getQuantityOnHand() {

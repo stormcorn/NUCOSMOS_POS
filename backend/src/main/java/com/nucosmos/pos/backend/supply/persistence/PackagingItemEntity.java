@@ -28,6 +28,12 @@ public class PackagingItemEntity extends BaseEntity {
     @Column(nullable = false, length = 30)
     private String unit;
 
+    @Column(nullable = false, length = 30)
+    private String purchaseUnit;
+
+    @Column(nullable = false)
+    private int purchaseToStockRatio;
+
     @Column(length = 120)
     private String specification;
 
@@ -54,6 +60,8 @@ public class PackagingItemEntity extends BaseEntity {
             String sku,
             String name,
             String unit,
+            String purchaseUnit,
+            int purchaseToStockRatio,
             String specification,
             String description,
             int reorderLevel,
@@ -64,6 +72,8 @@ public class PackagingItemEntity extends BaseEntity {
         entity.sku = sku;
         entity.name = name;
         entity.unit = unit;
+        entity.purchaseUnit = purchaseUnit;
+        entity.purchaseToStockRatio = purchaseToStockRatio;
         entity.specification = normalize(specification);
         entity.description = normalize(description);
         entity.quantityOnHand = 0;
@@ -77,6 +87,8 @@ public class PackagingItemEntity extends BaseEntity {
             String sku,
             String name,
             String unit,
+            String purchaseUnit,
+            int purchaseToStockRatio,
             String specification,
             String description,
             int reorderLevel,
@@ -85,6 +97,8 @@ public class PackagingItemEntity extends BaseEntity {
         this.sku = sku;
         this.name = name;
         this.unit = unit;
+        this.purchaseUnit = purchaseUnit;
+        this.purchaseToStockRatio = purchaseToStockRatio;
         this.specification = normalize(specification);
         this.description = normalize(description);
         this.reorderLevel = reorderLevel;
@@ -120,6 +134,14 @@ public class PackagingItemEntity extends BaseEntity {
 
     public String getSpecification() {
         return specification;
+    }
+
+    public String getPurchaseUnit() {
+        return purchaseUnit;
+    }
+
+    public int getPurchaseToStockRatio() {
+        return purchaseToStockRatio;
     }
 
     public String getDescription() {

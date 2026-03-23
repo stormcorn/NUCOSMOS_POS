@@ -1,8 +1,10 @@
 package com.nucosmos.pos.backend.product;
 
+import com.nucosmos.pos.backend.auth.AuthenticatedUser;
 import com.nucosmos.pos.backend.common.api.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -52,25 +54,36 @@ public class ProductAdminController {
     }
 
     @GetMapping("/products")
-    public ApiResponse<List<ProductAdminResponse>> listProducts(@RequestParam(required = false) Boolean active) {
-        return ApiResponse.ok(productAdminService.listProducts(active));
+    public ApiResponse<List<ProductAdminResponse>> listProducts(
+            Authentication authentication,
+            @RequestParam(required = false) Boolean active
+    ) {
+        return ApiResponse.ok(productAdminService.listProducts(currentUser(authentication), active));
     }
 
     @PostMapping("/products")
-    public ApiResponse<ProductAdminResponse> createProduct(@Valid @RequestBody ProductUpsertRequest request) {
-        return ApiResponse.ok(productAdminService.createProduct(request));
+    public ApiResponse<ProductAdminResponse> createProduct(
+            Authentication authentication,
+            @Valid @RequestBody ProductUpsertRequest request
+    ) {
+        return ApiResponse.ok(productAdminService.createProduct(currentUser(authentication), request));
     }
 
     @PutMapping("/products/{productId}")
     public ApiResponse<ProductAdminResponse> updateProduct(
+            Authentication authentication,
             @PathVariable UUID productId,
             @Valid @RequestBody ProductUpsertRequest request
     ) {
-        return ApiResponse.ok(productAdminService.updateProduct(productId, request));
+        return ApiResponse.ok(productAdminService.updateProduct(currentUser(authentication), productId, request));
     }
 
     @PostMapping("/products/{productId}/deactivate")
     public ApiResponse<ProductAdminResponse> deactivateProduct(@PathVariable UUID productId) {
         return ApiResponse.ok(productAdminService.deactivateProduct(productId));
+    }
+
+    private AuthenticatedUser currentUser(Authentication authentication) {
+        return (AuthenticatedUser) authentication.getPrincipal();
     }
 }
