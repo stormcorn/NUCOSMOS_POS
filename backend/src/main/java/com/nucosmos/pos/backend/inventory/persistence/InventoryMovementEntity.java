@@ -34,6 +34,9 @@ public class InventoryMovementEntity extends BaseEntity {
     @Column(nullable = false, length = 30)
     private String movementType;
 
+    @Column(nullable = false, length = 20)
+    private String stockBucket;
+
     @Column(nullable = false)
     private int quantity;
 
@@ -43,8 +46,23 @@ public class InventoryMovementEntity extends BaseEntity {
     @Column(nullable = false)
     private int quantityAfter;
 
+    @Column(nullable = false)
+    private int sellableQuantityDelta;
+
+    @Column(nullable = false)
+    private int defectiveQuantityDelta;
+
+    @Column(nullable = false)
+    private int sellableQuantityAfter;
+
+    @Column(nullable = false)
+    private int defectiveQuantityAfter;
+
     @Column(precision = 10, scale = 2)
     private BigDecimal unitCost;
+
+    @Column(length = 50)
+    private String reasonCode;
 
     @Column(length = 255)
     private String note;
@@ -66,10 +84,16 @@ public class InventoryMovementEntity extends BaseEntity {
             ProductEntity product,
             UserEntity createdByUser,
             String movementType,
+            String stockBucket,
             int quantity,
             int quantityDelta,
             int quantityAfter,
+            int sellableQuantityDelta,
+            int defectiveQuantityDelta,
+            int sellableQuantityAfter,
+            int defectiveQuantityAfter,
             BigDecimal unitCost,
+            String reasonCode,
             String note,
             String referenceType,
             UUID referenceId,
@@ -79,10 +103,16 @@ public class InventoryMovementEntity extends BaseEntity {
         this.product = product;
         this.createdByUser = createdByUser;
         this.movementType = movementType;
+        this.stockBucket = stockBucket;
         this.quantity = quantity;
         this.quantityDelta = quantityDelta;
         this.quantityAfter = quantityAfter;
+        this.sellableQuantityDelta = sellableQuantityDelta;
+        this.defectiveQuantityDelta = defectiveQuantityDelta;
+        this.sellableQuantityAfter = sellableQuantityAfter;
+        this.defectiveQuantityAfter = defectiveQuantityAfter;
         this.unitCost = unitCost;
+        this.reasonCode = reasonCode;
         this.note = note;
         this.referenceType = referenceType;
         this.referenceId = referenceId;
@@ -101,6 +131,10 @@ public class InventoryMovementEntity extends BaseEntity {
         return quantity;
     }
 
+    public String getStockBucket() {
+        return stockBucket;
+    }
+
     public int getQuantityDelta() {
         return quantityDelta;
     }
@@ -109,8 +143,28 @@ public class InventoryMovementEntity extends BaseEntity {
         return quantityAfter;
     }
 
+    public int getSellableQuantityDelta() {
+        return sellableQuantityDelta;
+    }
+
+    public int getDefectiveQuantityDelta() {
+        return defectiveQuantityDelta;
+    }
+
+    public int getSellableQuantityAfter() {
+        return sellableQuantityAfter;
+    }
+
+    public int getDefectiveQuantityAfter() {
+        return defectiveQuantityAfter;
+    }
+
     public BigDecimal getUnitCost() {
         return unitCost;
+    }
+
+    public String getReasonCode() {
+        return reasonCode;
     }
 
     public String getNote() {

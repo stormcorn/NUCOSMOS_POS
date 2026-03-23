@@ -43,6 +43,18 @@ public class InventoryController {
         return ApiResponse.ok(inventoryService.listMovements(user));
     }
 
+    @GetMapping("/defective/stocks")
+    public ApiResponse<List<InventoryStockResponse>> listDefectiveStocks(Authentication authentication) {
+        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+        return ApiResponse.ok(inventoryService.listDefectiveStocks(user));
+    }
+
+    @GetMapping("/defective/movements")
+    public ApiResponse<List<InventoryMovementResponse>> listDefectiveMovements(Authentication authentication) {
+        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+        return ApiResponse.ok(inventoryService.listDefectiveMovements(user));
+    }
+
     @PostMapping("/movements")
     public ApiResponse<InventoryMovementResponse> createMovement(
             Authentication authentication,
@@ -50,6 +62,26 @@ public class InventoryController {
     ) {
         AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
         return ApiResponse.ok(inventoryService.createMovement(user, request));
+    }
+
+    @PostMapping("/defective/{productId}/scrap")
+    public ApiResponse<InventoryMovementResponse> scrapDefectiveStock(
+            Authentication authentication,
+            @PathVariable UUID productId,
+            @Valid @RequestBody DefectiveInventoryActionRequest request
+    ) {
+        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+        return ApiResponse.ok(inventoryService.scrapDefectiveStock(user, productId, request));
+    }
+
+    @PostMapping("/defective/{productId}/restore")
+    public ApiResponse<InventoryMovementResponse> restoreDefectiveStock(
+            Authentication authentication,
+            @PathVariable UUID productId,
+            @Valid @RequestBody DefectiveInventoryActionRequest request
+    ) {
+        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+        return ApiResponse.ok(inventoryService.restoreDefectiveStock(user, productId, request));
     }
 
     @PutMapping("/stocks/{productId}/reorder-level")

@@ -4,15 +4,26 @@ import { defineStore } from "pinia";
 import { ApiError } from "@/api/http";
 import {
   createInventoryMovement,
+  fetchDefectiveInventoryMovements,
+  fetchDefectiveInventoryStocks,
   fetchInventoryMovements,
   fetchInventoryStocks,
+  restoreDefectiveInventory,
+  scrapDefectiveInventory,
   updateInventoryReorderLevel,
 } from "@/api/inventory";
-import type { InventoryMovementRequest, InventoryMovementItem, InventoryStockItem } from "@/types/inventory";
+import type {
+  DefectiveInventoryActionRequest,
+  InventoryMovementItem,
+  InventoryMovementRequest,
+  InventoryStockItem,
+} from "@/types/inventory";
 
 export const useInventoryStore = defineStore("inventory", () => {
   const stocks = ref<InventoryStockItem[]>([]);
   const movements = ref<InventoryMovementItem[]>([]);
+  const defectiveStocks = ref<InventoryStockItem[]>([]);
+  const defectiveMovements = ref<InventoryMovementItem[]>([]);
   const loading = ref(false);
   const saving = ref(false);
   const errorMessage = ref("");
@@ -30,7 +41,25 @@ export const useInventoryStore = defineStore("inventory", () => {
       stocks.value = nextStocks;
       movements.value = nextMovements;
     } catch (error) {
-      errorMessage.value = error instanceof ApiError ? error.message : "載入庫存資料失敗。";
+      errorMessage.value = error instanceof ApiError ? error.message : "載入庫存資料失敗";
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  async function loadDefectiveInventory() {
+    loading.value = true;
+    errorMessage.value = "";
+
+    try {
+      const [nextStocks, nextMovements] = await Promise.all([
+        fetchDefectiveInventoryStocks(),
+        fetchDefectiveInventoryMovements(),
+      ]);
+      defectiveStocks.value = nextStocks;
+      defectiveMovements.value = nextMovements;
+    } catch (error) {
+      errorMessage.value = error instanceof ApiError ? error.message : "載入瑕疵庫存資料失敗";
     } finally {
       loading.value = false;
     }
@@ -50,7 +79,7 @@ export const useInventoryStore = defineStore("inventory", () => {
       await loadInventory();
       return true;
     } catch (error) {
-      errorMessage.value = error instanceof ApiError ? error.message : "新增庫存異動失敗。";
+      errorMessage.value = error instanceof ApiError ? error.message : "建立庫存異動失敗";
       return false;
     } finally {
       saving.value = false;
@@ -66,7 +95,37 @@ export const useInventoryStore = defineStore("inventory", () => {
       await loadInventory();
       return true;
     } catch (error) {
-      errorMessage.value = error instanceof ApiError ? error.message : "更新補貨門檻失敗。";
+      errorMessage.value = error instanceof ApiError ? error.message : "更新補貨門檻失敗";
+      return false;
+    } finally {
+      saving.value = false;
+    }
+  }
+
+  async function scrapDefective(productId: string, payload: DefectiveInventoryActionRequest) {
+    saving.value = true;
+    errorMessage.value = "";
+    try {
+      await scrapDefectiveInventory(productId, payload);
+      await Promise.all([loadInventory(), loadDefectiveInventory()]);
+      return true;
+    } catch (error) {
+      errorMessage.value = error instanceof ApiError ? error.message : "報廢瑕疵庫存失敗";
+      return false;
+    } finally {
+      saving.value = false;
+    }
+  }
+
+  async function restoreDefective(productId: string, payload: DefectiveInventoryActionRequest) {
+    saving.value = true;
+    errorMessage.value = "";
+    try {
+      await restoreDefectiveInventory(productId, payload);
+      await Promise.all([loadInventory(), loadDefectiveInventory()]);
+      return true;
+    } catch (error) {
+      errorMessage.value = error instanceof ApiError ? error.message : "轉回可售庫存失敗";
       return false;
     } finally {
       saving.value = false;
@@ -74,13 +133,18 @@ export const useInventoryStore = defineStore("inventory", () => {
   }
 
   return {
+    defectiveMovements,
+    defectiveStocks,
     errorMessage,
+    loadDefectiveInventory,
     loadInventory,
     loading,
     lowStockOnly,
     movements,
+    restoreDefective,
     saveReorderLevel,
     saving,
+    scrapDefective,
     setLowStockFilter,
     stocks,
     submitMovement,

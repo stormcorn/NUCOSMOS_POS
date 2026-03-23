@@ -26,6 +26,12 @@ public class InventoryStockEntity extends BaseEntity {
     private int quantityOnHand;
 
     @Column(nullable = false)
+    private int sellableQuantity;
+
+    @Column(nullable = false)
+    private int defectiveQuantity;
+
+    @Column(nullable = false)
     private int reorderLevel;
 
     protected InventoryStockEntity() {
@@ -36,11 +42,19 @@ public class InventoryStockEntity extends BaseEntity {
         entity.store = store;
         entity.product = product;
         entity.quantityOnHand = 0;
+        entity.sellableQuantity = 0;
+        entity.defectiveQuantity = 0;
         entity.reorderLevel = 0;
         return entity;
     }
 
-    public void applyDelta(int delta) {
+    public void applySellableDelta(int delta) {
+        this.sellableQuantity += delta;
+        this.quantityOnHand += delta;
+    }
+
+    public void applyDefectiveDelta(int delta) {
+        this.defectiveQuantity += delta;
         this.quantityOnHand += delta;
     }
 
@@ -58,6 +72,14 @@ public class InventoryStockEntity extends BaseEntity {
 
     public int getQuantityOnHand() {
         return quantityOnHand;
+    }
+
+    public int getSellableQuantity() {
+        return sellableQuantity;
+    }
+
+    public int getDefectiveQuantity() {
+        return defectiveQuantity;
     }
 
     public int getReorderLevel() {

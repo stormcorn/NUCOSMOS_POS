@@ -5,42 +5,74 @@ import { RouterLink, useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { useStoreContextStore } from "@/stores/store-context";
 
+type NavigationChild = {
+  to: string;
+  label: string;
+  short: string;
+};
+
+type NavigationItem = {
+  to: string;
+  label: string;
+  short: string;
+  children?: NavigationChild[];
+};
+
 const authStore = useAuthStore();
 const route = useRoute();
 const router = useRouter();
 const storeContextStore = useStoreContextStore();
 
-const navigationItems = [
+const navigationItems: NavigationItem[] = [
   { to: "/", label: "總覽儀表板", short: "OV" },
-  { to: "/product-categories", label: "商品分類", short: "PC" },
-  { to: "/inventory", label: "庫存管理", short: "IV" },
+  { to: "/product-categories", label: "商品分類管理", short: "PC" },
+  {
+    to: "/inventory",
+    label: "庫存管理",
+    short: "IV",
+    children: [
+      { to: "/inventory/defective", label: "瑕疵庫存", short: "DF" },
+      { to: "/inventory/materials", label: "原料管理", short: "RM" },
+      { to: "/inventory/packaging", label: "包裝管理", short: "PK" },
+    ],
+  },
   { to: "/products", label: "商品管理", short: "PD" },
   { to: "/devices", label: "裝置管理", short: "DV" },
   { to: "/orders", label: "訂單查詢", short: "OD" },
-  { to: "/reports", label: "銷售報表", short: "RP" },
+  { to: "/reports", label: "報表分析", short: "RP" },
   { to: "/shifts", label: "班次管理", short: "SH" },
 ];
 
 const pageSubtitle = computed(() => {
   switch (route.path) {
     case "/product-categories":
-      return "管理商品分類代碼、排序與啟用狀態。";
+      return "管理商品分類、排序與啟用狀態，讓商品結構維持一致。";
     case "/inventory":
-      return "管理庫存台帳、進銷存異動與補貨門檻。";
+      return "查看庫存總覽、補貨門檻與最近庫存異動。";
+    case "/inventory/defective":
+      return "專注查看瑕疵庫存、瑕疵異動與待報廢商品狀態。";
+    case "/inventory/materials":
+      return "集中管理原料品項、庫存規劃與後續配方耗用基礎。";
+    case "/inventory/packaging":
+      return "集中管理杯、蓋、吸管、提袋等包材資料與庫存規劃。";
     case "/products":
-      return "維護商品資料、價格、圖片與分類。";
+      return "維護商品資料、售價、圖片與上架狀態。";
     case "/devices":
-      return "查看門市裝置狀態與最近在線時間。";
+      return "管理門市裝置、設備狀態與同步情況。";
     case "/orders":
-      return "查詢訂單清單、付款與退款紀錄。";
+      return "查詢訂單明細、付款結果與退款紀錄。";
     case "/reports":
-      return "彙整營收、訂單與銷售趨勢。";
+      return "查看銷售摘要、支付組成與營運趨勢。";
     case "/shifts":
-      return "管理開班、結班與現金交接紀錄。";
+      return "管理開班、交班與班次結算資料。";
     default:
-      return "集中管理門市營運資料與管理後台操作。";
+      return "集中管理後台資料、裝置與營運狀態。";
   }
 });
+
+function isRouteActive(target: string) {
+  return route.path === target || route.path.startsWith(`${target}/`);
+}
 
 async function ensureStores() {
   if (authStore.isAuthenticated && storeContextStore.stores.length === 0 && !storeContextStore.loading) {
@@ -101,23 +133,43 @@ watch(
           </div>
 
           <nav class="mt-8 space-y-2">
-            <RouterLink
-              v-for="item in navigationItems"
-              :key="item.to"
-              :to="item.to"
-              class="group flex items-center gap-3 rounded-2xl border px-3 py-3 transition"
-              :class="route.path === item.to
-                ? 'border-brand-aqua/30 bg-brand-aqua/12 text-white shadow-glow'
-                : 'border-white/6 bg-white/0 text-slate-300 hover:border-white/14 hover:bg-white/6 hover:text-white'"
-            >
-              <span
-                class="flex h-11 w-11 items-center justify-center rounded-2xl text-xs font-semibold tracking-[0.2em]"
-                :class="route.path === item.to ? 'bg-brand-aqua text-slate-950' : 'bg-slate-900 text-brand-aqua'"
+            <div v-for="item in navigationItems" :key="item.to" class="space-y-2">
+              <RouterLink
+                :to="item.to"
+                class="group flex items-center gap-3 rounded-2xl border px-3 py-3 transition"
+                :class="isRouteActive(item.to)
+                  ? 'border-brand-aqua/30 bg-brand-aqua/12 text-white shadow-glow'
+                  : 'border-white/6 bg-white/0 text-slate-300 hover:border-white/14 hover:bg-white/6 hover:text-white'"
               >
-                {{ item.short }}
-              </span>
-              <span class="text-sm font-medium">{{ item.label }}</span>
-            </RouterLink>
+                <span
+                  class="flex h-11 w-11 items-center justify-center rounded-2xl text-xs font-semibold tracking-[0.2em]"
+                  :class="isRouteActive(item.to) ? 'bg-brand-aqua text-slate-950' : 'bg-slate-900 text-brand-aqua'"
+                >
+                  {{ item.short }}
+                </span>
+                <span class="text-sm font-medium">{{ item.label }}</span>
+              </RouterLink>
+
+              <div v-if="item.children" class="space-y-2 pl-5">
+                <RouterLink
+                  v-for="child in item.children"
+                  :key="child.to"
+                  :to="child.to"
+                  class="group flex items-center gap-3 rounded-2xl border px-3 py-2.5 transition"
+                  :class="route.path === child.to
+                    ? 'border-amber-300/30 bg-amber-200/12 text-white'
+                    : 'border-white/6 bg-white/0 text-slate-400 hover:border-white/14 hover:bg-white/6 hover:text-white'"
+                >
+                  <span
+                    class="flex h-9 w-9 items-center justify-center rounded-2xl text-[11px] font-semibold tracking-[0.18em]"
+                    :class="route.path === child.to ? 'bg-amber-300 text-slate-950' : 'bg-slate-900 text-amber-200'"
+                  >
+                    {{ child.short }}
+                  </span>
+                  <span class="text-sm font-medium">{{ child.label }}</span>
+                </RouterLink>
+              </div>
+            </div>
           </nav>
 
           <div class="mt-10 rounded-[1.5rem] border border-amber-300/15 bg-gradient-to-br from-amber-200/10 to-transparent p-4">
@@ -125,7 +177,7 @@ watch(
             <p class="mt-3 text-lg font-semibold text-white">{{ authStore.activeRole || "未登入" }}</p>
             <p class="mt-2 text-sm text-slate-400">
               {{ storeContextStore.selectedStore?.name || authStore.currentStoreCode || "未選擇門市" }}
-              正在使用管理後台
+              的管理工作階段
             </p>
           </div>
         </div>
@@ -142,7 +194,9 @@ watch(
           <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <div class="rounded-2xl border border-white/8 bg-slate-950/50 px-4 py-3">
               <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Store Focus</p>
-              <p class="mt-2 text-base font-semibold text-white">{{ storeContextStore.selectedStore?.name || authStore.currentStoreCode || "未選擇門市" }}</p>
+              <p class="mt-2 text-base font-semibold text-white">
+                {{ storeContextStore.selectedStore?.name || authStore.currentStoreCode || "未選擇門市" }}
+              </p>
               <p class="text-sm text-slate-400">{{ storeContextStore.selectedStore?.code || authStore.currentStoreCode || "-" }}</p>
             </div>
             <div class="rounded-2xl border border-white/8 bg-slate-950/50 px-4 py-3">

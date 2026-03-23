@@ -11,4 +11,10 @@ public interface InventoryMovementRepository extends JpaRepository<InventoryMove
 
     @EntityGraph(attributePaths = {"product", "product.category"})
     List<InventoryMovementEntity> findTop100ByStore_IdOrderByOccurredAtDescCreatedAtDesc(UUID storeId);
+
+    @EntityGraph(attributePaths = {"product", "product.category"})
+    List<InventoryMovementEntity> findTop100ByStore_IdAndStockBucketOrderByOccurredAtDescCreatedAtDesc(
+            UUID storeId,
+            String stockBucket
+    );
 }

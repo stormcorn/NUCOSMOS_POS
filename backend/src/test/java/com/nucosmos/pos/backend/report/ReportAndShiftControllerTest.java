@@ -10,6 +10,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -111,10 +112,14 @@ class ReportAndShiftControllerTest {
         UUID orderId = TestLoginSupport.extractDataFieldAsUuid(createOrder(cashierToken, "44444444-4444-4444-4444-444444444442", 2), "id");
         payCash(cashierToken, orderId, "13.50", "20.00");
 
+        OffsetDateTime now = OffsetDateTime.now();
+        String from = now.minusDays(1).toString();
+        String to = now.plusDays(1).toString();
+
         mockMvc.perform(get("/api/v1/reports/sales-summary")
                         .header("Authorization", "Bearer " + managerToken)
-                        .param("from", "2026-03-19T00:00:00+08:00")
-                        .param("to", "2026-03-21T23:59:59+08:00"))
+                        .param("from", from)
+                        .param("to", to))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.storeCode").value("TW001"))
                 .andExpect(jsonPath("$.data.orderCount").value(1))
@@ -138,10 +143,14 @@ class ReportAndShiftControllerTest {
                 }
                 """);
 
+        OffsetDateTime now = OffsetDateTime.now();
+        String from = now.minusDays(1).toString();
+        String to = now.plusDays(1).toString();
+
         mockMvc.perform(get("/api/v1/reports/sales-summary")
                         .header("Authorization", "Bearer " + cashierToken)
-                        .param("from", "2026-03-19T00:00:00+08:00")
-                        .param("to", "2026-03-21T23:59:59+08:00"))
+                        .param("from", from)
+                        .param("to", to))
                 .andExpect(status().isForbidden());
     }
 

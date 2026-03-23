@@ -5,15 +5,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-import java.math.BigDecimal;
-import java.util.UUID;
-
-public record InventoryMovementRequest(
-        @NotNull UUID productId,
-        @NotBlank String movementType,
+public record DefectiveInventoryActionRequest(
         @NotNull @Min(1) Integer quantity,
-        BigDecimal unitCost,
-        @Size(max = 50) String reasonCode,
+        @NotBlank @Size(max = 50) String reasonCode,
         @Size(max = 255) String note
 ) {
 }

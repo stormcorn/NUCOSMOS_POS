@@ -3,10 +3,13 @@ import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { pinia } from "@/stores/pinia";
 import DashboardView from "@/views/DashboardView.vue";
+import DefectiveInventoryView from "@/views/DefectiveInventoryView.vue";
 import DevicesView from "@/views/DevicesView.vue";
 import InventoryView from "@/views/InventoryView.vue";
 import LoginView from "@/views/LoginView.vue";
+import MaterialsInventoryView from "@/views/MaterialsInventoryView.vue";
 import OrdersView from "@/views/OrdersView.vue";
+import PackagingInventoryView from "@/views/PackagingInventoryView.vue";
 import ProductCategoriesView from "@/views/ProductCategoriesView.vue";
 import ProductsView from "@/views/ProductsView.vue";
 import ReportsView from "@/views/ReportsView.vue";
@@ -19,7 +22,7 @@ const router = createRouter({
       path: "/login",
       name: "login",
       component: LoginView,
-      meta: { title: "管理員登入", layout: "auth", requiresAuth: false },
+      meta: { title: "登入", layout: "auth", requiresAuth: false },
     },
     {
       path: "/",
@@ -38,6 +41,24 @@ const router = createRouter({
       name: "inventory",
       component: InventoryView,
       meta: { title: "庫存管理", requiresAuth: true, roles: ["MANAGER", "ADMIN"] },
+    },
+    {
+      path: "/inventory/defective",
+      name: "inventory-defective",
+      component: DefectiveInventoryView,
+      meta: { title: "瑕疵庫存", requiresAuth: true, roles: ["MANAGER", "ADMIN"] },
+    },
+    {
+      path: "/inventory/materials",
+      name: "inventory-materials",
+      component: MaterialsInventoryView,
+      meta: { title: "原料管理", requiresAuth: true, roles: ["MANAGER", "ADMIN"] },
+    },
+    {
+      path: "/inventory/packaging",
+      name: "inventory-packaging",
+      component: PackagingInventoryView,
+      meta: { title: "包裝管理", requiresAuth: true, roles: ["MANAGER", "ADMIN"] },
     },
     {
       path: "/products",
@@ -61,7 +82,7 @@ const router = createRouter({
       path: "/reports",
       name: "reports",
       component: ReportsView,
-      meta: { title: "銷售報表", requiresAuth: true, roles: ["MANAGER", "ADMIN"] },
+      meta: { title: "報表分析", requiresAuth: true, roles: ["MANAGER", "ADMIN"] },
     },
     {
       path: "/shifts",

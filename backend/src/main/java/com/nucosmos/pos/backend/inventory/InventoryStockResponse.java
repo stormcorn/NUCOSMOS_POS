@@ -8,6 +8,8 @@ public record InventoryStockResponse(
         String name,
         String categoryName,
         String imageUrl,
+        int sellableQuantity,
+        int defectiveQuantity,
         int quantityOnHand,
         int reorderLevel,
         boolean lowStock
