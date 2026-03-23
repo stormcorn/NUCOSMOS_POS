@@ -1,38 +1,37 @@
 # NUCOSMOS POS
 
-產品規劃方向是 Flutter POS 與 Vue 管理後台。
+這個 repo 是 `NUCOSMOS POS` 的開發主專案，目前包含：
 
-目前這個 repo 現階段包含：
+- Flutter POS 前台的產品規劃文件
+- Vue 3 管理後台
+- Java 17 Spring Boot 後端
+- PostgreSQL + Flyway
 
-- Vue 3 + Vite 的管理後台前端
-- POS 系統實用架構 PRD
-- Spring Boot 後端
-- PostgreSQL + Flyway migration
-- POS PIN + JWT 登入第一版
+## 本機開發
 
-## 開發
+前端：
 
 ```bash
 npm install
 npm run dev
 ```
 
-前端預設位置：
+預設網址：
 
 - `http://localhost:5173`
 
-前端 API Base URL 可透過 [.env.example](./.env.example) 設定：
+前端 API base URL 可在 [.env.example](./.env.example) 設定：
 
 - `VITE_API_BASE_URL=http://localhost:8081`
 
-## 後端
+後端：
 
 ```bash
 cd backend
 ./mvnw spring-boot:run
 ```
 
-目前預設後端服務使用 `8081`。如果本機 `5432` 或 `8081` 已被其他專案占用，可改用：
+若要用 Docker 啟 PostgreSQL：
 
 ```bash
 cd backend
@@ -46,13 +45,16 @@ DB_PORT=5433 SERVER_PORT=8081 ./mvnw spring-boot:run
 npm run build
 ```
 
-## 文件
+## 文件入口
 
-- [POS 系統實用架構 PRD](./docs/pos-system-prd.md)
-- [Vue 管理後台前端文件](./docs/vue-admin-web.md)
-- [Vue 管理後台 API 對接規格](./docs/vue-admin-api-spec.md)
-- [Vue 管理後台頁面清單與欄位規格](./docs/vue-admin-page-field-spec.md)
+- [管理後台與進銷存總 Roadmap](./docs/admin-system-roadmap.md)
+- [POS 系統 PRD](./docs/pos-system-prd.md)
+- [Vue 管理後台總覽](./docs/vue-admin-web.md)
+- [Vue 管理後台 API 規格](./docs/vue-admin-api-spec.md)
+- [Vue 管理後台頁面與欄位規格](./docs/vue-admin-page-field-spec.md)
 - [Vue 管理後台前端開發規範](./docs/vue-admin-frontend-guidelines.md)
-- [後端基礎建設文件](./docs/backend-foundation.md)
+- [後端基礎架構文件](./docs/backend-foundation.md)
 - [PIN + JWT 登入設計](./docs/pin-jwt-auth-design.md)
-- [MacBook 接手工作指南](./docs/macbook-handoff.md)
+- [MacBook 交接文件](./docs/macbook-handoff.md)
+- [Docker Desktop 換 Mac 開發流程](./docs/mac-docker-desktop-flow.md)
+- [服務重啟與環境變數驗證規範](./docs/service-restart-and-env-validation.md)
