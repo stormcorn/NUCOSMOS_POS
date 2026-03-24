@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, watch } from "vue";
+import { computed, onMounted, onUnmounted, reactive, watch } from "vue";
 
 import DonutChart from "@/components/dashboard/DonutChart.vue";
 import HorizontalBarChart from "@/components/dashboard/HorizontalBarChart.vue";
@@ -34,6 +34,10 @@ const filters = reactive({
   from: quickRange.from,
   to: quickRange.to,
 });
+
+const AUTO_REFRESH_INTERVAL_MS = 30_000;
+let refreshTimer: number | null = null;
+let refreshInFlight = false;
 
 const overviewCards = computed(() => {
   const sales = reportStore.salesSummary;
@@ -298,20 +302,86 @@ function varianceTone(value: number) {
 }
 
 async function refresh() {
+  if (refreshInFlight) {
+    return;
+  }
+
+  refreshInFlight = true;
   const from = new Date(filters.from).toISOString();
   const to = new Date(filters.to).toISOString();
 
-  await Promise.all([
-    reportStore.loadAllReports(from, to),
-    productStore.loadCatalog(),
-    storeContextStore.loadStores(),
-  ]);
+  try {
+    await Promise.all([
+      reportStore.loadAllReports(from, to),
+      productStore.loadCatalog(),
+      storeContextStore.loadStores(),
+    ]);
 
-  await deviceStore.loadDevices(storeContextStore.selectedStoreCode || undefined);
+    await deviceStore.loadDevices(storeContextStore.selectedStoreCode || undefined);
+  } finally {
+    refreshInFlight = false;
+  }
+}
+
+async function refreshMetricsOnly() {
+  if (refreshInFlight) {
+    return;
+  }
+
+  refreshInFlight = true;
+  const from = new Date(filters.from).toISOString();
+  const to = new Date(filters.to).toISOString();
+
+  try {
+    await Promise.all([
+      reportStore.loadAllReports(from, to),
+      deviceStore.loadDevices(storeContextStore.selectedStoreCode || undefined),
+    ]);
+  } finally {
+    refreshInFlight = false;
+  }
+}
+
+function startAutoRefresh() {
+  if (refreshTimer !== null) {
+    window.clearInterval(refreshTimer);
+  }
+
+  refreshTimer = window.setInterval(() => {
+    if (document.visibilityState === "visible") {
+      void refreshMetricsOnly();
+    }
+  }, AUTO_REFRESH_INTERVAL_MS);
+}
+
+function stopAutoRefresh() {
+  if (refreshTimer !== null) {
+    window.clearInterval(refreshTimer);
+    refreshTimer = null;
+  }
+}
+
+function handleWindowFocus() {
+  void refreshMetricsOnly();
+}
+
+function handleVisibilityChange() {
+  if (document.visibilityState === "visible") {
+    void refreshMetricsOnly();
+  }
 }
 
 onMounted(() => {
   void refresh();
+  startAutoRefresh();
+  window.addEventListener("focus", handleWindowFocus);
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+});
+
+onUnmounted(() => {
+  stopAutoRefresh();
+  window.removeEventListener("focus", handleWindowFocus);
+  document.removeEventListener("visibilitychange", handleVisibilityChange);
 });
 
 watch(
