@@ -17,12 +17,19 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
+set -a
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+set +a
+
+ADMIN_WEB_PORT="${ADMIN_WEB_PORT:-8080}"
+
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" pull || true
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --build
 
 echo "[deploy] waiting for backend health..."
 sleep 8
-curl -fsS http://127.0.0.1/actuator/health
+curl -fsS "http://127.0.0.1:${ADMIN_WEB_PORT}/actuator/health"
 
 echo
 echo "[deploy] deployment complete"
