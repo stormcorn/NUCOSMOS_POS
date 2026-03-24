@@ -29,7 +29,7 @@ docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --build
 
 echo "[deploy] waiting for backend health..."
 sleep 8
-curl -fsS "http://127.0.0.1:${ADMIN_WEB_PORT}/actuator/health"
+curl -fsS "http://127.0.0.1:${ADMIN_WEB_PORT}/api/v1/health"
 
 echo
 echo "[deploy] deployment complete"
