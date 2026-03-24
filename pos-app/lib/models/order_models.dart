@@ -3,17 +3,20 @@ class OrderCreateItem {
     required this.productId,
     required this.quantity,
     this.note,
+    this.selectedOptionIds = const [],
   });
 
   final String productId;
   final int quantity;
   final String? note;
+  final List<String> selectedOptionIds;
 
   Map<String, dynamic> toJson() {
     return {
       'productId': productId,
       'quantity': quantity,
       if (note != null && note!.trim().isNotEmpty) 'note': note,
+      if (selectedOptionIds.isNotEmpty) 'selectedOptionIds': selectedOptionIds,
     };
   }
 }

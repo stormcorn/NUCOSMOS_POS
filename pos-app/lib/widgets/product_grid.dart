@@ -18,40 +18,45 @@ class ProductGrid extends StatelessWidget {
       return Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: const Color(0xFF0E1726),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: const Color(0xFF22314B)),
+          color: const Color(0xFF172132),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: const Color(0xFF243047)),
         ),
         alignment: Alignment.center,
         child: const Text(
-          '目前沒有可販售商品。\n請先確認商品資料與 API 連線是否正常。',
+          'No products available.\nPlease check inventory or API connection.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white70, height: 1.6),
+          style: TextStyle(color: Colors.white70, height: 1.7),
         ),
       );
     }
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth >= 1200
-            ? 4
-            : constraints.maxWidth >= 800
-                ? 3
-                : 2;
+        final width = constraints.maxWidth;
+        final crossAxisCount = width >= 1180
+            ? 5
+            : width >= 760
+                ? 4
+                : width >= 560
+                    ? 3
+                    : 2;
+        final compactCard = width < 920;
 
         return GridView.builder(
           itemCount: products.length,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 16,
-            childAspectRatio: 0.92,
+            crossAxisSpacing: compactCard ? 12 : 16,
+            mainAxisSpacing: compactCard ? 12 : 16,
+            childAspectRatio: compactCard ? 0.72 : 0.78,
           ),
           itemBuilder: (context, index) {
             final product = products[index];
             return _ProductCard(
               product: product,
               onAdd: () => onAddProduct(product),
+              compact: compactCard,
             );
           },
         );
@@ -64,24 +69,33 @@ class _ProductCard extends StatelessWidget {
   const _ProductCard({
     required this.product,
     required this.onAdd,
+    required this.compact,
   });
 
   final ProductSummary product;
   final VoidCallback onAdd;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF0E1726),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFF22314B)),
+        color: const Color(0xFF253043),
+        borderRadius: BorderRadius.circular(compact ? 18 : 22),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x22000000),
+            blurRadius: 16,
+            offset: Offset(0, 10),
+          ),
+        ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
+            flex: compact ? 5 : 6,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -92,20 +106,21 @@ class _ProductCard extends StatelessWidget {
                     left: 12,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
+                        horizontal: 8,
+                        vertical: 5,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1FE4FF),
+                        color: const Color(0xFF14F1FF),
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
                         product.campaignLabel?.trim().isNotEmpty == true
                             ? product.campaignLabel!
-                            : '活動商品',
+                            : 'Promo',
                         style: const TextStyle(
-                          color: Color(0xFF08101D),
+                          color: Color(0xFF07111C),
                           fontWeight: FontWeight.bold,
+                          fontSize: 11,
                         ),
                       ),
                     ),
@@ -113,86 +128,90 @@ class _ProductCard extends StatelessWidget {
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  product.categoryName,
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                const SizedBox(height: 10),
-                if ((product.description ?? '').isNotEmpty)
+          Expanded(
+            flex: compact ? 4 : 5,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                compact ? 12 : 16,
+                compact ? 10 : 14,
+                compact ? 12 : 16,
+                compact ? 10 : 14,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    product.description!,
-                    maxLines: 2,
+                    product.name,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white60, height: 1.4),
-                  )
-                else
-                  const Text(
-                    '暫無商品說明',
-                    style: TextStyle(color: Colors.white38),
+                    style: TextStyle(
+                      fontSize: compact ? 15 : 18,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
                   ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _formatPrice(product.price),
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1FE4FF),
+                  SizedBox(height: compact ? 6 : 8),
+                  Expanded(
+                    child: Text(
+                      (product.description ?? '').trim().isEmpty
+                          ? 'Freshly prepared and ready to serve.'
+                          : product.description!,
+                      maxLines: compact ? 2 : 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: const Color(0xFF9FB1C7),
+                        fontSize: compact ? 11.5 : 13,
+                        height: 1.45,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: compact ? 8 : 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '\$${product.price.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: compact ? 15 : 18,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF14F1FF),
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        height: compact ? 30 : 34,
+                        child: FilledButton(
+                          onPressed: onAdd,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF14F1FF),
+                            foregroundColor: const Color(0xFF07111C),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: compact ? 12 : 16,
+                              vertical: 0,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(compact ? 10 : 12),
                             ),
                           ),
-                          if (product.originalPrice > product.price) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              _formatPrice(product.originalPrice),
-                              style: const TextStyle(
-                                color: Colors.white54,
-                                decoration: TextDecoration.lineThrough,
-                              ),
+                          child: Text(
+                            'Add',
+                            style: TextStyle(
+                              fontSize: compact ? 12 : 14,
+                              fontWeight: FontWeight.w700,
                             ),
-                          ],
-                        ],
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    FilledButton(
-                      onPressed: onAdd,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF1FE4FF),
-                        foregroundColor: const Color(0xFF08101D),
-                      ),
-                      child: const Text('加入'),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
       ),
     );
   }
-
-  String _formatPrice(double value) => '\$${value.toStringAsFixed(2)}';
 }
 
 class _ProductImage extends StatelessWidget {
@@ -205,7 +224,7 @@ class _ProductImage extends StatelessWidget {
     final url = imageUrl?.trim();
     if (url == null || url.isEmpty) {
       return Container(
-        color: const Color(0xFF08101D),
+        color: const Color(0xFF0C1320),
         alignment: Alignment.center,
         child: const Icon(
           Icons.image_not_supported_outlined,
@@ -220,7 +239,7 @@ class _ProductImage extends StatelessWidget {
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) {
         return Container(
-          color: const Color(0xFF08101D),
+          color: const Color(0xFF0C1320),
           alignment: Alignment.center,
           child: const Icon(
             Icons.broken_image_outlined,

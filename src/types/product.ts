@@ -32,6 +32,27 @@ export type ProductRecipeVersion = {
   totalCost: number;
 };
 
+export type ProductCustomizationOption = {
+  id: string;
+  name: string;
+  priceDelta: number;
+  defaultSelected: boolean;
+  displayOrder: number;
+  active: boolean;
+};
+
+export type ProductCustomizationGroup = {
+  id: string;
+  name: string;
+  selectionMode: "SINGLE" | "MULTIPLE";
+  required: boolean;
+  minSelections: number;
+  maxSelections: number;
+  displayOrder: number;
+  active: boolean;
+  options: ProductCustomizationOption[];
+};
+
 export type ProductCategory = {
   id: string;
   code: string;
@@ -66,6 +87,7 @@ export type ProductAdminItem = {
   active: boolean;
   materialComponents: ProductMaterialComponent[];
   packagingComponents: ProductPackagingComponent[];
+  customizationGroups: ProductCustomizationGroup[];
   recipeVersions: ProductRecipeVersion[];
   materialCost: number;
   packagingCost: number;
@@ -92,5 +114,19 @@ export type ProductUpsertRequest = {
   packagingComponents: Array<{
     packagingItemId: string;
     quantity: number;
+  }>;
+  customizationGroups: Array<{
+    name: string;
+    selectionMode: "SINGLE" | "MULTIPLE";
+    required: boolean;
+    minSelections: number;
+    maxSelections: number;
+    displayOrder: number;
+    options: Array<{
+      name: string;
+      priceDelta: number;
+      defaultSelected: boolean;
+      displayOrder: number;
+    }>;
   }>;
 };

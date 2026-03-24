@@ -1,7 +1,7 @@
 class AppConfig {
   static const apiBaseUrl = String.fromEnvironment(
     'POS_API_BASE_URL',
-    defaultValue: 'http://localhost:8081',
+    defaultValue: 'http://nucosmos.io',
   );
 
   static const defaultDeviceCode = String.fromEnvironment(

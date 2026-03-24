@@ -1,6 +1,7 @@
 package com.nucosmos.pos.backend.order;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 public record OrderItemResponse(
@@ -15,6 +16,7 @@ public record OrderItemResponse(
         BigDecimal unitCostAmount,
         BigDecimal lineCostAmount,
         BigDecimal refundedCostAmount,
-        String note
+        String note,
+        List<OrderItemCustomizationResponse> customizations
 ) {
 }

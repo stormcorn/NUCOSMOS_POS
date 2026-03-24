@@ -6,7 +6,9 @@ import 'screens/pos_home_screen.dart';
 import 'services/api_client.dart';
 import 'services/auth_service.dart';
 import 'services/order_service.dart';
+import 'services/printer_service.dart';
 import 'services/product_service.dart';
+import 'state/printer_controller.dart';
 import 'state/session_controller.dart';
 
 class PosApp extends StatefulWidget {
@@ -18,12 +20,16 @@ class PosApp extends StatefulWidget {
 
 class _PosAppState extends State<PosApp> {
   late final SessionController _sessionController;
+  late final PrinterController _printerController;
 
   @override
   void initState() {
     super.initState();
 
     final apiClient = ApiClient(baseUrl: AppConfig.apiBaseUrl);
+    _printerController = PrinterController(
+      printerService: PrinterService(),
+    )..restoreSettings();
     _sessionController = SessionController(
       authService: AuthService(apiClient),
       productService: ProductService(apiClient),
@@ -36,6 +42,7 @@ class _PosAppState extends State<PosApp> {
   @override
   void dispose() {
     _sessionController.dispose();
+    _printerController.dispose();
     super.dispose();
   }
 
@@ -73,7 +80,10 @@ class _PosAppState extends State<PosApp> {
     }
 
     if (_sessionController.isLoggedIn) {
-      return PosHomeScreen(controller: _sessionController);
+      return PosHomeScreen(
+        controller: _sessionController,
+        printerController: _printerController,
+      );
     }
 
     return LoginScreen(controller: _sessionController);

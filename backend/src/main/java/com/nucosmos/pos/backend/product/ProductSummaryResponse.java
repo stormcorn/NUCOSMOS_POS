@@ -2,6 +2,7 @@ package com.nucosmos.pos.backend.product;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public record ProductSummaryResponse(
@@ -20,6 +21,7 @@ public record ProductSummaryResponse(
         BigDecimal campaignPrice,
         OffsetDateTime campaignStartsAt,
         OffsetDateTime campaignEndsAt,
-        boolean available
+        boolean available,
+        List<ProductCustomizationGroupResponse> customizationGroups
 ) {
 }

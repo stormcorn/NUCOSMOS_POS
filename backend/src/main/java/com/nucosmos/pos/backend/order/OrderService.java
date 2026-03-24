@@ -10,13 +10,20 @@ import com.nucosmos.pos.backend.device.persistence.DeviceEntity;
 import com.nucosmos.pos.backend.device.repository.DeviceRepository;
 import com.nucosmos.pos.backend.order.persistence.OrderEntity;
 import com.nucosmos.pos.backend.order.persistence.OrderItemEntity;
+import com.nucosmos.pos.backend.order.persistence.OrderItemCustomizationEntity;
 import com.nucosmos.pos.backend.order.persistence.PaymentEntity;
 import com.nucosmos.pos.backend.order.persistence.RefundEntity;
+import com.nucosmos.pos.backend.order.repository.OrderItemCustomizationRepository;
 import com.nucosmos.pos.backend.order.repository.OrderRepository;
 import com.nucosmos.pos.backend.order.repository.PaymentRepository;
 import com.nucosmos.pos.backend.order.repository.RefundItemRepository;
 import com.nucosmos.pos.backend.order.repository.RefundRepository;
+import com.nucosmos.pos.backend.product.ProductCustomizationSelectionMode;
+import com.nucosmos.pos.backend.product.persistence.ProductCustomizationGroupEntity;
+import com.nucosmos.pos.backend.product.persistence.ProductCustomizationOptionEntity;
 import com.nucosmos.pos.backend.product.persistence.ProductEntity;
+import com.nucosmos.pos.backend.product.repository.ProductCustomizationGroupRepository;
+import com.nucosmos.pos.backend.product.repository.ProductCustomizationOptionRepository;
 import com.nucosmos.pos.backend.product.repository.ProductRepository;
 import com.nucosmos.pos.backend.store.persistence.StoreEntity;
 import com.nucosmos.pos.backend.store.repository.StoreRepository;
@@ -37,7 +44,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
@@ -49,6 +58,9 @@ public class OrderService {
     private final DeviceRepository deviceRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final ProductCustomizationGroupRepository productCustomizationGroupRepository;
+    private final ProductCustomizationOptionRepository productCustomizationOptionRepository;
+    private final OrderItemCustomizationRepository orderItemCustomizationRepository;
     private final PaymentRepository paymentRepository;
     private final RefundRepository refundRepository;
     private final RefundItemRepository refundItemRepository;
@@ -61,6 +73,9 @@ public class OrderService {
             DeviceRepository deviceRepository,
             UserRepository userRepository,
             ProductRepository productRepository,
+            ProductCustomizationGroupRepository productCustomizationGroupRepository,
+            ProductCustomizationOptionRepository productCustomizationOptionRepository,
+            OrderItemCustomizationRepository orderItemCustomizationRepository,
             PaymentRepository paymentRepository,
             RefundRepository refundRepository,
             RefundItemRepository refundItemRepository,
@@ -72,6 +87,9 @@ public class OrderService {
         this.deviceRepository = deviceRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
+        this.productCustomizationGroupRepository = productCustomizationGroupRepository;
+        this.productCustomizationOptionRepository = productCustomizationOptionRepository;
+        this.orderItemCustomizationRepository = orderItemCustomizationRepository;
         this.paymentRepository = paymentRepository;
         this.refundRepository = refundRepository;
         this.refundItemRepository = refundItemRepository;
@@ -110,26 +128,34 @@ public class OrderService {
                 orderedAt
         );
 
+        List<OrderItemCustomizationEntity> pendingCustomizations = new ArrayList<>();
         int lineNumber = 1;
         for (OrderCreateItemRequest itemRequest : request.items()) {
             ProductEntity product = products.get(itemRequest.productId());
-            BigDecimal displayPrice = product.getDisplayPrice(orderedAt);
-            BigDecimal lineTotal = displayPrice.multiply(BigDecimal.valueOf(itemRequest.quantity()));
+            List<ResolvedCustomizationSelection> selectedOptions = resolveCustomizationSelections(product, itemRequest.selectedOptionIds());
+            BigDecimal unitPrice = calculateUnitPrice(product, orderedAt, selectedOptions);
+            BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(itemRequest.quantity()));
             OrderItemEntity item = new OrderItemEntity(
                     order,
                     product,
                     lineNumber++,
                     product.getSku(),
                     product.getName(),
-                    displayPrice,
+                    unitPrice,
                     itemRequest.quantity(),
                     lineTotal,
                     blankToNull(itemRequest.note())
             );
             order.addItem(item);
+            pendingCustomizations.addAll(buildOrderItemCustomizations(item, selectedOptions));
         }
 
-        return toResponse(orderRepository.save(order));
+        OrderEntity savedOrder = orderRepository.save(order);
+        if (!pendingCustomizations.isEmpty()) {
+            orderItemCustomizationRepository.saveAll(pendingCustomizations);
+        }
+
+        return toResponse(savedOrder);
     }
 
     @Transactional
@@ -445,7 +471,8 @@ public class OrderService {
 
         for (OrderCreateItemRequest item : items) {
             ProductEntity product = products.get(item.productId());
-            BigDecimal displayPrice = product.getDisplayPrice(orderedAt);
+            List<ResolvedCustomizationSelection> selectedOptions = resolveCustomizationSelections(product, item.selectedOptionIds());
+            BigDecimal displayPrice = calculateUnitPrice(product, orderedAt, selectedOptions);
             itemCount += item.quantity();
             subtotal = subtotal.add(displayPrice.multiply(BigDecimal.valueOf(item.quantity())));
         }
@@ -459,6 +486,25 @@ public class OrderService {
     }
 
     private OrderResponse toResponse(OrderEntity order) {
+        Map<UUID, List<OrderItemCustomizationResponse>> customizationsByOrderItemId = orderItemCustomizationRepository
+                .findAllByOrderItem_IdInOrderByLineNumberAscCreatedAtAsc(
+                        order.getItems().stream().map(OrderItemEntity::getId).toList()
+                )
+                .stream()
+                .collect(Collectors.groupingBy(
+                        customization -> customization.getOrderItem().getId(),
+                        Collectors.mapping(
+                                customization -> new OrderItemCustomizationResponse(
+                                        customization.getId(),
+                                        customization.getGroupName(),
+                                        customization.getOptionName(),
+                                        customization.getPriceDelta(),
+                                        customization.getLineNumber()
+                                ),
+                                Collectors.toList()
+                        )
+                ));
+
         return new OrderResponse(
                 order.getId(),
                 order.getOrderNumber(),
@@ -495,7 +541,8 @@ public class OrderService {
                                 item.getUnitCostAmount(),
                                 item.getLineCostAmount(),
                                 item.getRefundedCostAmount(),
-                                item.getNote()
+                                item.getNote(),
+                                customizationsByOrderItemId.getOrDefault(item.getId(), List.of())
                         ))
                         .toList(),
                 order.getPayments().stream()
@@ -600,6 +647,102 @@ public class OrderService {
         return value == null || value.isBlank() ? null : value;
     }
 
+    private List<ResolvedCustomizationSelection> resolveCustomizationSelections(ProductEntity product, List<UUID> selectedOptionIds) {
+        List<ProductCustomizationGroupEntity> groups = productCustomizationGroupRepository
+                .findAllByProduct_IdAndActiveTrueOrderByDisplayOrderAscCreatedAtAsc(product.getId());
+        if (groups.isEmpty()) {
+            return List.of();
+        }
+
+        Set<UUID> requestedIds = selectedOptionIds == null ? Set.of() : Set.copyOf(selectedOptionIds);
+        Map<UUID, ProductCustomizationOptionEntity> optionMap = productCustomizationOptionRepository
+                .findAllByCustomizationGroup_IdInOrderByDisplayOrderAscCreatedAtAsc(groups.stream().map(ProductCustomizationGroupEntity::getId).toList())
+                .stream()
+                .filter(ProductCustomizationOptionEntity::isActive)
+                .collect(Collectors.toMap(ProductCustomizationOptionEntity::getId, option -> option));
+
+        for (UUID selectedOptionId : requestedIds) {
+            ProductCustomizationOptionEntity option = optionMap.get(selectedOptionId);
+            if (option == null || !option.getCustomizationGroup().getProduct().getId().equals(product.getId())) {
+                throw new BadRequestException("One or more customization options are invalid for this product");
+            }
+        }
+
+        List<ResolvedCustomizationSelection> resolvedSelections = new ArrayList<>();
+        for (ProductCustomizationGroupEntity group : groups) {
+            List<ProductCustomizationOptionEntity> groupOptions = optionMap.values().stream()
+                    .filter(option -> option.getCustomizationGroup().getId().equals(group.getId()))
+                    .sorted((left, right) -> Integer.compare(left.getDisplayOrder(), right.getDisplayOrder()))
+                    .toList();
+
+            List<ProductCustomizationOptionEntity> selectedGroupOptions = groupOptions.stream()
+                    .filter(option -> requestedIds.contains(option.getId()))
+                    .toList();
+
+            if (selectedGroupOptions.isEmpty()) {
+                selectedGroupOptions = groupOptions.stream()
+                        .filter(ProductCustomizationOptionEntity::isDefaultSelected)
+                        .toList();
+            }
+
+            validateGroupSelections(group, selectedGroupOptions);
+
+            for (ProductCustomizationOptionEntity option : selectedGroupOptions) {
+                resolvedSelections.add(new ResolvedCustomizationSelection(group, option));
+            }
+        }
+
+        return resolvedSelections;
+    }
+
+    private void validateGroupSelections(
+            ProductCustomizationGroupEntity group,
+            List<ProductCustomizationOptionEntity> selectedGroupOptions
+    ) {
+        int selectionCount = selectedGroupOptions.size();
+        if (group.isRequired() && selectionCount == 0) {
+            throw new BadRequestException("Required customization option is missing");
+        }
+        if (selectionCount < group.getMinSelections()) {
+            throw new BadRequestException("Customization selection does not meet minimum requirement");
+        }
+        if (selectionCount > group.getMaxSelections()) {
+            throw new BadRequestException("Customization selection exceeds maximum allowed");
+        }
+        if (group.getSelectionMode() == ProductCustomizationSelectionMode.SINGLE && selectionCount > 1) {
+            throw new BadRequestException("Customization group only allows one option");
+        }
+    }
+
+    private BigDecimal calculateUnitPrice(
+            ProductEntity product,
+            OffsetDateTime orderedAt,
+            List<ResolvedCustomizationSelection> selectedOptions
+    ) {
+        BigDecimal unitPrice = product.getDisplayPrice(orderedAt);
+        for (ResolvedCustomizationSelection selection : selectedOptions) {
+            unitPrice = unitPrice.add(selection.option().getPriceDelta());
+        }
+        return unitPrice;
+    }
+
+    private List<OrderItemCustomizationEntity> buildOrderItemCustomizations(
+            OrderItemEntity orderItem,
+            List<ResolvedCustomizationSelection> selectedOptions
+    ) {
+        List<OrderItemCustomizationEntity> customizations = new ArrayList<>();
+        int customizationLine = 1;
+        for (ResolvedCustomizationSelection selection : selectedOptions) {
+            customizations.add(OrderItemCustomizationEntity.create(
+                    orderItem,
+                    selection.group(),
+                    selection.option(),
+                    customizationLine++
+            ));
+        }
+        return customizations;
+    }
+
     private String normalizeFilter(String value) {
         return value == null || value.isBlank() ? null : value.trim().toUpperCase();
     }
@@ -694,6 +837,12 @@ public class OrderService {
             BigDecimal amountApplied,
             BigDecimal amountReceived,
             BigDecimal changeAmount
+    ) {
+    }
+
+    private record ResolvedCustomizationSelection(
+            ProductCustomizationGroupEntity group,
+            ProductCustomizationOptionEntity option
     ) {
     }
 }

@@ -4,6 +4,8 @@ import com.nucosmos.pos.backend.auth.AuthenticatedUser;
 import com.nucosmos.pos.backend.common.exception.BadRequestException;
 import com.nucosmos.pos.backend.common.exception.NotFoundException;
 import com.nucosmos.pos.backend.product.persistence.ProductCategoryEntity;
+import com.nucosmos.pos.backend.product.persistence.ProductCustomizationGroupEntity;
+import com.nucosmos.pos.backend.product.persistence.ProductCustomizationOptionEntity;
 import com.nucosmos.pos.backend.product.persistence.ProductEntity;
 import com.nucosmos.pos.backend.product.persistence.ProductMaterialRecipeEntity;
 import com.nucosmos.pos.backend.product.persistence.ProductPackagingRecipeEntity;
@@ -11,6 +13,8 @@ import com.nucosmos.pos.backend.product.persistence.ProductRecipeVersionEntity;
 import com.nucosmos.pos.backend.product.persistence.ProductRecipeVersionMaterialEntity;
 import com.nucosmos.pos.backend.product.persistence.ProductRecipeVersionPackagingEntity;
 import com.nucosmos.pos.backend.product.repository.ProductCategoryRepository;
+import com.nucosmos.pos.backend.product.repository.ProductCustomizationGroupRepository;
+import com.nucosmos.pos.backend.product.repository.ProductCustomizationOptionRepository;
 import com.nucosmos.pos.backend.product.repository.ProductMaterialRecipeRepository;
 import com.nucosmos.pos.backend.product.repository.ProductPackagingRecipeRepository;
 import com.nucosmos.pos.backend.product.repository.ProductRecipeVersionMaterialRepository;
@@ -40,6 +44,8 @@ public class ProductAdminService {
 
     private final ProductRepository productRepository;
     private final ProductCategoryRepository productCategoryRepository;
+    private final ProductCustomizationGroupRepository productCustomizationGroupRepository;
+    private final ProductCustomizationOptionRepository productCustomizationOptionRepository;
     private final ProductMaterialRecipeRepository productMaterialRecipeRepository;
     private final ProductPackagingRecipeRepository productPackagingRecipeRepository;
     private final ProductRecipeVersionRepository productRecipeVersionRepository;
@@ -51,6 +57,8 @@ public class ProductAdminService {
     public ProductAdminService(
             ProductRepository productRepository,
             ProductCategoryRepository productCategoryRepository,
+            ProductCustomizationGroupRepository productCustomizationGroupRepository,
+            ProductCustomizationOptionRepository productCustomizationOptionRepository,
             ProductMaterialRecipeRepository productMaterialRecipeRepository,
             ProductPackagingRecipeRepository productPackagingRecipeRepository,
             ProductRecipeVersionRepository productRecipeVersionRepository,
@@ -61,6 +69,8 @@ public class ProductAdminService {
     ) {
         this.productRepository = productRepository;
         this.productCategoryRepository = productCategoryRepository;
+        this.productCustomizationGroupRepository = productCustomizationGroupRepository;
+        this.productCustomizationOptionRepository = productCustomizationOptionRepository;
         this.productMaterialRecipeRepository = productMaterialRecipeRepository;
         this.productPackagingRecipeRepository = productPackagingRecipeRepository;
         this.productRecipeVersionRepository = productRecipeVersionRepository;
@@ -144,6 +154,7 @@ public class ProductAdminService {
 
         ProductEntity savedProduct = productRepository.save(product);
         syncRecipeComponents(savedProduct, user.storeCode(), request, true);
+        syncCustomizationGroups(savedProduct, request.customizationGroups());
         return toAdminResponse(savedProduct, user.storeCode());
     }
 
@@ -169,6 +180,7 @@ public class ProductAdminService {
         );
 
         syncRecipeComponents(product, user.storeCode(), request, false);
+        syncCustomizationGroups(product, request.customizationGroups());
         return toAdminResponse(product, user.storeCode());
     }
 
@@ -246,6 +258,7 @@ public class ProductAdminService {
 
         validateMaterialComponents(materialComponents);
         validatePackagingComponents(packagingComponents);
+        validateCustomizationGroups(request.customizationGroups());
 
         List<ResolvedMaterialComponent> resolvedMaterials = materialComponents.stream()
                 .map(component -> new ResolvedMaterialComponent(
@@ -310,6 +323,7 @@ public class ProductAdminService {
                     component.quantity()
             ));
         }
+
     }
 
     private void validateMaterialComponents(List<ProductMaterialComponentRequest> components) {
@@ -326,6 +340,58 @@ public class ProductAdminService {
         for (ProductPackagingComponentRequest component : components) {
             if (!seenIds.add(component.packagingItemId())) {
                 throw new BadRequestException("Duplicate packaging component is not allowed");
+            }
+        }
+    }
+
+    private void validateCustomizationGroups(List<ProductCustomizationGroupRequest> groups) {
+        if (groups == null) {
+            return;
+        }
+
+        Set<String> seenNames = new HashSet<>();
+        for (ProductCustomizationGroupRequest group : groups) {
+            String normalizedName = group.name().trim().toLowerCase();
+            if (!seenNames.add(normalizedName)) {
+                throw new BadRequestException("Duplicate customization group name is not allowed");
+            }
+
+            ProductCustomizationSelectionMode selectionMode;
+            try {
+                selectionMode = ProductCustomizationSelectionMode.from(group.selectionMode());
+            } catch (IllegalArgumentException exception) {
+                throw new BadRequestException("Unsupported customization selection mode");
+            }
+
+            if (group.maxSelections() < group.minSelections()) {
+                throw new BadRequestException("Customization max selections must be greater than or equal to min selections");
+            }
+
+            if (group.required() && group.minSelections() < 1) {
+                throw new BadRequestException("Required customization group must select at least one option");
+            }
+
+            if (selectionMode == ProductCustomizationSelectionMode.SINGLE && group.maxSelections() > 1) {
+                throw new BadRequestException("Single selection customization group cannot allow more than one option");
+            }
+
+            Set<String> seenOptionNames = new HashSet<>();
+            long defaultSelectedCount = 0;
+            for (ProductCustomizationOptionRequest option : group.options()) {
+                String normalizedOptionName = option.name().trim().toLowerCase();
+                if (!seenOptionNames.add(normalizedOptionName)) {
+                    throw new BadRequestException("Duplicate customization option name is not allowed");
+                }
+                if (option.defaultSelected()) {
+                    defaultSelectedCount++;
+                }
+            }
+
+            if (selectionMode == ProductCustomizationSelectionMode.SINGLE && defaultSelectedCount > 1) {
+                throw new BadRequestException("Single selection customization group cannot have multiple default options");
+            }
+            if (defaultSelectedCount > group.maxSelections()) {
+                throw new BadRequestException("Default selected options exceed customization max selections");
             }
         }
     }
@@ -352,10 +418,46 @@ public class ProductAdminService {
         return packagingItem;
     }
 
+    private void syncCustomizationGroups(ProductEntity product, List<ProductCustomizationGroupRequest> groups) {
+        productCustomizationOptionRepository.deleteAllByCustomizationGroup_Product_Id(product.getId());
+        productCustomizationGroupRepository.deleteAllByProduct_Id(product.getId());
+
+        if (groups == null || groups.isEmpty()) {
+            return;
+        }
+
+        for (ProductCustomizationGroupRequest groupRequest : groups) {
+            ProductCustomizationGroupEntity group = productCustomizationGroupRepository.save(
+                    ProductCustomizationGroupEntity.create(
+                            product,
+                            groupRequest.name().trim(),
+                            ProductCustomizationSelectionMode.from(groupRequest.selectionMode()),
+                            groupRequest.required(),
+                            groupRequest.minSelections(),
+                            groupRequest.maxSelections(),
+                            groupRequest.displayOrder()
+                    )
+            );
+
+            for (ProductCustomizationOptionRequest optionRequest : groupRequest.options()) {
+                productCustomizationOptionRepository.save(
+                        ProductCustomizationOptionEntity.create(
+                                group,
+                                optionRequest.name().trim(),
+                                optionRequest.priceDelta().setScale(2, RoundingMode.HALF_UP),
+                                optionRequest.defaultSelected(),
+                                optionRequest.displayOrder()
+                        )
+                );
+            }
+        }
+    }
+
     private ProductAdminResponse toAdminResponse(ProductEntity product, String fallbackStoreCode) {
         OffsetDateTime now = OffsetDateTime.now();
         List<ProductMaterialRecipeEntity> materialRecipes = productMaterialRecipeRepository.findAllByProduct_IdOrderByCreatedAtAsc(product.getId());
         List<ProductPackagingRecipeEntity> packagingRecipes = productPackagingRecipeRepository.findAllByProduct_IdOrderByCreatedAtAsc(product.getId());
+        List<ProductCustomizationGroupResponse> customizationGroups = loadCustomizationGroups(product.getId());
 
         List<ProductMaterialComponentResponse> materialComponents = materialRecipes.stream()
                 .map(this::toMaterialComponentResponse)
@@ -395,11 +497,53 @@ public class ProductAdminService {
                 product.isActive(),
                 materialComponents,
                 packagingComponents,
+                customizationGroups,
                 recipeVersions,
                 materialCost,
                 packagingCost,
                 totalCost
         );
+    }
+
+    private List<ProductCustomizationGroupResponse> loadCustomizationGroups(UUID productId) {
+        List<ProductCustomizationGroupEntity> groups = productCustomizationGroupRepository
+                .findAllByProduct_IdOrderByDisplayOrderAscCreatedAtAsc(productId);
+        if (groups.isEmpty()) {
+            return List.of();
+        }
+
+        Map<UUID, List<ProductCustomizationOptionResponse>> optionsByGroupId = productCustomizationOptionRepository
+                .findAllByCustomizationGroup_IdInOrderByDisplayOrderAscCreatedAtAsc(groups.stream().map(ProductCustomizationGroupEntity::getId).toList())
+                .stream()
+                .filter(ProductCustomizationOptionEntity::isActive)
+                .collect(Collectors.groupingBy(
+                        option -> option.getCustomizationGroup().getId(),
+                        Collectors.mapping(
+                                option -> new ProductCustomizationOptionResponse(
+                                        option.getId(),
+                                        option.getName(),
+                                        option.getPriceDelta(),
+                                        option.isDefaultSelected(),
+                                        option.getDisplayOrder(),
+                                        option.isActive()
+                                ),
+                                Collectors.toList()
+                        )
+                ));
+
+        return groups.stream()
+                .map(group -> new ProductCustomizationGroupResponse(
+                        group.getId(),
+                        group.getName(),
+                        group.getSelectionMode().name(),
+                        group.isRequired(),
+                        group.getMinSelections(),
+                        group.getMaxSelections(),
+                        group.getDisplayOrder(),
+                        group.isActive(),
+                        optionsByGroupId.getOrDefault(group.getId(), List.of())
+                ))
+                .toList();
     }
 
     private ProductMaterialComponentResponse toMaterialComponentResponse(ProductMaterialRecipeEntity recipe) {

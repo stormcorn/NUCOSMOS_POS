@@ -101,9 +101,14 @@ class SessionController extends ChangeNotifier {
 
     final prefs = await SharedPreferences.getInstance();
     final storedToken = prefs.getString(_tokenKey);
-    _apiBaseUrl = prefs.getString(_apiBaseUrlKey) ?? _apiBaseUrl;
+    final storedApiBaseUrl = prefs.getString(_apiBaseUrlKey);
+    _apiBaseUrl = _resolveInitialApiBaseUrl(storedApiBaseUrl);
     _deviceCode = prefs.getString(_deviceCodeKey) ?? _deviceCode;
     _syncApiBaseUrl();
+
+    if (storedApiBaseUrl != null && storedApiBaseUrl != _apiBaseUrl) {
+      await prefs.setString(_apiBaseUrlKey, _apiBaseUrl);
+    }
 
     if (storedToken == null || storedToken.isEmpty) {
       bootstrapping = false;
@@ -113,7 +118,9 @@ class SessionController extends ChangeNotifier {
 
     try {
       accessToken = storedToken;
-      session = await _authService.currentSession(storedToken);
+      session = await _runWithApiFallback(
+        () => _authService.currentSession(storedToken),
+      );
       await loadProducts(showLoading: false);
     } catch (_) {
       await logout();
@@ -135,15 +142,19 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await _authService.pinLogin(
-        storeCode: storeCode,
-        roleCode: roleCode,
-        pin: pin,
-        deviceCode: deviceCode,
+      final response = await _runWithApiFallback(
+        () => _authService.pinLogin(
+          storeCode: storeCode,
+          roleCode: roleCode,
+          pin: pin,
+          deviceCode: deviceCode,
+        ),
       );
 
       accessToken = response.accessToken;
-      session = await _authService.currentSession(response.accessToken);
+      session = await _runWithApiFallback(
+        () => _authService.currentSession(response.accessToken),
+      );
       _deviceCode = deviceCode;
 
       final prefs = await SharedPreferences.getInstance();
@@ -157,12 +168,10 @@ class SessionController extends ChangeNotifier {
       errorMessage = error.message;
       return false;
     } on Exception {
-      errorMessage =
-          '無法連線到 POS 伺服器，請確認平板與 ${AppConfig.apiBaseUrl} 在同一網段。';
+      errorMessage = '無法連線到 POS 伺服器，請檢查 API：$_apiBaseUrl';
       return false;
     } catch (_) {
-      errorMessage =
-          '無法連線到 POS 伺服器，請確認平板與 $_apiBaseUrl 在同一網段。';
+      errorMessage = '無法連線到 POS 伺服器，請檢查 API：$_apiBaseUrl';
       return false;
     } finally {
       loading = false;
@@ -183,10 +192,13 @@ class SessionController extends ChangeNotifier {
     }
 
     try {
-      products = await _productService.fetchProducts(accessToken!);
+      products = await _runWithApiFallback(
+        () => _productService.fetchProducts(accessToken!),
+      );
       errorMessage = '';
 
-      final availableCodes = products.map((product) => product.categoryCode).toSet();
+      final availableCodes =
+          products.map((product) => product.categoryCode).toSet();
       if (selectedCategoryCode != null &&
           selectedCategoryCode!.isNotEmpty &&
           !availableCodes.contains(selectedCategoryCode)) {
@@ -195,9 +207,9 @@ class SessionController extends ChangeNotifier {
     } on ApiException catch (error) {
       errorMessage = error.message;
     } on Exception {
-      errorMessage = '商品載入失敗，請確認可連到 $_apiBaseUrl。';
+      errorMessage = '無法取得商品資料，請檢查 API：$_apiBaseUrl';
     } catch (_) {
-      errorMessage = '商品載入失敗，請確認可連到 $_apiBaseUrl。';
+      errorMessage = '無法取得商品資料，請檢查 API：$_apiBaseUrl';
     } finally {
       catalogLoading = false;
       notifyListeners();
@@ -210,15 +222,27 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addProduct(ProductSummary product) {
+  void addProduct(
+    ProductSummary product, {
+    List<PosCartSelection> selectedOptions = const [],
+  }) {
+    final normalizedSelections = _normalizeSelections(selectedOptions);
     final nextCart = [...cart];
-    final index = nextCart.indexWhere((line) => line.product.id == product.id);
+    final cartKey = PosCartLine.cartKeyFor(product.id, normalizedSelections);
+    final index = nextCart.indexWhere((line) => line.key == cartKey);
+
     if (index >= 0) {
       nextCart[index] = nextCart[index].copyWith(
         quantity: nextCart[index].quantity + 1,
       );
     } else {
-      nextCart.add(PosCartLine(product: product, quantity: 1));
+      nextCart.add(
+        PosCartLine(
+          product: product,
+          quantity: 1,
+          selectedOptions: normalizedSelections,
+        ),
+      );
     }
 
     cart = nextCart;
@@ -226,9 +250,9 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void increaseQuantity(String productId) {
+  void increaseQuantity(String cartKey) {
     final nextCart = [...cart];
-    final index = nextCart.indexWhere((line) => line.product.id == productId);
+    final index = nextCart.indexWhere((line) => line.key == cartKey);
     if (index < 0) {
       return;
     }
@@ -240,9 +264,9 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void decreaseQuantity(String productId) {
+  void decreaseQuantity(String cartKey) {
     final nextCart = [...cart];
-    final index = nextCart.indexWhere((line) => line.product.id == productId);
+    final index = nextCart.indexWhere((line) => line.key == cartKey);
     if (index < 0) {
       return;
     }
@@ -258,10 +282,8 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void removeProduct(String productId) {
-    cart = cart
-        .where((line) => line.product.id != productId)
-        .toList(growable: false);
+  void removeProduct(String cartKey) {
+    cart = cart.where((line) => line.key != cartKey).toList(growable: false);
     notifyListeners();
   }
 
@@ -273,13 +295,13 @@ class SessionController extends ChangeNotifier {
 
   Future<OrderReceipt?> checkoutCash() async {
     if (accessToken == null || session == null) {
-      errorMessage = '請先登入，再進行結帳。';
+      errorMessage = '請先登入後再結帳。';
       notifyListeners();
       return null;
     }
 
     if (cart.isEmpty) {
-      errorMessage = '目前訂單沒有商品。';
+      errorMessage = '購物車是空的，請先加入商品。';
       notifyListeners();
       return null;
     }
@@ -290,39 +312,46 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final order = await _orderService.createOrder(
-        accessToken: accessToken!,
-        items: cart
-            .map(
-              (line) => OrderCreateItem(
-                productId: line.product.id,
-                quantity: line.quantity,
-              ),
-            )
-            .toList(growable: false),
+      final order = await _runWithApiFallback(
+        () => _orderService.createOrder(
+          accessToken: accessToken!,
+          items: cart
+              .map(
+                (line) => OrderCreateItem(
+                  productId: line.product.id,
+                  quantity: line.quantity,
+                  selectedOptionIds: line.selectedOptions
+                      .map((selection) => selection.optionId)
+                      .toList(growable: false),
+                ),
+              )
+              .toList(growable: false),
+        ),
       );
 
-      final paidOrder = await _orderService.addCashPayment(
-        accessToken: accessToken!,
-        orderId: order.id,
-        amount: order.totalAmount,
-        note: 'Flutter POS cash checkout',
+      final paidOrder = await _runWithApiFallback(
+        () => _orderService.addCashPayment(
+          accessToken: accessToken!,
+          orderId: order.id,
+          amount: order.totalAmount,
+          note: 'Flutter POS cash checkout',
+        ),
       );
 
       lastCompletedOrder = paidOrder;
       cart = const [];
       checkoutMessage =
-          '訂單 ${paidOrder.orderNumber} 已完成，收款 \$${paidOrder.paidAmount.toStringAsFixed(2)}。';
+          '訂單 ${paidOrder.orderNumber} 已完成，收款 ${paidOrder.paidAmount.toStringAsFixed(2)}。';
       await loadProducts(showLoading: false);
       return paidOrder;
     } on ApiException catch (error) {
       errorMessage = error.message;
       return null;
     } on Exception {
-      errorMessage = '結帳失敗，請確認可連到 $_apiBaseUrl，且商品庫存足夠。';
+      errorMessage = '結帳失敗，請檢查 API：$_apiBaseUrl';
       return null;
     } catch (_) {
-      errorMessage = '結帳失敗，請確認可連到 $_apiBaseUrl，且商品庫存足夠。';
+      errorMessage = '結帳失敗，請檢查 API：$_apiBaseUrl';
       return null;
     } finally {
       checkoutLoading = false;
@@ -351,16 +380,16 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _authService.healthCheck();
+      await _runWithApiFallback(_authService.healthCheck);
       return true;
     } on ApiException catch (error) {
       errorMessage = error.message;
       return false;
     } on Exception {
-      errorMessage = '無法連線到 $_apiBaseUrl。';
+      errorMessage = '無法連線到 $_apiBaseUrl';
       return false;
     } catch (_) {
-      errorMessage = '無法連線到 $_apiBaseUrl。';
+      errorMessage = '無法連線到 $_apiBaseUrl';
       return false;
     } finally {
       notifyListeners();
@@ -368,7 +397,7 @@ class SessionController extends ChangeNotifier {
   }
 
   Future<void> updateApiBaseUrl(String value) async {
-    _apiBaseUrl = value.trim().replaceAll(RegExp(r'/$'), '');
+    _apiBaseUrl = _sanitizeApiBaseUrl(value);
     _syncApiBaseUrl();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_apiBaseUrlKey, _apiBaseUrl);
@@ -381,11 +410,141 @@ class SessionController extends ChangeNotifier {
   }
 
   void _syncApiBaseUrl() {
-    final normalized = _apiBaseUrl.trim().replaceAll(RegExp(r'/$'), '');
+    final normalized = _sanitizeApiBaseUrl(_apiBaseUrl);
     _apiBaseUrl = normalized.isEmpty ? AppConfig.apiBaseUrl : normalized;
     _authService.updateBaseUrl(_apiBaseUrl);
     _productService.updateBaseUrl(_apiBaseUrl);
     _orderService.updateBaseUrl(_apiBaseUrl);
+  }
+
+  Future<T> _runWithApiFallback<T>(Future<T> Function() action) async {
+    try {
+      return await action();
+    } on ApiException {
+      rethrow;
+    } on Exception {
+      final fallbackUrl = _alternateApiBaseUrl(_apiBaseUrl);
+      if (fallbackUrl == null) {
+        rethrow;
+      }
+
+      final originalUrl = _apiBaseUrl;
+      await _setApiBaseUrlSilently(fallbackUrl);
+
+      try {
+        return await action();
+      } catch (_) {
+        await _setApiBaseUrlSilently(originalUrl);
+        rethrow;
+      }
+    }
+  }
+
+  Future<void> _setApiBaseUrlSilently(String value) async {
+    _apiBaseUrl = _sanitizeApiBaseUrl(value);
+    _syncApiBaseUrl();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_apiBaseUrlKey, _apiBaseUrl);
+  }
+
+  String _sanitizeApiBaseUrl(String value) {
+    var normalized = value.trim();
+    if (normalized.isEmpty) {
+      normalized = AppConfig.apiBaseUrl;
+    }
+
+    if (!normalized.contains('://')) {
+      normalized = 'http://$normalized';
+    }
+
+    return normalized.replaceAll(RegExp(r'/$'), '');
+  }
+
+  String _resolveInitialApiBaseUrl(String? storedApiBaseUrl) {
+    final normalizedStored = _normalizeApiBaseUrl(storedApiBaseUrl);
+    final normalizedDefault =
+        _normalizeApiBaseUrl(AppConfig.apiBaseUrl) ?? AppConfig.apiBaseUrl;
+
+    if (normalizedStored == null || normalizedStored.isEmpty) {
+      return normalizedDefault;
+    }
+
+    if (_shouldReplaceLegacyLocalUrl(
+      storedApiBaseUrl: normalizedStored,
+      defaultApiBaseUrl: normalizedDefault,
+    )) {
+      return normalizedDefault;
+    }
+
+    return normalizedStored;
+  }
+
+  String? _normalizeApiBaseUrl(String? value) {
+    final normalized = (value ?? '').trim().replaceAll(RegExp(r'/$'), '');
+    if (normalized.isEmpty) {
+      return null;
+    }
+    return normalized;
+  }
+
+  bool _shouldReplaceLegacyLocalUrl({
+    required String storedApiBaseUrl,
+    required String defaultApiBaseUrl,
+  }) {
+    final defaultUri = Uri.tryParse(defaultApiBaseUrl);
+    final storedUri = Uri.tryParse(storedApiBaseUrl);
+    if (defaultUri == null || storedUri == null) {
+      return false;
+    }
+
+    final defaultHost = defaultUri.host.toLowerCase();
+    final storedHost = storedUri.host.toLowerCase();
+    const legacyHosts = {
+      'localhost',
+      '127.0.0.1',
+      '10.0.2.2',
+      '10.0.3.2',
+    };
+    final storedPath = storedUri.path.replaceAll(RegExp(r'/$'), '');
+
+    return defaultHost == 'nucosmos.io' &&
+        (legacyHosts.contains(storedHost) ||
+            (storedHost == 'nucosmos.io' && storedPath == '/api'));
+  }
+
+  String? _alternateApiBaseUrl(String value) {
+    final current = Uri.tryParse(_sanitizeApiBaseUrl(value));
+    if (current == null) {
+      return null;
+    }
+
+    final host = current.host.toLowerCase();
+    const localOnlyHosts = {
+      'localhost',
+      '127.0.0.1',
+      '10.0.2.2',
+      '10.0.3.2',
+    };
+
+    if (localOnlyHosts.contains(host)) {
+      return null;
+    }
+
+    if (current.scheme == 'http') {
+      return current.replace(scheme: 'https').toString();
+    }
+
+    if (current.scheme == 'https') {
+      return current.replace(scheme: 'http').toString();
+    }
+
+    return null;
+  }
+
+  List<PosCartSelection> _normalizeSelections(List<PosCartSelection> selections) {
+    final nextSelections = [...selections]
+      ..sort((left, right) => left.optionId.compareTo(right.optionId));
+    return List.unmodifiable(nextSelections);
   }
 }
 
@@ -413,24 +572,62 @@ class ProductCategoryFilter {
   }
 }
 
+class PosCartSelection {
+  const PosCartSelection({
+    required this.groupId,
+    required this.groupName,
+    required this.optionId,
+    required this.optionName,
+    required this.priceDelta,
+  });
+
+  final String groupId;
+  final String groupName;
+  final String optionId;
+  final String optionName;
+  final double priceDelta;
+}
+
 class PosCartLine {
   const PosCartLine({
     required this.product,
     required this.quantity,
+    this.selectedOptions = const [],
   });
 
   final ProductSummary product;
   final int quantity;
+  final List<PosCartSelection> selectedOptions;
 
-  double get lineTotal => product.price * quantity;
+  double get unitPrice =>
+      product.price +
+      selectedOptions.fold<double>(
+        0,
+        (total, selection) => total + selection.priceDelta,
+      );
+
+  double get lineTotal => unitPrice * quantity;
+
+  String get key => cartKeyFor(product.id, selectedOptions);
+
+  static String cartKeyFor(
+    String productId,
+    List<PosCartSelection> selectedOptions,
+  ) {
+    final optionIds = selectedOptions.map((selection) => selection.optionId).toList()
+      ..sort();
+    return '$productId::${optionIds.join(",")}';
+  }
 
   PosCartLine copyWith({
     ProductSummary? product,
     int? quantity,
+    List<PosCartSelection>? selectedOptions,
   }) {
     return PosCartLine(
       product: product ?? this.product,
       quantity: quantity ?? this.quantity,
+      selectedOptions: selectedOptions ?? this.selectedOptions,
     );
   }
 }

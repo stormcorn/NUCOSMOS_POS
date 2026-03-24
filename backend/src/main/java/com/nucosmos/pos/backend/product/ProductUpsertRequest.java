@@ -24,6 +24,7 @@ public record ProductUpsertRequest(
         OffsetDateTime campaignEndsAt,
         @Size(max = 255) String recipeNote,
         List<ProductMaterialComponentRequest> materialComponents,
-        List<ProductPackagingComponentRequest> packagingComponents
+        List<ProductPackagingComponentRequest> packagingComponents,
+        List<ProductCustomizationGroupRequest> customizationGroups
 ) {
 }

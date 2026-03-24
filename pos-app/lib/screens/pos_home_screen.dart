@@ -1,316 +1,379 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_thermal_printer/utils/printer.dart';
 
+import '../models/product_summary.dart';
+import '../state/printer_controller.dart';
 import '../state/session_controller.dart';
 import '../widgets/product_grid.dart';
 
 class PosHomeScreen extends StatefulWidget {
   const PosHomeScreen({
     required this.controller,
+    required this.printerController,
     super.key,
   });
 
   final SessionController controller;
+  final PrinterController printerController;
 
   @override
   State<PosHomeScreen> createState() => _PosHomeScreenState();
 }
 
 class _PosHomeScreenState extends State<PosHomeScreen> {
+  Future<void> _handleAddProduct(ProductSummary product) async {
+    if (product.customizationGroups.isEmpty) {
+      widget.controller.addProduct(product);
+      return;
+    }
+
+    final selections = await _openCustomizationSheet(product);
+    if (!mounted || selections == null) {
+      return;
+    }
+
+    widget.controller.addProduct(product, selectedOptions: selections);
+  }
+
   Future<void> _checkoutCash() async {
+    final cartSnapshot = widget.controller.cart.toList(growable: false);
     final receipt = await widget.controller.checkoutCash();
     if (!mounted || receipt == null) {
+      return;
+    }
+
+    await widget.printerController.printReceiptForOrder(
+      receipt: receipt,
+      lines: cartSnapshot,
+      storeCode: widget.controller.session?.storeCode,
+      staffName: widget.controller.session?.displayName,
+    );
+
+    if (!mounted) {
       return;
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          '訂單 ${receipt.orderNumber} 已完成，收款 ${_currency(receipt.paidAmount)}',
+          'Order ${receipt.orderNumber} completed. Paid ${_currency(receipt.paidAmount)}',
         ),
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: widget.controller,
-      builder: (context, _) {
-        final controller = widget.controller;
-
-        return Scaffold(
-          body: SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final wideLayout = constraints.maxWidth >= 1120;
-
-                if (!wideLayout) {
-                  return Column(
-                    children: [
-                      _TopBar(controller: controller),
-                      Expanded(
-                        child: ListView(
-                          padding: const EdgeInsets.all(20),
-                          children: [
-                            _StoreHeader(controller: controller),
-                            const SizedBox(height: 20),
-                            _CategoryStrip(controller: controller),
-                            const SizedBox(height: 20),
-                            SizedBox(
-                              height: 520,
-                              child: ProductGrid(
-                                products: controller.filteredProducts,
-                                onAddProduct: controller.addProduct,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            _OrderPanel(
-                              controller: controller,
-                              onCheckoutCash: _checkoutCash,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  );
-                }
-
-                return Row(
-                  children: [
-                    SizedBox(
-                      width: 280,
-                      child: _SidePanel(controller: controller),
-                    ),
-                    const VerticalDivider(width: 1),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _StoreHeader(controller: controller),
-                            const SizedBox(height: 20),
-                            _CategoryStrip(controller: controller),
-                            const SizedBox(height: 20),
-                            Expanded(
-                              child: ProductGrid(
-                                products: controller.filteredProducts,
-                                onAddProduct: controller.addProduct,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const VerticalDivider(width: 1),
-                    SizedBox(
-                      width: 360,
-                      child: _OrderPanel(
-                        controller: controller,
-                        onCheckoutCash: _checkoutCash,
-                      ),
-                    ),
-                  ],
-                );
-              },
+  void _openPrinterSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF111827),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: SingleChildScrollView(
+              child: _PrinterPanel(printerController: widget.printerController),
             ),
           ),
         );
       },
     );
   }
-}
 
-class _TopBar extends StatelessWidget {
-  const _TopBar({required this.controller});
-
-  final SessionController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: Color(0xFF0A111E),
-        border: Border(
-          bottom: BorderSide(color: Color(0xFF22314B)),
-        ),
-      ),
-      child: Row(
-        children: [
-          const Text(
-            'NUCOSMOS POS',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1FE4FF),
-            ),
-          ),
-          const Spacer(),
-          TextButton.icon(
-            onPressed: controller.logout,
-            icon: const Icon(Icons.logout_rounded),
-            label: const Text('登出'),
-          ),
-        ],
-      ),
+  Future<List<PosCartSelection>?> _openCustomizationSheet(
+    ProductSummary product,
+  ) {
+    return showModalBottomSheet<List<PosCartSelection>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF101827),
+      builder: (context) => _CustomizationSheet(product: product),
     );
   }
-}
-
-class _SidePanel extends StatelessWidget {
-  const _SidePanel({required this.controller});
-
-  final SessionController controller;
 
   @override
   Widget build(BuildContext context) {
-    final session = controller.session;
-    final theme = Theme.of(context);
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        widget.controller,
+        widget.printerController,
+      ]),
+      builder: (context, _) {
+        final controller = widget.controller;
+        final selectedCategoryName = _selectedCategoryName(controller);
+        final screenWidth = MediaQuery.of(context).size.width;
+        final wideLayout = screenWidth >= 940;
+        final desktopLayout = screenWidth >= 1220;
+        final contentPadding = desktopLayout ? 20.0 : 14.0;
+        final cartWidth = desktopLayout ? 310.0 : 272.0;
+        final categoryWidth = desktopLayout ? 148.0 : 126.0;
 
-    return Container(
-      color: const Color(0xFF0A111E),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'NUCOSMOS POS',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              color: const Color(0xFF1FE4FF),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 24),
-          _InfoCard(
-            title: '門市',
-            value: session?.storeCode ?? '-',
-            subtitle: '目前登入門市',
-          ),
-          const SizedBox(height: 12),
-          _InfoCard(
-            title: '員工',
-            value: session?.displayName ?? '-',
-            subtitle: session?.employeeCode ?? '-',
-          ),
-          const SizedBox(height: 12),
-          _InfoCard(
-            title: '角色',
-            value: session?.activeRole ?? '-',
-            subtitle: 'Device: ${session?.deviceCode ?? controller.deviceCode}',
-          ),
-          const SizedBox(height: 12),
-          _InfoCard(
-            title: '購物車',
-            value: '${controller.cartItemCount} 件',
-            subtitle: '小計 ${_currency(controller.cartSubtotal)}',
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed:
-                  controller.catalogLoading ? null : () => controller.loadProducts(),
-              icon: controller.catalogLoading
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.refresh_rounded),
-              label: Text(controller.catalogLoading ? '載入中...' : '重新載入商品'),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: controller.logout,
-              icon: const Icon(Icons.logout_rounded),
-              label: const Text('登出'),
-            ),
-          ),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF0E1726),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFF22314B)),
-            ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        return Scaffold(
+          body: SafeArea(
+            child: Row(
               children: [
-                Text(
-                  '目前 POS 第一版已完成',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                _NavigationRail(
+                  onOpenPrinter: _openPrinterSheet,
+                  onLogout: controller.logout,
+                  onRefresh: () => controller.loadProducts(),
                 ),
-                SizedBox(height: 10),
-                Text('1. PIN 登入與工作階段還原'),
-                Text('2. 商品分類與商品清單'),
-                Text('3. 購物車與現金結帳'),
-                Text('4. 串接 Spring Boot 訂單 API'),
+                Expanded(
+                  child: Container(
+                    color: const Color(0xFF171F2E),
+                    child: wideLayout
+                        ? Row(
+                            children: [
+                              SizedBox(
+                                width: categoryWidth,
+                                child: _CategorySidebar(controller: controller),
+                              ),
+                              Expanded(
+                                child: Padding(
+                                  padding: EdgeInsets.fromLTRB(
+                                    contentPadding,
+                                    16,
+                                    contentPadding,
+                                    16,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      _HeaderSection(
+                                        title: selectedCategoryName,
+                                        subtitle: 'Select your favorite beverages',
+                                        sessionController: controller,
+                                        compact: !desktopLayout,
+                                      ),
+                                      SizedBox(height: desktopLayout ? 16 : 12),
+                                      Expanded(
+                                        child: ProductGrid(
+                                          products: controller.filteredProducts,
+                                          onAddProduct: _handleAddProduct,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              SizedBox(
+                                width: cartWidth,
+                                child: _CurrentOrderPanel(
+                                  controller: controller,
+                                  onCheckout: _checkoutCash,
+                                  compact: !desktopLayout,
+                                ),
+                              ),
+                            ],
+                          )
+                        : Column(
+                            children: [
+                              Expanded(
+                                child: ListView(
+                                  padding: const EdgeInsets.fromLTRB(18, 20, 18, 24),
+                                  children: [
+                                    _HeaderSection(
+                                      title: selectedCategoryName,
+                                      subtitle:
+                                          'Select your favorite beverages',
+                                      sessionController: controller,
+                                      compact: true,
+                                    ),
+                                    const SizedBox(height: 18),
+                                    _CategoryChips(controller: controller),
+                                    const SizedBox(height: 18),
+                                    SizedBox(
+                                      height: 720,
+                                      child: ProductGrid(
+                                        products: controller.filteredProducts,
+                                        onAddProduct: _handleAddProduct,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 18),
+                                    _CurrentOrderPanel(
+                                      controller: controller,
+                                      onCheckout: _checkoutCash,
+                                      compact: true,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
               ],
             ),
           ),
+        );
+      },
+    );
+  }
+
+  String _selectedCategoryName(SessionController controller) {
+    final selectedCode = controller.selectedCategoryCode;
+    if (selectedCode == null || selectedCode.isEmpty) {
+      return 'Tea & Drinks';
+    }
+
+    final match = controller.categories.where((item) => item.code == selectedCode);
+    if (match.isEmpty) {
+      return 'Tea & Drinks';
+    }
+
+    return match.first.name;
+  }
+}
+
+class _NavigationRail extends StatelessWidget {
+  const _NavigationRail({
+    required this.onOpenPrinter,
+    required this.onLogout,
+    required this.onRefresh,
+  });
+
+  final VoidCallback onOpenPrinter;
+  final VoidCallback onLogout;
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 72,
+      color: const Color(0xFF0A0F17),
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              gradient: const LinearGradient(
+                colors: [Color(0xFF14F1FF), Color(0xFF0FE7A7)],
+              ),
+            ),
+            child: const Text(
+              'N',
+              style: TextStyle(
+                color: Color(0xFF07111C),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(height: 26),
+          _RailButton(
+            icon: Icons.local_cafe_rounded,
+            active: true,
+            onTap: () {},
+          ),
+          _RailButton(
+            icon: Icons.grid_view_rounded,
+            onTap: onRefresh,
+          ),
+          _RailButton(
+            icon: Icons.print_rounded,
+            onTap: onOpenPrinter,
+          ),
+          const Spacer(),
+          _RailButton(
+            icon: Icons.logout_rounded,
+            onTap: onLogout,
+          ),
+          const SizedBox(height: 16),
         ],
       ),
     );
   }
 }
 
-class _StoreHeader extends StatelessWidget {
-  const _StoreHeader({required this.controller});
+class _RailButton extends StatelessWidget {
+  const _RailButton({
+    required this.icon,
+    required this.onTap,
+    this.active = false,
+  });
 
-  final SessionController controller;
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool active;
 
   @override
   Widget build(BuildContext context) {
-    final session = controller.session;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Ink(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            color: active ? const Color(0xFF111E2F) : const Color(0xFF1A2434),
+            border: Border.all(
+              color: active ? const Color(0xFF14F1FF) : Colors.transparent,
+            ),
+          ),
+          child: Icon(
+            icon,
+            color: active ? const Color(0xFF14F1FF) : Colors.white70,
+            size: 20,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HeaderSection extends StatelessWidget {
+  const _HeaderSection({
+    required this.title,
+    required this.subtitle,
+    required this.sessionController,
+    this.compact = false,
+  });
+
+  final String title;
+  final String subtitle;
+  final SessionController sessionController;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Wrap(
-          spacing: 16,
-          runSpacing: 12,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text(
-              'POS 點餐台',
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            _Pill(
-              label: session == null
-                  ? '未登入'
-                  : '${session.storeCode} / ${session.activeRole}',
-            ),
-            _Pill(label: '購物車 ${controller.cartItemCount} 件'),
-          ],
-        ),
-        const SizedBox(height: 10),
         Text(
-          '先從商品分類開始點餐，右側會即時累積當前訂單並可直接現金結帳。',
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Colors.white70,
-              ),
+          title,
+          style: TextStyle(
+            fontSize: compact ? 18 : 22,
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF14F1FF),
+          ),
         ),
-        if (controller.errorMessage.isNotEmpty) ...[
+        SizedBox(height: compact ? 4 : 6),
+        Text(
+          subtitle,
+          style: TextStyle(
+            color: const Color(0xFF97A7BC),
+            fontSize: compact ? 12 : 15,
+          ),
+        ),
+        if (sessionController.errorMessage.isNotEmpty) ...[
           const SizedBox(height: 12),
-          _InlineMessage(
-            color: const Color(0xFF3A0E14),
-            borderColor: Colors.redAccent,
-            message: controller.errorMessage,
+          _BannerMessage(
+            color: const Color(0xFF35161B),
+            borderColor: const Color(0xFFB74B57),
+            message: sessionController.errorMessage,
           ),
         ],
-        if (controller.checkoutMessage.isNotEmpty) ...[
+        if (sessionController.checkoutMessage.isNotEmpty) ...[
           const SizedBox(height: 12),
-          _InlineMessage(
-            color: const Color(0xFF0E2B24),
-            borderColor: const Color(0xFF2DF3C4),
-            message: controller.checkoutMessage,
+          _BannerMessage(
+            color: const Color(0xFF122A27),
+            borderColor: const Color(0xFF14F1FF),
+            message: sessionController.checkoutMessage,
           ),
         ],
       ],
@@ -318,35 +381,102 @@ class _StoreHeader extends StatelessWidget {
   }
 }
 
-class _CategoryStrip extends StatelessWidget {
-  const _CategoryStrip({required this.controller});
+class _CategorySidebar extends StatelessWidget {
+  const _CategorySidebar({required this.controller});
 
   final SessionController controller;
 
   @override
   Widget build(BuildContext context) {
-    final categories = controller.categories;
-    return SizedBox(
-      height: 52,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
+    final categories = [
+      const _SidebarCategoryItem(
+        code: null,
+        label: 'All Items',
+        icon: Icons.grid_view_rounded,
+      ),
+      ...controller.categories.map(
+        (item) => _SidebarCategoryItem(
+          code: item.code,
+          label: item.name,
+          icon: Icons.local_cafe_rounded,
+        ),
+      ),
+    ];
+
+    return Container(
+      color: const Color(0xFF121927),
+      padding: const EdgeInsets.fromLTRB(10, 16, 10, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: FilterChip(
-              label: Text('全部 (${controller.availableProducts.length})'),
-              selected: controller.selectedCategoryCode == null,
-              onSelected: (_) => controller.selectCategory(null),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 6),
+            child: Text(
+              'Categories',
+              style: TextStyle(
+                color: Color(0xFF14F1FF),
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
-          ...categories.map(
-            (category) => Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: FilterChip(
-                label: Text('${category.name} (${category.count})'),
-                selected: controller.selectedCategoryCode == category.code,
-                onSelected: (_) => controller.selectCategory(category.code),
-              ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: ListView.separated(
+              itemCount: categories.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final item = categories[index];
+                final active = controller.selectedCategoryCode == item.code ||
+                    (item.code == null && controller.selectedCategoryCode == null);
+                return InkWell(
+                  onTap: () => controller.selectCategory(item.code),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Ink(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      color: active
+                          ? const Color(0xFF14F1FF)
+                          : const Color(0xFF1E293B),
+                      border: Border.all(
+                        color: active
+                            ? const Color(0xFF14F1FF)
+                            : const Color(0xFF29364A),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          item.icon,
+                          size: 16,
+                          color: active
+                              ? const Color(0xFF07111C)
+                              : Colors.white70,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            item.label,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: active
+                                  ? const Color(0xFF07111C)
+                                  : Colors.white,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
@@ -355,145 +485,216 @@ class _CategoryStrip extends StatelessWidget {
   }
 }
 
-class _OrderPanel extends StatelessWidget {
-  const _OrderPanel({
+class _SidebarCategoryItem {
+  const _SidebarCategoryItem({
+    required this.code,
+    required this.label,
+    required this.icon,
+  });
+
+  final String? code;
+  final String label;
+  final IconData icon;
+}
+
+class _CategoryChips extends StatelessWidget {
+  const _CategoryChips({required this.controller});
+
+  final SessionController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 42,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          _CategoryChip(
+            label: 'All',
+            active: controller.selectedCategoryCode == null,
+            onTap: () => controller.selectCategory(null),
+          ),
+          const SizedBox(width: 10),
+          ...controller.categories.expand(
+            (item) => [
+              _CategoryChip(
+                label: item.name,
+                active: controller.selectedCategoryCode == item.code,
+                onTap: () => controller.selectCategory(item.code),
+              ),
+              const SizedBox(width: 10),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Ink(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(999),
+          color: active ? const Color(0xFF14F1FF) : const Color(0xFF243047),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: active ? const Color(0xFF07111C) : Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CurrentOrderPanel extends StatelessWidget {
+  const _CurrentOrderPanel({
     required this.controller,
-    required this.onCheckoutCash,
+    required this.onCheckout,
+    this.compact = false,
   });
 
   final SessionController controller;
-  final Future<void> Function() onCheckoutCash;
+  final Future<void> Function() onCheckout;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final cart = controller.cart;
-    final lastOrder = controller.lastCompletedOrder;
+    final subtotal = controller.cartSubtotal;
+    const tax = 0.0;
+    final total = subtotal + tax;
 
     return Container(
-      color: const Color(0xFF0A111E),
-      padding: const EdgeInsets.all(20),
+      color: const Color(0xFF050709),
+      padding: EdgeInsets.fromLTRB(
+        compact ? 14 : 18,
+        compact ? 14 : 18,
+        compact ? 14 : 18,
+        compact ? 16 : 20,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '當前訂單',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '商品數 ${controller.cartItemCount} 件',
-            style: const TextStyle(color: Colors.white70),
-          ),
-          if (lastOrder != null) ...[
-            const SizedBox(height: 16),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0E2B24),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0xFF2DF3C4)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '最近完成訂單 ${lastOrder.orderNumber}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '總額 ${_currency(lastOrder.totalAmount)} / 已收 ${_currency(lastOrder.paidAmount)}',
-                    style: const TextStyle(color: Colors.white70),
-                  ),
-                ],
-              ),
+            'Current Order',
+            style: TextStyle(
+              color: const Color(0xFF14F1FF),
+              fontSize: compact ? 16 : 18,
+              fontWeight: FontWeight.w800,
             ),
-          ],
-          const SizedBox(height: 16),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            controller.session?.storeCode ?? 'Store Session',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: compact ? 11.5 : 13,
+            ),
+          ),
+          SizedBox(height: compact ? 12 : 18),
           Expanded(
             child: cart.isEmpty
                 ? Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0E1726),
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: const Color(0xFF22314B)),
+                      color: const Color(0xFF10151D),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: const Color(0xFF1C2432)),
                     ),
                     alignment: Alignment.center,
                     child: const Text(
-                      '尚未加入商品。\n請從左側商品卡點擊「加入」。',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white60, height: 1.7),
+                      'Cart is empty',
+                      style: TextStyle(color: Colors.white60),
                     ),
                   )
                 : ListView.separated(
                     itemCount: cart.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    separatorBuilder: (_, __) =>
+                        SizedBox(height: compact ? 10 : 12),
                     itemBuilder: (context, index) {
                       final line = cart[index];
-                      return _CartLineTile(
+                      return _OrderCard(
                         line: line,
-                        onIncrease: () =>
-                            controller.increaseQuantity(line.product.id),
                         onDecrease: () =>
-                            controller.decreaseQuantity(line.product.id),
-                        onRemove: () => controller.removeProduct(line.product.id),
+                            controller.decreaseQuantity(line.key),
+                        onIncrease: () =>
+                            controller.increaseQuantity(line.key),
+                        onRemove: () => controller.removeProduct(line.key),
+                        compact: compact,
                       );
                     },
                   ),
           ),
-          const SizedBox(height: 16),
-          Container(
+          SizedBox(height: compact ? 12 : 16),
+          _TotalRow(label: 'Subtotal', value: _currency(subtotal)),
+          const SizedBox(height: 10),
+          _TotalRow(label: 'Tax', value: _currency(tax)),
+          const Divider(color: Color(0xFF202A39), height: 28),
+          _TotalRow(
+            label: 'Total',
+            value: _currency(total),
+            emphasize: true,
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
             width: double.infinity,
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: const Color(0xFF0E1726),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: const Color(0xFF22314B)),
-            ),
-            child: Column(
-              children: [
-                _SummaryRow(label: '品項數', value: '${controller.cartItemCount}'),
-                const SizedBox(height: 10),
-                _SummaryRow(
-                  label: '小計',
-                  value: _currency(controller.cartSubtotal),
+            height: compact ? 54 : 48,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1FE4FF), Color(0xFF785BFF)],
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: cart.isEmpty || controller.checkoutLoading
-                            ? null
-                            : controller.clearCart,
-                        child: const Text('清空'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: cart.isEmpty || controller.checkoutLoading
-                            ? null
-                            : onCheckoutCash,
-                        icon: controller.checkoutLoading
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.payments_rounded),
-                        label: Text(
-                          controller.checkoutLoading ? '結帳中...' : '現金結帳',
-                        ),
-                      ),
-                    ),
-                  ],
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x3314F1FF),
+                    blurRadius: 16,
+                    offset: Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: FilledButton.icon(
+                onPressed:
+                    cart.isEmpty || controller.checkoutLoading ? null : onCheckout,
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  foregroundColor: const Color(0xFF07111C),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
-              ],
+                icon: controller.checkoutLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.credit_card_rounded),
+                label: Text(
+                  controller.checkoutLoading ? 'PROCESSING' : 'CHECKOUT',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
             ),
           ),
         ],
@@ -502,27 +703,28 @@ class _OrderPanel extends StatelessWidget {
   }
 }
 
-class _CartLineTile extends StatelessWidget {
-  const _CartLineTile({
+class _OrderCard extends StatelessWidget {
+  const _OrderCard({
     required this.line,
-    required this.onIncrease,
     required this.onDecrease,
+    required this.onIncrease,
     required this.onRemove,
+    required this.compact,
   });
 
   final PosCartLine line;
-  final VoidCallback onIncrease;
   final VoidCallback onDecrease;
+  final VoidCallback onIncrease;
   final VoidCallback onRemove;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.all(compact ? 12 : 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF0E1726),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFF22314B)),
+        color: const Color(0xFF232E40),
+        borderRadius: BorderRadius.circular(compact ? 14 : 18),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -536,66 +738,81 @@ class _CartLineTile extends StatelessWidget {
                   children: [
                     Text(
                       line.product.name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: compact ? 14 : 16,
                       ),
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      line.product.categoryName,
-                      style: const TextStyle(color: Colors.white60),
+                      _currency(line.unitPrice),
+                      style: TextStyle(
+                        color: const Color(0xFF7ED8FF),
+                        fontWeight: FontWeight.w600,
+                        fontSize: compact ? 12 : 14,
+                      ),
                     ),
+                    if (line.selectedOptions.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      ...line.selectedOptions.map(
+                        (selection) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            '${selection.groupName}: ${selection.optionName}'
+                            '${selection.priceDelta > 0 ? ' (+${_currency(selection.priceDelta)})' : ''}',
+                            style: TextStyle(
+                              color: Colors.white60,
+                              fontSize: compact ? 10.5 : 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
               IconButton(
                 onPressed: onRemove,
-                icon: const Icon(Icons.close_rounded),
-                tooltip: '移除',
+                icon: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: Color(0xFFFF6E79),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              _QuantityButton(
+              _CircleButton(
                 icon: Icons.remove_rounded,
                 onTap: onDecrease,
+                compact: compact,
               ),
-              Container(
-                width: 56,
-                alignment: Alignment.center,
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 12),
                 child: Text(
                   '${line.quantity}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: compact ? 16 : 18,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
-              _QuantityButton(
+              _CircleButton(
                 icon: Icons.add_rounded,
                 onTap: onIncrease,
+                compact: compact,
               ),
               const Spacer(),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '${_currency(line.product.price)} x ${line.quantity}',
-                    style: const TextStyle(color: Colors.white60),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _currency(line.lineTotal),
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1FE4FF),
-                    ),
-                  ),
-                ],
+              Text(
+                _currency(line.lineTotal),
+                style: TextStyle(
+                  color: const Color(0xFF14F1FF),
+                  fontWeight: FontWeight.w800,
+                  fontSize: compact ? 18 : 20,
+                ),
               ),
             ],
           ),
@@ -605,63 +822,230 @@ class _CartLineTile extends StatelessWidget {
   }
 }
 
-class _QuantityButton extends StatelessWidget {
-  const _QuantityButton({
+class _CircleButton extends StatelessWidget {
+  const _CircleButton({
     required this.icon,
     required this.onTap,
+    required this.compact,
   });
 
   final IconData icon;
   final VoidCallback onTap;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(999),
       child: Ink(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: const Color(0xFF08101D),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFF22314B)),
+        width: compact ? 30 : 34,
+        height: compact ? 30 : 34,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          color: Color(0xFF364154),
         ),
-        child: Icon(icon, size: 18),
+        child: Icon(icon, size: compact ? 16 : 18, color: Colors.white),
       ),
     );
   }
 }
 
-class _SummaryRow extends StatelessWidget {
-  const _SummaryRow({
-    required this.label,
-    required this.value,
-  });
+class _PrinterPanel extends StatelessWidget {
+  const _PrinterPanel({required this.printerController});
 
-  final String label;
-  final String value;
+  final PrinterController printerController;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Text(label, style: const TextStyle(color: Colors.white70)),
-        const Spacer(),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+    final selected = printerController.selectedPrinter;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF172132),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFF243047)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Printer Settings',
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+            ),
           ),
+          const SizedBox(height: 10),
+          Text(
+            selected == null
+                ? 'No printer selected'
+                : 'Selected: ${selected.name ?? selected.address ?? 'Unnamed Printer'}',
+            style: const TextStyle(color: Colors.white70),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            selected == null
+                ? 'Supports Bluetooth BLE and USB thermal printers'
+                : 'Status: ${(selected.isConnected ?? false) ? 'Connected' : 'Disconnected'} / ${selected.connectionTypeString}',
+            style: const TextStyle(color: Colors.white60),
+          ),
+          if (printerController.statusMessage.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              printerController.statusMessage,
+              style: const TextStyle(color: Color(0xFF14F1FF)),
+            ),
+          ],
+          if (printerController.errorMessage.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              printerController.errorMessage,
+              style: const TextStyle(color: Colors.redAccent),
+            ),
+          ],
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              FilledButton.icon(
+                onPressed: printerController.scanning
+                    ? null
+                    : printerController.startScan,
+                icon: const Icon(Icons.radar_rounded),
+                label: const Text('Scan'),
+              ),
+              OutlinedButton.icon(
+                onPressed:
+                    printerController.scanning ? printerController.stopScan : null,
+                icon: const Icon(Icons.stop_circle_outlined),
+                label: const Text('Stop'),
+              ),
+              OutlinedButton.icon(
+                onPressed: printerController.printing || selected == null
+                    ? null
+                    : printerController.printTestReceipt,
+                icon: const Icon(Icons.receipt_long_rounded),
+                label: const Text('Test Print'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Auto print after checkout'),
+            value: printerController.autoPrintReceipt,
+            onChanged: printerController.setAutoPrintReceipt,
+          ),
+          const SizedBox(height: 8),
+          if (printerController.printers.isEmpty)
+            const Text(
+              'No printers found yet. Tap Scan to search nearby devices.',
+              style: TextStyle(color: Colors.white54),
+            )
+          else
+            Column(
+              children: printerController.printers
+                  .map(
+                    (printer) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _PrinterDeviceTile(
+                        printer: printer,
+                        selected: selected != null &&
+                            _samePrinter(printer, selected),
+                        connecting: printerController.connecting,
+                        onTap: () => printerController.connectPrinter(printer),
+                      ),
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+        ],
+      ),
+    );
+  }
+
+  bool _samePrinter(Printer left, Printer right) {
+    final leftAddress = left.address?.trim();
+    final rightAddress = right.address?.trim();
+    if (left.connectionTypeString == right.connectionTypeString &&
+        leftAddress != null &&
+        rightAddress != null &&
+        leftAddress.isNotEmpty &&
+        rightAddress.isNotEmpty) {
+      return leftAddress == rightAddress;
+    }
+
+    return (left.name ?? '').trim() == (right.name ?? '').trim() &&
+        left.connectionTypeString == right.connectionTypeString;
+  }
+}
+
+class _PrinterDeviceTile extends StatelessWidget {
+  const _PrinterDeviceTile({
+    required this.printer,
+    required this.selected,
+    required this.connecting,
+    required this.onTap,
+  });
+
+  final Printer printer;
+  final bool selected;
+  final bool connecting;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: selected ? const Color(0xFF223047) : const Color(0xFF101827),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: selected ? const Color(0xFF14F1FF) : const Color(0xFF243047),
         ),
-      ],
+      ),
+      child: Row(
+        children: [
+          Icon(
+            printer.connectionTypeString == 'USB'
+                ? Icons.usb_rounded
+                : Icons.bluetooth_rounded,
+            color: const Color(0xFF14F1FF),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  printer.name?.trim().isNotEmpty == true
+                      ? printer.name!
+                      : (printer.address ?? 'Unnamed Printer'),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  printer.connectionTypeString,
+                  style: const TextStyle(color: Colors.white60),
+                ),
+              ],
+            ),
+          ),
+          FilledButton(
+            onPressed: connecting ? null : onTap,
+            child: Text(selected ? 'Selected' : 'Use'),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _InlineMessage extends StatelessWidget {
-  const _InlineMessage({
+class _BannerMessage extends StatelessWidget {
+  const _BannerMessage({
     required this.color,
     required this.borderColor,
     required this.message,
@@ -686,64 +1070,349 @@ class _InlineMessage extends StatelessWidget {
   }
 }
 
-class _Pill extends StatelessWidget {
-  const _Pill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0E1726),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFF263652)),
-      ),
-      child: Text(label),
-    );
-  }
-}
-
-class _InfoCard extends StatelessWidget {
-  const _InfoCard({
-    required this.title,
+class _TotalRow extends StatelessWidget {
+  const _TotalRow({
+    required this.label,
     required this.value,
-    required this.subtitle,
+    this.emphasize = false,
   });
 
-  final String title;
+  final String label;
   final String value;
-  final String subtitle;
+  final bool emphasize;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0E1726),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFF22314B)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(color: Colors.white70)),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+    final color = emphasize ? const Color(0xFF14F1FF) : Colors.white;
+    final size = emphasize ? 28.0 : 15.0;
+    final weight = emphasize ? FontWeight.w800 : FontWeight.w600;
+
+    return Row(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: emphasize ? 18 : 14,
+            fontWeight: FontWeight.w700,
           ),
-          const SizedBox(height: 4),
-          Text(subtitle, style: const TextStyle(color: Colors.white60)),
-        ],
-      ),
+        ),
+        const Spacer(),
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: size,
+            fontWeight: weight,
+          ),
+        ),
+      ],
     );
   }
 }
 
 String _currency(double value) => '\$${value.toStringAsFixed(2)}';
+
+class _CustomizationSheet extends StatefulWidget {
+  const _CustomizationSheet({required this.product});
+
+  final ProductSummary product;
+
+  @override
+  State<_CustomizationSheet> createState() => _CustomizationSheetState();
+}
+
+class _CustomizationSheetState extends State<_CustomizationSheet> {
+  late final Map<String, Set<String>> _selectedOptionIdsByGroup;
+  String _errorMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedOptionIdsByGroup = {
+      for (final group in widget.product.customizationGroups)
+        group.id: group.options
+            .where((option) => option.defaultSelected)
+            .map((option) => option.id)
+            .toSet(),
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selections = _buildSelections();
+    final extraTotal = selections.fold<double>(
+      0,
+      (sum, selection) => sum + selection.priceDelta,
+    );
+    final previewPrice = widget.product.price + extraTotal;
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          20 + MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                widget.product.name,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Base price ${_currency(widget.product.price)}',
+                style: const TextStyle(color: Color(0xFF8DA2BD)),
+              ),
+              if (_errorMessage.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF35161B),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFB74B57)),
+                  ),
+                  child: Text(_errorMessage),
+                ),
+              ],
+              const SizedBox(height: 18),
+              ...widget.product.customizationGroups.map(_buildGroupCard),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF172132),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFF253043)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Price Preview',
+                      style: TextStyle(
+                        color: Color(0xFF8DA2BD),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _currency(previewPrice),
+                      style: const TextStyle(
+                        color: Color(0xFF14F1FF),
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () {
+                        if (!_validateSelections()) {
+                          return;
+                        }
+                        Navigator.of(context).pop(_buildSelections());
+                      },
+                      child: const Text('Add To Cart'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGroupCard(ProductCustomizationGroup group) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF172132),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFF253043)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            group.name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            group.isSingleSelect
+                ? 'Choose up to ${group.maxSelections}'
+                : 'Choose ${group.minSelections} - ${group.maxSelections}',
+            style: const TextStyle(color: Color(0xFF8DA2BD), fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: group.options.map((option) {
+              final active =
+                  _selectedOptionIdsByGroup[group.id]?.contains(option.id) ?? false;
+              return InkWell(
+                onTap: () => _toggleOption(group, option),
+                borderRadius: BorderRadius.circular(14),
+                child: Ink(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    color: active
+                        ? const Color(0xFF14F1FF)
+                        : const Color(0xFF223047),
+                    border: Border.all(
+                      color: active
+                          ? const Color(0xFF14F1FF)
+                          : const Color(0xFF304056),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        option.name,
+                        style: TextStyle(
+                          color: active
+                              ? const Color(0xFF07111C)
+                              : Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        option.priceDelta > 0
+                            ? '+${_currency(option.priceDelta)}'
+                            : 'No extra charge',
+                        style: TextStyle(
+                          color: active
+                              ? const Color(0xFF07111C)
+                              : const Color(0xFF9AB0C7),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(growable: false),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _toggleOption(
+    ProductCustomizationGroup group,
+    ProductCustomizationOption option,
+  ) {
+    final current = <String>{
+      ...(_selectedOptionIdsByGroup[group.id] ?? const <String>{}),
+    };
+
+    setState(() {
+      _errorMessage = '';
+      if (group.isSingleSelect) {
+        if (current.contains(option.id)) {
+          current.remove(option.id);
+        } else {
+          current
+            ..clear()
+            ..add(option.id);
+        }
+      } else {
+        if (current.contains(option.id)) {
+          current.remove(option.id);
+        } else if (current.length < group.maxSelections) {
+          current.add(option.id);
+        } else {
+          _errorMessage = 'This group allows up to ${group.maxSelections} options.';
+        }
+      }
+      _selectedOptionIdsByGroup[group.id] = current;
+    });
+  }
+
+  bool _validateSelections() {
+    for (final group in widget.product.customizationGroups) {
+      final count = _selectedOptionIdsByGroup[group.id]?.length ?? 0;
+      if (group.required && count == 0) {
+        setState(() {
+          _errorMessage = '${group.name} is required.';
+        });
+        return false;
+      }
+      if (count < group.minSelections) {
+        setState(() {
+          _errorMessage =
+              '${group.name} requires at least ${group.minSelections} selection(s).';
+        });
+        return false;
+      }
+      if (count > group.maxSelections) {
+        setState(() {
+          _errorMessage =
+              '${group.name} allows up to ${group.maxSelections} selection(s).';
+        });
+        return false;
+      }
+    }
+    return true;
+  }
+
+  List<PosCartSelection> _buildSelections() {
+    final selections = <PosCartSelection>[];
+    for (final group in widget.product.customizationGroups) {
+      final selectedIds = _selectedOptionIdsByGroup[group.id] ?? const <String>{};
+      for (final option in group.options.where((item) => selectedIds.contains(item.id))) {
+        selections.add(
+          PosCartSelection(
+            groupId: group.id,
+            groupName: group.name,
+            optionId: option.id,
+            optionName: option.name,
+            priceDelta: option.priceDelta,
+          ),
+        );
+      }
+    }
+    return selections;
+  }
+}

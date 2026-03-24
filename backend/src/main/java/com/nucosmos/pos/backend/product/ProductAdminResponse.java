@@ -25,6 +25,7 @@ public record ProductAdminResponse(
         boolean active,
         List<ProductMaterialComponentResponse> materialComponents,
         List<ProductPackagingComponentResponse> packagingComponents,
+        List<ProductCustomizationGroupResponse> customizationGroups,
         List<ProductRecipeVersionSummaryResponse> recipeVersions,
         BigDecimal materialCost,
         BigDecimal packagingCost,

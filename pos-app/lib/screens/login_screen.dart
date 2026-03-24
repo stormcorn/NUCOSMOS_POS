@@ -89,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
       SnackBar(
         content: Text(
           success
-              ? '連線成功：${widget.controller.apiBaseUrl}'
+              ? '已成功連線到 ${widget.controller.apiBaseUrl}'
               : widget.controller.errorMessage,
         ),
       ),
@@ -263,179 +263,179 @@ class _LoginPanel extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-          Text(
-            'NUCOSMOS POS',
-            style: theme.textTheme.headlineMedium?.copyWith(
-              color: const Color(0xFF1FE4FF),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Android 平板 POS 測試版',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: Colors.white70,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            '目前 API：$currentApiBaseUrl',
-            style: const TextStyle(color: Colors.white60),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: apiBaseUrlController,
-            decoration: const InputDecoration(
-              labelText: 'API Base URL',
-              hintText: 'http://10.0.2.2:8081',
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: testingConnection ? null : onTestConnection,
-                  icon: testingConnection
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.wifi_tethering_rounded),
-                  label: Text(testingConnection ? '測試中...' : '測試連線'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          TextField(
-            controller: storeCodeController,
-            textCapitalization: TextCapitalization.characters,
-            decoration: const InputDecoration(
-              labelText: 'Store Code',
-              hintText: 'TW001',
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: deviceCodeController,
-            textCapitalization: TextCapitalization.characters,
-            decoration: const InputDecoration(
-              labelText: 'Device Code',
-              hintText: 'POS-TABLET-001',
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            '登入角色',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              _RoleChip(
-                label: '收銀員',
-                icon: Icons.point_of_sale_rounded,
-                selected: roleCode == 'CASHIER',
-                onTap: () => onRoleChanged('CASHIER'),
-              ),
-              _RoleChip(
-                label: '店長',
-                icon: Icons.manage_accounts_rounded,
-                selected: roleCode == 'MANAGER',
-                onTap: () => onRoleChanged('MANAGER'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'PIN',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: List.generate(_pinDigits, (index) {
-              final filled = index < pin.length;
-              return Expanded(
-                child: Container(
-                  height: 56,
-                  margin: EdgeInsets.only(
-                    right: index == _pinDigits - 1 ? 0 : 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF08101D),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: filled
-                          ? const Color(0xFF1FE4FF)
-                          : const Color(0xFF2A3856),
-                    ),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    filled ? '•' : '',
-                    style: const TextStyle(
-                      fontSize: 28,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: loading || pin.length != _pinDigits ? null : onSubmit,
-              icon: loading
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.login_rounded),
-              label: Text(
-                loading ? '登入中...' : '使用 4 碼 PIN 登入',
+            Text(
+              'NUCOSMOS POS',
+              style: theme.textTheme.headlineMedium?.copyWith(
+                color: const Color(0xFF1FE4FF),
+                fontWeight: FontWeight.bold,
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF08101D),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFF22314B)),
+            const SizedBox(height: 8),
+            Text(
+              'Android 平板 POS 測試版',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: Colors.white70,
+              ),
             ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: 20),
+            Text(
+              '目前 API：$currentApiBaseUrl',
+              style: const TextStyle(color: Colors.white60),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: apiBaseUrlController,
+              decoration: const InputDecoration(
+                labelText: 'API Base URL',
+                hintText: 'http://nucosmos.io',
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
               children: [
-                Text(
-                  '模擬器建議 API 位址',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: testingConnection ? null : onTestConnection,
+                    icon: testingConnection
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.wifi_tethering_rounded),
+                    label: Text(testingConnection ? '測試中...' : '測試連線'),
+                  ),
                 ),
-                SizedBox(height: 10),
-                Text('1. Android 模擬器常用：http://10.0.2.2:8081'),
-                Text('2. 若失敗可改試：http://10.0.3.2:8081'),
-                Text('3. 實體平板走區網：http://192.168.1.111:8081'),
               ],
             ),
-          ),
-          if (errorMessage.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Text(
-              errorMessage,
-              style: const TextStyle(color: Colors.redAccent),
+            const SizedBox(height: 20),
+            TextField(
+              controller: storeCodeController,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                labelText: 'Store Code',
+                hintText: 'TW001',
+              ),
             ),
-          ],
+            const SizedBox(height: 16),
+            TextField(
+              controller: deviceCodeController,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                labelText: 'Device Code',
+                hintText: 'POS-TABLET-001',
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              '登入角色',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _RoleChip(
+                  label: '收銀員',
+                  icon: Icons.point_of_sale_rounded,
+                  selected: roleCode == 'CASHIER',
+                  onTap: () => onRoleChanged('CASHIER'),
+                ),
+                _RoleChip(
+                  label: '店長',
+                  icon: Icons.manage_accounts_rounded,
+                  selected: roleCode == 'MANAGER',
+                  onTap: () => onRoleChanged('MANAGER'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'PIN',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: List.generate(_pinDigits, (index) {
+                final filled = index < pin.length;
+                return Expanded(
+                  child: Container(
+                    height: 56,
+                    margin: EdgeInsets.only(
+                      right: index == _pinDigits - 1 ? 0 : 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF08101D),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: filled
+                            ? const Color(0xFF1FE4FF)
+                            : const Color(0xFF2A3856),
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      filled ? '•' : '',
+                      style: const TextStyle(
+                        fontSize: 28,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: loading || pin.length != _pinDigits ? null : onSubmit,
+                icon: loading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.login_rounded),
+                label: Text(
+                  loading ? '登入中...' : '輸入 4 碼 PIN 登入',
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF08101D),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFF22314B)),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '建議測試設定',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  SizedBox(height: 10),
+                  Text('1. 正式站請直接填：http://nucosmos.io'),
+                  Text('2. App 會自動嘗試 http 與 https'),
+                  Text('3. 模擬器可改用：http://10.0.2.2:8081'),
+                ],
+              ),
+            ),
+            if (errorMessage.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(
+                errorMessage,
+                style: const TextStyle(color: Colors.redAccent),
+              ),
+            ],
           ],
         ),
       ),

@@ -18,6 +18,23 @@ type EditablePackagingComponent = {
   quantity: string;
 };
 
+type EditableCustomizationOption = {
+  name: string;
+  priceDelta: string;
+  defaultSelected: boolean;
+  displayOrder: string;
+};
+
+type EditableCustomizationGroup = {
+  name: string;
+  selectionMode: "SINGLE" | "MULTIPLE";
+  required: boolean;
+  minSelections: string;
+  maxSelections: string;
+  displayOrder: string;
+  options: EditableCustomizationOption[];
+};
+
 const authStore = useAuthStore();
 const productStore = useProductStore();
 
@@ -43,6 +60,7 @@ const form = reactive({
   recipeNote: "",
   materialComponents: [] as EditableMaterialComponent[],
   packagingComponents: [] as EditablePackagingComponent[],
+  customizationGroups: [] as EditableCustomizationGroup[],
 });
 
 const titleText = computed(() => (editingProductId.value ? "編輯商品" : "新增商品"));
@@ -102,6 +120,7 @@ function resetForm() {
   form.recipeNote = "";
   form.materialComponents = [];
   form.packagingComponents = [];
+  form.customizationGroups = [];
 }
 
 function openCreateForm() {
@@ -139,6 +158,20 @@ function openEditForm(product: ProductAdminItem) {
   form.packagingComponents = product.packagingComponents.map((component) => ({
     packagingItemId: component.packagingItemId,
     quantity: component.quantity.toString(),
+  }));
+  form.customizationGroups = product.customizationGroups.map((group) => ({
+    name: group.name,
+    selectionMode: group.selectionMode,
+    required: group.required,
+    minSelections: group.minSelections.toString(),
+    maxSelections: group.maxSelections.toString(),
+    displayOrder: group.displayOrder.toString(),
+    options: group.options.map((option) => ({
+      name: option.name,
+      priceDelta: option.priceDelta.toString(),
+      defaultSelected: option.defaultSelected,
+      displayOrder: option.displayOrder.toString(),
+    })),
   }));
   isFormOpen.value = true;
 }
@@ -179,6 +212,58 @@ function removePackagingComponent(index: number) {
   }
 
   form.packagingComponents.splice(index, 1);
+}
+
+function addCustomizationGroup() {
+  if (!canEditProducts.value) {
+    return;
+  }
+
+  form.customizationGroups.push({
+    name: "",
+    selectionMode: "SINGLE",
+    required: false,
+    minSelections: "0",
+    maxSelections: "1",
+    displayOrder: String(form.customizationGroups.length),
+    options: [
+      {
+        name: "",
+        priceDelta: "0.00",
+        defaultSelected: false,
+        displayOrder: "0",
+      },
+    ],
+  });
+}
+
+function removeCustomizationGroup(index: number) {
+  if (!canEditProducts.value) {
+    return;
+  }
+
+  form.customizationGroups.splice(index, 1);
+}
+
+function addCustomizationOption(groupIndex: number) {
+  if (!canEditProducts.value) {
+    return;
+  }
+
+  form.customizationGroups[groupIndex]?.options.push({
+    name: "",
+    priceDelta: "0.00",
+    defaultSelected: false,
+    displayOrder: String(form.customizationGroups[groupIndex].options.length),
+  });
+}
+
+function removeCustomizationOption(groupIndex: number, optionIndex: number) {
+  if (!canEditProducts.value) {
+    return;
+  }
+
+  form.customizationGroups[groupIndex]?.options.splice(optionIndex, 1);
 }
 
 function materialItemById(materialItemId: string) {
@@ -262,6 +347,86 @@ function validateComponents() {
   return true;
 }
 
+function validateCustomizationGroups() {
+  const groupNames = new Set<string>();
+
+  for (const group of form.customizationGroups) {
+    const name = group.name.trim();
+    if (!name) {
+      formError.value = "Customization group name is required.";
+      return false;
+    }
+
+    const normalizedName = name.toLowerCase();
+    if (groupNames.has(normalizedName)) {
+      formError.value = "Customization group name must be unique.";
+      return false;
+    }
+    groupNames.add(normalizedName);
+
+    const minSelections = Number(group.minSelections);
+    const maxSelections = Number(group.maxSelections);
+    if (Number.isNaN(minSelections) || minSelections < 0) {
+      formError.value = "Customization min selections is invalid.";
+      return false;
+    }
+    if (Number.isNaN(maxSelections) || maxSelections < 1 || maxSelections < minSelections) {
+      formError.value = "Customization max selections is invalid.";
+      return false;
+    }
+    if (group.selectionMode === "SINGLE" && maxSelections > 1) {
+      formError.value = "Single selection group can only choose one option.";
+      return false;
+    }
+    if (group.required && minSelections < 1) {
+      formError.value = "Required customization group must select at least one option.";
+      return false;
+    }
+    if (!group.options.length) {
+      formError.value = "Each customization group needs at least one option.";
+      return false;
+    }
+
+    const optionNames = new Set<string>();
+    let defaultSelectedCount = 0;
+    for (const option of group.options) {
+      const optionName = option.name.trim();
+      if (!optionName) {
+        formError.value = "Customization option name is required.";
+        return false;
+      }
+
+      const normalizedOptionName = optionName.toLowerCase();
+      if (optionNames.has(normalizedOptionName)) {
+        formError.value = "Customization option name must be unique in a group.";
+        return false;
+      }
+      optionNames.add(normalizedOptionName);
+
+      const priceDelta = Number(option.priceDelta);
+      if (Number.isNaN(priceDelta) || priceDelta < 0) {
+        formError.value = "Customization price delta must be zero or greater.";
+        return false;
+      }
+
+      if (option.defaultSelected) {
+        defaultSelectedCount += 1;
+      }
+    }
+
+    if (group.selectionMode === "SINGLE" && defaultSelectedCount > 1) {
+      formError.value = "Single selection group cannot have multiple default options.";
+      return false;
+    }
+    if (defaultSelectedCount > maxSelections) {
+      formError.value = "Default selected options exceed the max selections setting.";
+      return false;
+    }
+  }
+
+  return true;
+}
+
 async function submitForm() {
   if (!canEditProducts.value) {
     return;
@@ -305,6 +470,10 @@ async function submitForm() {
     return;
   }
 
+  if (!validateCustomizationGroups()) {
+    return;
+  }
+
   const payload = {
     categoryId: form.categoryId,
     sku: form.sku.trim(),
@@ -325,6 +494,20 @@ async function submitForm() {
     packagingComponents: form.packagingComponents.map((component) => ({
       packagingItemId: component.packagingItemId,
       quantity: Number(component.quantity),
+    })),
+    customizationGroups: form.customizationGroups.map((group) => ({
+      name: group.name.trim(),
+      selectionMode: group.selectionMode,
+      required: group.required,
+      minSelections: Number(group.minSelections),
+      maxSelections: Number(group.maxSelections),
+      displayOrder: Number(group.displayOrder || 0),
+      options: group.options.map((option) => ({
+        name: option.name.trim(),
+        priceDelta: Number(option.priceDelta),
+        defaultSelected: option.defaultSelected,
+        displayOrder: Number(option.displayOrder || 0),
+      })),
     })),
   };
 
@@ -614,6 +797,138 @@ onMounted(async () => {
             </p>
             <button v-if="canEditProducts" class="mt-3 rounded-xl border border-brand-coral/20 px-3 py-2 text-xs text-brand-coral" @click="removePackagingComponent(index)">移除包裝</button>
           </div>
+        </div>
+
+        <div class="rounded-[1.5rem] border border-white/8 bg-white/4 p-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-semibold text-white">Customization Options</p>
+              <p class="mt-1 text-xs text-slate-400">Configure sugar level, ice level, toppings, or any paid add-on for POS ordering.</p>
+            </div>
+            <button
+              v-if="canEditProducts"
+              class="rounded-xl border border-brand-aqua/30 px-3 py-2 text-xs text-brand-aqua"
+              @click="addCustomizationGroup"
+            >
+              Add Group
+            </button>
+          </div>
+
+          <div
+            v-for="(group, groupIndex) in form.customizationGroups"
+            :key="`customization-group-${groupIndex}`"
+            class="mt-4 rounded-2xl border border-white/8 bg-slate-900/50 p-4"
+          >
+            <div class="grid gap-3 md:grid-cols-2">
+              <input
+                v-model="group.name"
+                class="w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 py-2 text-sm text-white outline-none"
+                placeholder="Group name"
+              />
+              <select
+                v-model="group.selectionMode"
+                class="w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 py-2 text-sm text-white outline-none"
+              >
+                <option value="SINGLE">Single select</option>
+                <option value="MULTIPLE">Multiple select</option>
+              </select>
+              <label class="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2 text-sm text-white">
+                <input v-model="group.required" type="checkbox" class="h-4 w-4 rounded border-white/20 bg-slate-900/80" />
+                Required group
+              </label>
+              <input
+                v-model="group.displayOrder"
+                type="number"
+                min="0"
+                class="w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 py-2 text-sm text-white outline-none"
+                placeholder="Display order"
+              />
+            </div>
+
+            <div class="mt-3 grid gap-3 md:grid-cols-2">
+              <input
+                v-model="group.minSelections"
+                type="number"
+                min="0"
+                class="w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 py-2 text-sm text-white outline-none"
+                placeholder="Min selections"
+              />
+              <input
+                v-model="group.maxSelections"
+                type="number"
+                min="1"
+                class="w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 py-2 text-sm text-white outline-none"
+                placeholder="Max selections"
+              />
+            </div>
+
+            <div class="mt-4 flex items-center justify-between">
+              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Options</p>
+              <div class="flex gap-2">
+                <button
+                  v-if="canEditProducts"
+                  class="rounded-xl border border-brand-aqua/30 px-3 py-2 text-xs text-brand-aqua"
+                  @click="addCustomizationOption(groupIndex)"
+                >
+                  Add Option
+                </button>
+                <button
+                  v-if="canEditProducts"
+                  class="rounded-xl border border-brand-coral/20 px-3 py-2 text-xs text-brand-coral"
+                  @click="removeCustomizationGroup(groupIndex)"
+                >
+                  Remove Group
+                </button>
+              </div>
+            </div>
+
+            <div
+              v-for="(option, optionIndex) in group.options"
+              :key="`customization-option-${groupIndex}-${optionIndex}`"
+              class="mt-3 rounded-2xl border border-white/8 bg-slate-950/55 p-4"
+            >
+              <div class="grid gap-3 md:grid-cols-[minmax(0,1.3fr)_minmax(0,0.8fr)_minmax(0,0.8fr)]">
+                <input
+                  v-model="option.name"
+                  class="w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 py-2 text-sm text-white outline-none"
+                  placeholder="Option name"
+                />
+                <input
+                  v-model="option.priceDelta"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 py-2 text-sm text-white outline-none"
+                  placeholder="Price delta"
+                />
+                <input
+                  v-model="option.displayOrder"
+                  type="number"
+                  min="0"
+                  class="w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 py-2 text-sm text-white outline-none"
+                  placeholder="Display order"
+                />
+              </div>
+
+              <div class="mt-3 flex items-center justify-between">
+                <label class="flex items-center gap-2 text-sm text-white">
+                  <input v-model="option.defaultSelected" type="checkbox" class="h-4 w-4 rounded border-white/20 bg-slate-900/80" />
+                  Default selected
+                </label>
+                <button
+                  v-if="canEditProducts"
+                  class="rounded-xl border border-brand-coral/20 px-3 py-2 text-xs text-brand-coral"
+                  @click="removeCustomizationOption(groupIndex, optionIndex)"
+                >
+                  Remove Option
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <p v-if="form.customizationGroups.length === 0" class="mt-4 text-sm text-slate-400">
+            No customization groups yet. Add one here so POS staff can choose sugar, ice, toppings, or add-ons.
+          </p>
         </div>
 
         <div class="rounded-[1.5rem] border border-brand-aqua/20 bg-brand-aqua/5 p-4">
