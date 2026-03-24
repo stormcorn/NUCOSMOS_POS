@@ -1,0 +1,10 @@
+node_modules
+dist
+.git
+.gitignore
+.vscode
+.idea
+frontend-run.log
+pos-app
+backend/target
+backend/backend-run-8081.log

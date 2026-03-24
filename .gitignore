@@ -23,3 +23,5 @@ Thumbs.db
 *.user
 *.userossc
 *.sln.docstates
+
+deployment/_dist/

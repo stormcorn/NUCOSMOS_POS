@@ -1,6 +1,9 @@
 import type { ApiErrorResponse, ApiResponse } from "@/types/api";
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "http://localhost:8081";
+const CONFIGURED_API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
+const API_BASE_URL = CONFIGURED_API_BASE_URL && CONFIGURED_API_BASE_URL.trim().length > 0
+  ? CONFIGURED_API_BASE_URL
+  : window.location.origin;
 const ACCESS_TOKEN_KEY = "nucosmos.admin.accessToken";
 
 export class ApiError extends Error {

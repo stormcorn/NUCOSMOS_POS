@@ -1,0 +1,57 @@
+class OrderCreateItem {
+  const OrderCreateItem({
+    required this.productId,
+    required this.quantity,
+    this.note,
+  });
+
+  final String productId;
+  final int quantity;
+  final String? note;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'productId': productId,
+      'quantity': quantity,
+      if (note != null && note!.trim().isNotEmpty) 'note': note,
+    };
+  }
+}
+
+class OrderReceipt {
+  const OrderReceipt({
+    required this.id,
+    required this.orderNumber,
+    required this.status,
+    required this.paymentStatus,
+    required this.itemCount,
+    required this.subtotalAmount,
+    required this.totalAmount,
+    required this.paidAmount,
+    required this.changeAmount,
+  });
+
+  final String id;
+  final String orderNumber;
+  final String status;
+  final String paymentStatus;
+  final int itemCount;
+  final double subtotalAmount;
+  final double totalAmount;
+  final double paidAmount;
+  final double changeAmount;
+
+  factory OrderReceipt.fromJson(Map<String, dynamic> json) {
+    return OrderReceipt(
+      id: json['id']?.toString() ?? '',
+      orderNumber: json['orderNumber'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      paymentStatus: json['paymentStatus'] as String? ?? '',
+      itemCount: (json['itemCount'] as num?)?.toInt() ?? 0,
+      subtotalAmount: (json['subtotalAmount'] as num?)?.toDouble() ?? 0,
+      totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0,
+      paidAmount: (json['paidAmount'] as num?)?.toDouble() ?? 0,
+      changeAmount: (json['changeAmount'] as num?)?.toDouble() ?? 0,
+    );
+  }
+}
