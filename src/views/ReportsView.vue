@@ -381,7 +381,7 @@ watch(
       />
     </div>
 
-    <div class="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+    <div class="grid gap-6 lg:grid-cols-[1.2fr_0.95fr]">
       <article class="rounded-[2rem] border border-white/10 bg-slate-950/55 p-6 shadow-soft shadow-black/20">
         <div class="mb-5 flex items-center justify-between gap-4">
           <div>
@@ -417,7 +417,7 @@ watch(
       </article>
     </div>
 
-    <div class="grid gap-6 xl:grid-cols-3">
+    <div class="grid gap-6 md:grid-cols-2 2xl:grid-cols-3">
       <article class="rounded-[2rem] border border-white/10 bg-slate-950/55 p-6 shadow-soft shadow-black/20">
         <div class="mb-5">
           <p class="text-xs uppercase tracking-[0.28em] text-brand-aqua/70">Payment Mix</p>
@@ -473,7 +473,7 @@ watch(
         </div>
       </div>
 
-      <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div class="mt-6 grid gap-4 md:grid-cols-2 2xl:grid-cols-5">
         <div
           v-for="card in profitabilitySummaryCards"
           :key="card.label"
@@ -492,7 +492,7 @@ watch(
       </div>
     </article>
 
-    <div class="grid gap-6 xl:grid-cols-3">
+    <div class="grid gap-6 md:grid-cols-2 2xl:grid-cols-3">
       <article class="rounded-[2rem] border border-white/10 bg-slate-950/55 p-6 shadow-soft shadow-black/20">
         <div class="mb-5">
           <p class="text-xs uppercase tracking-[0.28em] text-brand-aqua/70">Top Products</p>
@@ -530,7 +530,7 @@ watch(
       </article>
     </div>
 
-    <div class="grid gap-6 xl:grid-cols-2">
+    <div class="grid gap-6 lg:grid-cols-2">
       <article class="rounded-[2rem] border border-white/10 bg-slate-950/55 p-6 shadow-soft shadow-black/20">
         <div class="mb-5">
           <p class="text-xs uppercase tracking-[0.28em] text-brand-aqua/70">Products</p>
@@ -616,7 +616,7 @@ watch(
       </article>
     </div>
 
-    <div class="grid gap-6 xl:grid-cols-3">
+    <div class="grid gap-6 md:grid-cols-2 2xl:grid-cols-3">
       <article class="rounded-[2rem] border border-white/10 bg-slate-950/55 p-6 shadow-soft shadow-black/20">
         <p class="text-xs uppercase tracking-[0.28em] text-brand-aqua/70">Low Stock</p>
         <h3 class="mt-2 text-xl font-semibold text-white">商品低庫存</h3>
@@ -699,7 +699,7 @@ watch(
         <p class="text-xs uppercase tracking-[0.28em] text-brand-aqua/70">Waste Analysis</p>
         <h3 class="mt-2 text-xl font-semibold text-white">瑕疵與損耗</h3>
       </div>
-      <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
         <div
           v-for="item in reportStore.inventoryAnalytics?.defectiveAndWaste ?? []"
           :key="`${item.sku}-${item.movementType}`"

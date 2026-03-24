@@ -19,7 +19,7 @@ export const useAuthStore = defineStore("auth", () => {
   const errorMessage = ref("");
 
   const isAuthenticated = computed(() => Boolean(accessToken.value && session.value));
-  const userDisplayName = computed(() => session.value?.displayName ?? "未登入");
+  const userDisplayName = computed(() => session.value?.displayName ?? "未登入使用者");
   const activeRole = computed(() => session.value?.activeRole ?? "");
   const currentStoreCode = computed(() => session.value?.storeCode ?? "");
   const permissionKeys = computed(() => session.value?.permissionKeys ?? []);
@@ -98,7 +98,7 @@ export const useAuthStore = defineStore("auth", () => {
       return true;
     } catch (error) {
       clearSession();
-      errorMessage.value = error instanceof ApiError ? error.message : "登入失敗";
+      errorMessage.value = error instanceof ApiError ? error.message : "登入失敗，請稍後再試";
       return false;
     } finally {
       loading.value = false;

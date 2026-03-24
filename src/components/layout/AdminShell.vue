@@ -27,6 +27,7 @@ const storeContextStore = useStoreContextStore();
 const navigationItems = ref<AdminNavigationItem[]>(cloneAdminNavigationItems());
 const draggingRootTo = ref<string | null>(null);
 const draggingChild = ref<{ parentTo: string; childTo: string } | null>(null);
+const isNavOpen = ref(false);
 
 const visibleNavigationItems = computed(() =>
   navigationItems.value
@@ -47,7 +48,7 @@ const visibleNavigationItems = computed(() =>
 );
 
 const pageSubtitle = computed(() => {
-  return findNavigationEntry(route.path)?.description ?? "集中查看目前頁面的核心資訊與可執行操作。";
+  return findNavigationEntry(route.path)?.description ?? "查看目前頁面的摘要、狀態與最近操作。";
 });
 
 function hasAnySavedOrder(order: PersistedNavigationOrder) {
@@ -56,6 +57,10 @@ function hasAnySavedOrder(order: PersistedNavigationOrder) {
 
 function isRouteActive(target: string) {
   return route.path === target || route.path.startsWith(`${target}/`);
+}
+
+function closeNavigation() {
+  isNavOpen.value = false;
 }
 
 function reorderByKey<T>(list: T[], fromKey: string, toKey: string, getKey: (item: T) => string) {
@@ -269,6 +274,13 @@ watch(
     void ensureStores();
   },
 );
+
+watch(
+  () => route.fullPath,
+  () => {
+    closeNavigation();
+  },
+);
 </script>
 
 <template>
@@ -278,16 +290,30 @@ watch(
       <div class="absolute right-[-12rem] top-40 h-80 w-80 rounded-full bg-[radial-gradient(circle,_rgba(255,181,94,0.22),_transparent_62%)] blur-3xl" />
     </div>
 
-    <div class="relative mx-auto grid min-h-screen max-w-[1600px] lg:grid-cols-[280px_minmax(0,1fr)]">
-      <aside class="border-b border-white/8 bg-white/5 px-5 py-6 backdrop-blur-xl lg:border-b-0 lg:border-r lg:px-6">
+    <div v-if="isNavOpen" class="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm xl:hidden" @click="closeNavigation" />
+
+    <div class="relative mx-auto min-h-screen max-w-[1600px] xl:grid xl:grid-cols-[280px_minmax(0,1fr)]">
+      <aside
+        class="fixed inset-y-0 left-0 z-50 w-[min(86vw,320px)] overflow-y-auto border-r border-white/10 bg-white/5 px-4 py-5 backdrop-blur-xl transition-transform duration-300 xl:static xl:w-auto xl:translate-x-0 xl:px-6 xl:py-6"
+        :class="isNavOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'"
+      >
         <div class="rounded-[2rem] border border-white/10 bg-brand-panel/80 p-5 shadow-soft shadow-black/30">
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between gap-3">
             <div>
               <p class="text-xs uppercase tracking-[0.35em] text-brand-aqua/70">NUCOSMOS</p>
               <h1 class="mt-2 text-2xl font-semibold text-white">Admin Bridge</h1>
             </div>
-            <div class="rounded-2xl border border-brand-aqua/20 bg-brand-aqua/10 px-3 py-2 text-sm font-medium text-brand-aqua">
-              Live
+            <div class="flex items-center gap-2">
+              <div class="rounded-2xl border border-brand-aqua/20 bg-brand-aqua/10 px-3 py-2 text-sm font-medium text-brand-aqua">
+                Live
+              </div>
+              <button
+                class="rounded-2xl border border-white/10 px-3 py-2 text-xs text-slate-200 xl:hidden"
+                type="button"
+                @click="closeNavigation"
+              >
+                關閉
+              </button>
             </div>
           </div>
 
@@ -305,7 +331,7 @@ watch(
           </div>
 
           <div class="mt-6 flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-slate-950/35 px-4 py-3 text-xs text-slate-400">
-            <span>可拖曳排序目前看得到的選單，並同步到你的帳號設定。</span>
+            <span>可直接拖曳主選單與子選單排序。</span>
             <button class="rounded-xl border border-white/10 px-3 py-2 text-[11px] text-slate-200 transition hover:border-brand-aqua/30 hover:text-white" @click="resetNavigationOrder">
               恢復預設
             </button>
@@ -372,24 +398,32 @@ watch(
 
           <div class="mt-10 rounded-[1.5rem] border border-amber-300/15 bg-gradient-to-br from-amber-200/10 to-transparent p-4">
             <p class="text-xs uppercase tracking-[0.3em] text-amber-200/70">Session Pulse</p>
-            <p class="mt-3 text-lg font-semibold text-white">{{ authStore.activeRole || "未登入角色" }}</p>
+            <p class="mt-3 text-lg font-semibold text-white">{{ authStore.activeRole || "尚未登入" }}</p>
             <p class="mt-2 text-sm text-slate-400">
               {{ storeContextStore.selectedStore?.name || authStore.currentStoreCode || "尚未選擇門市" }}
-              的目前工作權限。
+              的即時工作階段資訊。
             </p>
           </div>
         </div>
       </aside>
 
-      <main class="px-5 py-6 lg:px-8">
-        <header class="mb-6 flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 px-5 py-5 backdrop-blur-md lg:flex-row lg:items-end lg:justify-between">
+      <main class="min-w-0 px-4 py-4 sm:px-5 sm:py-5 lg:px-6 xl:px-8 xl:py-6">
+        <header class="mb-6 flex flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 px-4 py-4 backdrop-blur-md md:px-5 md:py-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
+            <button
+              class="mb-4 inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-2 text-sm text-slate-100 xl:hidden"
+              type="button"
+              @click="isNavOpen = true"
+            >
+              <span class="text-lg leading-none">≡</span>
+              <span>選單</span>
+            </button>
             <p class="text-xs uppercase tracking-[0.35em] text-brand-aqua/70">Operations Console</p>
-            <h2 class="mt-2 text-3xl font-semibold text-white">{{ route.meta.title || "管理後台" }}</h2>
+            <h2 class="mt-2 text-2xl font-semibold text-white md:text-3xl">{{ route.meta.title || "管理後台" }}</h2>
             <p class="mt-2 max-w-2xl text-sm text-slate-400">{{ pageSubtitle }}</p>
           </div>
 
-          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div class="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
             <div class="rounded-2xl border border-white/8 bg-slate-950/50 px-4 py-3">
               <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Store Focus</p>
               <p class="mt-2 text-base font-semibold text-white">
@@ -402,7 +436,7 @@ watch(
               <p class="mt-2 text-base font-semibold text-white">{{ authStore.userDisplayName }}</p>
               <p class="text-sm text-slate-400">{{ authStore.session?.employeeCode || "尚未登入帳號" }}</p>
             </div>
-            <div class="rounded-2xl border border-white/8 bg-slate-950/50 px-4 py-3 sm:col-span-2 xl:col-span-1">
+            <div class="rounded-2xl border border-white/8 bg-slate-950/50 px-4 py-3 sm:col-span-2 2xl:col-span-1">
               <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Mode</p>
               <div class="mt-2 flex items-center justify-between gap-3">
                 <div>
@@ -421,7 +455,9 @@ watch(
           </div>
         </header>
 
-        <slot />
+        <div class="min-w-0">
+          <slot />
+        </div>
       </main>
     </div>
   </div>

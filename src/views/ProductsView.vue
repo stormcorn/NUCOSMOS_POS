@@ -371,7 +371,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section class="grid gap-6 xl:grid-cols-[1.3fr_0.95fr]">
+  <section class="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.9fr)]">
     <article class="rounded-[2rem] border border-white/10 bg-slate-950/55 p-6 shadow-soft shadow-black/20">
       <div class="flex flex-col gap-4 border-b border-white/8 pb-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
@@ -411,7 +411,7 @@ onMounted(async () => {
 
       <p v-if="productStore.errorMessage" class="mt-4 text-sm text-brand-coral">{{ productStore.errorMessage }}</p>
 
-      <div class="mt-6 overflow-hidden rounded-[1.5rem] border border-white/8">
+      <div class="mt-6 overflow-x-auto rounded-[1.5rem] border border-white/8">
         <table class="min-w-full divide-y divide-white/8 text-left text-sm">
           <thead class="bg-white/5 text-slate-400">
             <tr>
@@ -499,7 +499,7 @@ onMounted(async () => {
       </div>
     </article>
 
-    <aside class="rounded-[2rem] border border-white/10 bg-slate-950/55 p-6 shadow-soft shadow-black/20">
+    <aside class="rounded-[2rem] border border-white/10 bg-slate-950/55 p-6 shadow-soft shadow-black/20 lg:sticky lg:top-6 lg:self-start">
       <div class="flex items-center justify-between">
         <div>
           <p class="text-xs uppercase tracking-[0.28em] text-brand-aqua/70">Editor</p>

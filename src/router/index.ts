@@ -105,7 +105,7 @@ const router = createRouter({
       path: "/procurement",
       name: "procurement",
       component: ProcurementView,
-      meta: { title: "採購進貨", requiresAuth: true, permissionKeys: [PERMISSIONS.PROCUREMENT_VIEW] },
+      meta: { title: "採購與進貨", requiresAuth: true, permissionKeys: [PERMISSIONS.PROCUREMENT_VIEW] },
     },
     {
       path: "/devices",

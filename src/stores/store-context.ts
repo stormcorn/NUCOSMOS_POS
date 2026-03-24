@@ -36,7 +36,7 @@ export const useStoreContextStore = defineStore("storeContext", () => {
       stores.value = await fetchStores();
       syncSelectedStore();
     } catch (error) {
-      errorMessage.value = error instanceof ApiError ? error.message : "無法取得門市資料";
+      errorMessage.value = error instanceof ApiError ? error.message : "無法載入門市資料";
     } finally {
       loading.value = false;
     }
