@@ -1,17 +1,19 @@
 FROM maven:3.9.9-eclipse-temurin-17 AS build
 
-WORKDIR /app
+WORKDIR /app/backend
 
-COPY pom.xml ./
-COPY src ./src
+COPY backend/pom.xml ./
+COPY backend/src ./src
+COPY backend/.mvn ./.mvn
+COPY backend/mvnw ./
 
-RUN mvn -q -DskipTests package
+RUN ./mvnw -q -DskipTests package
 
 FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 
-COPY --from=build /app/target/backend-0.1.0-SNAPSHOT.jar /app/app.jar
+COPY --from=build /app/backend/target/backend-0.1.0-SNAPSHOT.jar /app/app.jar
 
 EXPOSE 8081
 
