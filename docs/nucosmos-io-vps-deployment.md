@@ -80,6 +80,10 @@ chmod +x deployment/deploy.sh
 
 ## 6. Reverse proxy
 
+If `nucosmos.io` will **not** be added as a cPanel-managed domain, use:
+
+- [nucosmos-io-apache-without-cpanel.md](/c:/NUCOSMOS_POS/docs/nucosmos-io-apache-without-cpanel.md)
+
 ### Option A: WHM/cPanel Apache reverse proxy
 
 Find the cPanel account that owns `nucosmos.io`:

@@ -59,6 +59,7 @@ cd backend
 - [Admin System Roadmap](/c:/NUCOSMOS_POS/docs/admin-system-roadmap.md)
 - [POS PRD](/c:/NUCOSMOS_POS/docs/pos-system-prd.md)
 - [Production Deployment](/c:/NUCOSMOS_POS/docs/production-deployment.md)
+- [nucosmos.io Apache Without cPanel](/c:/NUCOSMOS_POS/docs/nucosmos-io-apache-without-cpanel.md)
 - [SFTP Deployment Package](/c:/NUCOSMOS_POS/docs/sftp-deployment-package.md)
 - [Vue Admin Overview](/c:/NUCOSMOS_POS/docs/vue-admin-web.md)
 - [Vue Admin API Spec](/c:/NUCOSMOS_POS/docs/vue-admin-api-spec.md)

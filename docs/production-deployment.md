@@ -27,6 +27,7 @@ Recommended target:
 ## Main deployment paths
 
 - VPS deployment guide: [nucosmos-io-vps-deployment.md](/c:/NUCOSMOS_POS/docs/nucosmos-io-vps-deployment.md)
+- Apache without cPanel account: [nucosmos-io-apache-without-cpanel.md](/c:/NUCOSMOS_POS/docs/nucosmos-io-apache-without-cpanel.md)
 - SFTP upload package: [sftp-deployment-package.md](/c:/NUCOSMOS_POS/docs/sftp-deployment-package.md)
 
 ## Local validation already completed
