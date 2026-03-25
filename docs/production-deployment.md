@@ -21,7 +21,8 @@ Recommended target:
 
 ## Recommended URL structure
 
-- `https://nucosmos.io` -> admin web
+- `https://nucosmos.io` -> temporary landing page
+- `https://nucosmos.io/erp` -> admin web
 - `https://nucosmos.io/api` -> backend API
 
 ## Main deployment paths
@@ -43,3 +44,15 @@ Before real deployment, you still need:
 - DNS A record for `nucosmos.io`
 - GitHub repository secrets for SSH deployment
 - Reverse proxy from host Apache or Nginx to `127.0.0.1:8080`
+
+## Current production note
+
+The currently verified production routing on the VPS is:
+
+- Apache serves the landing page from `/var/www/nucosmos-cover`
+- Apache proxies `/erp/` to `127.0.0.1:8080`
+- Apache proxies `/api/` to `127.0.0.1:8080/api/`
+- container Nginx then forwards `/api/` to the backend container
+
+This is the path that was validated after VPS recovery and should be treated as the canonical
+reference unless a future deployment intentionally changes it.

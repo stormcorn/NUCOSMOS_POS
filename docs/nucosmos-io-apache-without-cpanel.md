@@ -6,14 +6,17 @@ Use this guide if:
 - you do **not** want to add `nucosmos.io` as a paid cPanel domain
 - `NUCOSMOS POS` is already running in Docker on `127.0.0.1:8080`
 - the admin web should be served from `https://nucosmos.io/erp`
+- the landing page should stay on `https://nucosmos.io/`
 
 Current verified app status on the VPS:
 
-- admin web: `http://127.0.0.1:8080`
+- landing page: `https://nucosmos.io/`
+- admin web: `http://127.0.0.1:8080/erp/`
 - backend API: `http://127.0.0.1:8080/api/v1/health`
 
 Target public URLs:
 
+- landing page: `https://nucosmos.io/`
 - admin web: `https://nucosmos.io/erp`
 - backend API: `https://nucosmos.io/api`
 
@@ -82,11 +85,52 @@ curl -H "Host: nucosmos.io" http://127.0.0.1/api/v1/health
 
 Expected:
 
-- `/` redirects to `/erp/`
+- `/` returns the landing page HTML
 - `/erp/` returns the Vue app HTML
 - `/api/v1/health` returns `status=UP`
 
-## 6. HTTPS options
+## 6. Current stable reverse proxy shape
+
+The currently verified stable setup is:
+
+- Apache serves `https://nucosmos.io/` directly from `/var/www/nucosmos-cover`
+- Apache proxies `/erp/` to `http://127.0.0.1:8080/`
+- Apache proxies `/api/` to `http://127.0.0.1:8080/api/`
+- container Nginx inside `admin-web` proxies `/api/` onward to `backend:8081`
+
+Even though the backend can also be exposed on `127.0.0.1:8081`, the `8080 -> nginx -> backend`
+chain is the version currently validated in production and should be preferred unless you are
+actively debugging the backend container.
+
+## 7. VPS reboot recovery
+
+If the VPS has been restarted and the site comes back with `503` or `502`, use this sequence:
+
+```bash
+systemctl start docker
+cd /srv/nucosmos-pos
+docker rm -f nucosmos-pos-postgres-prod nucosmos-pos-backend-prod nucosmos-pos-admin-web-prod 2>/dev/null || true
+docker network rm deployment_default 2>/dev/null || true
+docker network prune -f
+docker compose --env-file deployment/.env.prod -f deployment/docker-compose.prod.yml up -d
+systemctl restart httpd
+```
+
+Then verify:
+
+```bash
+docker compose --env-file deployment/.env.prod -f deployment/docker-compose.prod.yml ps
+curl -i http://127.0.0.1:8080/api/v1/health
+curl -i https://nucosmos.io/api/v1/health
+curl -i https://nucosmos.io/erp/
+```
+
+Expected:
+
+- `/api/v1/health` returns `status=UP`
+- `/erp/` returns `200`
+
+## 8. HTTPS options
 
 Because `nucosmos.io` is not managed as a cPanel site, AutoSSL will not manage this host for you.
 
@@ -101,7 +145,7 @@ For the fastest path, you can:
 2. verify `nucosmos.io` works over port `80`
 3. then choose Cloudflare or manual Let's Encrypt
 
-## 7. Rollback
+## 9. Rollback
 
 If you need to revert:
 
