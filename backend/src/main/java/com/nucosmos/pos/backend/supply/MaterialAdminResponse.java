@@ -10,6 +10,7 @@ public record MaterialAdminResponse(
         String unit,
         String purchaseUnit,
         int purchaseToStockRatio,
+        String imageUrl,
         String description,
         int quantityOnHand,
         int reorderLevel,

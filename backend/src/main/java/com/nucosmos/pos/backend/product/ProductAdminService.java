@@ -3,6 +3,7 @@ package com.nucosmos.pos.backend.product;
 import com.nucosmos.pos.backend.auth.AuthenticatedUser;
 import com.nucosmos.pos.backend.common.exception.BadRequestException;
 import com.nucosmos.pos.backend.common.exception.NotFoundException;
+import com.nucosmos.pos.backend.common.media.ImageReferenceValidator;
 import com.nucosmos.pos.backend.product.persistence.ProductCategoryEntity;
 import com.nucosmos.pos.backend.product.persistence.ProductCustomizationGroupEntity;
 import com.nucosmos.pos.backend.product.persistence.ProductCustomizationOptionEntity;
@@ -143,7 +144,7 @@ public class ProductAdminService {
                 request.sku().trim(),
                 request.name().trim(),
                 request.description(),
-                request.imageUrl(),
+                ImageReferenceValidator.normalize(request.imageUrl()),
                 request.price(),
                 request.campaignEnabled(),
                 request.campaignLabel(),
@@ -170,7 +171,7 @@ public class ProductAdminService {
                 request.sku().trim(),
                 request.name().trim(),
                 request.description(),
-                request.imageUrl(),
+                ImageReferenceValidator.normalize(request.imageUrl()),
                 request.price(),
                 request.campaignEnabled(),
                 request.campaignLabel(),

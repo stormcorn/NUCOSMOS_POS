@@ -13,6 +13,7 @@ export type MaterialAdminItem = {
   unit: string;
   purchaseUnit: string;
   purchaseToStockRatio: number;
+  imageUrl: string | null;
   description: string | null;
   quantityOnHand: number;
   reorderLevel: number;
@@ -60,6 +61,7 @@ export type MaterialUpsertRequest = {
   unit: string;
   purchaseUnit: string;
   purchaseToStockRatio: number;
+  imageUrl: string;
   description: string;
   reorderLevel: number;
   latestUnitCost?: number | null;

@@ -7,6 +7,7 @@ import { useProductStore } from "@/stores/products";
 import type { MaterialAdminItem } from "@/types/materials";
 import type { PackagingAdminItem } from "@/types/packaging";
 import type { ProductAdminItem } from "@/types/product";
+import { isEmbeddedImage, readImageFileAsDataUrl } from "@/utils/image-upload";
 
 type EditableMaterialComponent = {
   materialItemId: string;
@@ -51,6 +52,8 @@ const form = reactive({
   name: "",
   description: "",
   imageUrl: "",
+  imageUrlInput: "",
+  uploadedImageName: "",
   price: "0.00",
   campaignEnabled: false,
   campaignLabel: "",
@@ -111,6 +114,8 @@ function resetForm() {
   form.name = "";
   form.description = "";
   form.imageUrl = "";
+  form.imageUrlInput = "";
+  form.uploadedImageName = "";
   form.price = "0.00";
   form.campaignEnabled = false;
   form.campaignLabel = "";
@@ -144,6 +149,8 @@ function openEditForm(product: ProductAdminItem) {
   form.name = product.name;
   form.description = product.description ?? "";
   form.imageUrl = product.imageUrl ?? "";
+  form.imageUrlInput = isEmbeddedImage(product.imageUrl) ? "" : (product.imageUrl ?? "");
+  form.uploadedImageName = isEmbeddedImage(product.imageUrl) ? "已上傳圖片" : "";
   form.price = product.price.toFixed(2);
   form.campaignEnabled = product.campaignEnabled;
   form.campaignLabel = product.campaignLabel ?? "";
@@ -185,6 +192,38 @@ function addMaterialComponent() {
     materialItemId: productStore.materials[0]?.id ?? "",
     quantity: "1",
   });
+}
+
+async function handleImageUpload(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  try {
+    form.imageUrl = await readImageFileAsDataUrl(file);
+    form.imageUrlInput = "";
+    form.uploadedImageName = file.name;
+    formError.value = "";
+  } catch (error) {
+    formError.value = error instanceof Error ? error.message : "圖片上傳失敗。";
+  } finally {
+    input.value = "";
+  }
+}
+
+function handleImageUrlInput() {
+  form.imageUrl = form.imageUrlInput.trim();
+  if (form.imageUrl) {
+    form.uploadedImageName = "";
+  }
+}
+
+function clearImage() {
+  form.imageUrl = "";
+  form.imageUrlInput = "";
+  form.uploadedImageName = "";
 }
 
 function addPackagingComponent() {
@@ -479,7 +518,7 @@ async function submitForm() {
     sku: form.sku.trim(),
     name: form.name.trim(),
     description: form.description.trim(),
-    imageUrl: form.imageUrl.trim(),
+    imageUrl: form.imageUrlInput.trim() || form.imageUrl.trim(),
     price: Number(form.price),
     campaignEnabled: form.campaignEnabled,
     campaignLabel: form.campaignEnabled ? form.campaignLabel.trim() || undefined : undefined,
@@ -708,7 +747,46 @@ onMounted(async () => {
         <input v-model="form.name" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="商品名稱" />
         <input v-model="form.price" type="number" min="0.01" step="0.01" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="原價" />
         <textarea v-model="form.description" rows="3" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="商品描述" />
-        <input v-model="form.imageUrl" type="url" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="圖片網址" />
+        <div class="rounded-[1.5rem] border border-white/8 bg-white/4 p-4">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <p class="text-sm font-semibold text-white">商品圖片</p>
+              <p class="mt-1 text-xs text-slate-400">支援 JPG、PNG、GIF、WebP，上傳檔案不可超過 2MB。</p>
+            </div>
+            <button
+              v-if="form.imageUrl"
+              type="button"
+              class="rounded-xl border border-brand-coral/20 px-3 py-2 text-xs text-brand-coral"
+              @click="clearImage"
+            >
+              移除圖片
+            </button>
+          </div>
+          <div class="mt-4 flex items-start gap-4">
+            <div
+              class="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-slate-900/70 text-[11px] text-slate-500"
+            >
+              <img v-if="form.imageUrl" :src="form.imageUrl" :alt="form.name || '商品圖片'" class="h-full w-full object-cover" />
+              <span v-else>尚未上傳</span>
+            </div>
+            <div class="min-w-0 flex-1 space-y-3">
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/gif,image/webp"
+                class="block w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-slate-200 file:mr-4 file:rounded-xl file:border-0 file:bg-brand-aqua file:px-3 file:py-2 file:text-sm file:font-semibold file:text-slate-950"
+                @change="handleImageUpload"
+              />
+              <p v-if="form.uploadedImageName" class="text-xs text-slate-400">{{ form.uploadedImageName }}</p>
+              <input
+                v-model="form.imageUrlInput"
+                type="url"
+                class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none"
+                placeholder="圖片網址（可留空，改用上傳）"
+                @input="handleImageUrlInput"
+              />
+            </div>
+          </div>
+        </div>
 
         <div class="rounded-[1.5rem] border border-brand-aqua/15 bg-brand-aqua/5 p-4">
           <label class="flex items-center gap-3 text-sm font-medium text-white">

@@ -5,6 +5,7 @@ import com.nucosmos.pos.backend.auth.persistence.UserEntity;
 import com.nucosmos.pos.backend.auth.repository.UserRepository;
 import com.nucosmos.pos.backend.common.exception.BadRequestException;
 import com.nucosmos.pos.backend.common.exception.NotFoundException;
+import com.nucosmos.pos.backend.common.media.ImageReferenceValidator;
 import com.nucosmos.pos.backend.store.repository.StoreRepository;
 import com.nucosmos.pos.backend.supply.persistence.MaterialItemEntity;
 import com.nucosmos.pos.backend.supply.persistence.MaterialStockLotEntity;
@@ -99,6 +100,7 @@ public class SupplyAdminService {
                 request.unit().trim(),
                 request.purchaseUnit().trim(),
                 request.purchaseToStockRatio(),
+                ImageReferenceValidator.normalize(request.imageUrl()),
                 request.description(),
                 request.reorderLevel(),
                 request.latestUnitCost()
@@ -116,6 +118,7 @@ public class SupplyAdminService {
                 request.unit().trim(),
                 request.purchaseUnit().trim(),
                 request.purchaseToStockRatio(),
+                ImageReferenceValidator.normalize(request.imageUrl()),
                 request.description(),
                 request.reorderLevel(),
                 request.latestUnitCost()
@@ -213,6 +216,7 @@ public class SupplyAdminService {
                 request.purchaseUnit().trim(),
                 request.purchaseToStockRatio(),
                 request.specification(),
+                ImageReferenceValidator.normalize(request.imageUrl()),
                 request.description(),
                 request.reorderLevel(),
                 request.latestUnitCost()
@@ -235,6 +239,7 @@ public class SupplyAdminService {
                 request.purchaseUnit().trim(),
                 request.purchaseToStockRatio(),
                 request.specification(),
+                ImageReferenceValidator.normalize(request.imageUrl()),
                 request.description(),
                 request.reorderLevel(),
                 request.latestUnitCost()
@@ -406,6 +411,7 @@ public class SupplyAdminService {
                 item.getUnit(),
                 item.getPurchaseUnit(),
                 item.getPurchaseToStockRatio(),
+                item.getImageUrl(),
                 item.getDescription(),
                 item.getQuantityOnHand(),
                 item.getReorderLevel(),
@@ -461,6 +467,7 @@ public class SupplyAdminService {
                 item.getPurchaseUnit(),
                 item.getPurchaseToStockRatio(),
                 item.getSpecification(),
+                item.getImageUrl(),
                 item.getDescription(),
                 item.getQuantityOnHand(),
                 item.getReorderLevel(),

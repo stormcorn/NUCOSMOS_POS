@@ -5,11 +5,17 @@ Use this guide if:
 - your VPS already runs `cPanel/WHM` for other sites
 - you do **not** want to add `nucosmos.io` as a paid cPanel domain
 - `NUCOSMOS POS` is already running in Docker on `127.0.0.1:8080`
+- the admin web should be served from `https://nucosmos.io/erp`
 
 Current verified app status on the VPS:
 
 - admin web: `http://127.0.0.1:8080`
 - backend API: `http://127.0.0.1:8080/api/v1/health`
+
+Target public URLs:
+
+- admin web: `https://nucosmos.io/erp`
+- backend API: `https://nucosmos.io/api`
 
 ## 1. Point DNS to the VPS
 
@@ -76,7 +82,8 @@ curl -H "Host: nucosmos.io" http://127.0.0.1/api/v1/health
 
 Expected:
 
-- `/` returns the Vue app HTML
+- `/` redirects to `/erp/`
+- `/erp/` returns the Vue app HTML
 - `/api/v1/health` returns `status=UP`
 
 ## 6. HTTPS options

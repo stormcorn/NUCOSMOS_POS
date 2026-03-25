@@ -11,6 +11,7 @@ public record PackagingAdminResponse(
         String purchaseUnit,
         int purchaseToStockRatio,
         String specification,
+        String imageUrl,
         String description,
         int quantityOnHand,
         int reorderLevel,

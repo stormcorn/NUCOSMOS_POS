@@ -27,6 +27,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 class SupplyProcurementControllerTest {
 
+    private static final String SMALL_PNG_DATA_URL =
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+X2xkAAAAASUVORK5CYII=";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -92,12 +95,14 @@ class SupplyProcurementControllerTest {
                                   "unit": "g",
                                   "purchaseUnit": "bag",
                                   "purchaseToStockRatio": 1000,
+                                  "imageUrl": "%s",
                                   "description": "Sugar for drinks",
                                   "reorderLevel": 50,
                                   "latestUnitCost": 0.03
                                 }
-                                """))
+                                """.formatted(SMALL_PNG_DATA_URL)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.imageUrl").value(SMALL_PNG_DATA_URL))
                 .andReturn();
 
         MvcResult packagingCreate = mockMvc.perform(post("/api/v1/admin/packaging-items")
@@ -111,12 +116,14 @@ class SupplyProcurementControllerTest {
                                   "purchaseUnit": "box",
                                   "purchaseToStockRatio": 100,
                                   "specification": "12mm",
+                                  "imageUrl": "%s",
                                   "description": "Eco straw",
                                   "reorderLevel": 30,
                                   "latestUnitCost": 0.25
                                 }
-                                """))
+                                """.formatted(SMALL_PNG_DATA_URL)))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.imageUrl").value(SMALL_PNG_DATA_URL))
                 .andReturn();
 
         UUID materialId = TestLoginSupport.extractDataFieldAsUuid(materialCreate, "id");

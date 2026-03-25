@@ -8,6 +8,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -17,7 +18,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Transactional
 class ProductControllerTest {
+
+    private static final String SMALL_PNG_DATA_URL =
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+X2xkAAAAASUVORK5CYII=";
 
     @Autowired
     private MockMvc mockMvc;
@@ -170,6 +175,64 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$.data.length()").value(1))
                 .andExpect(jsonPath("$.data[0].id").value(productId))
                 .andExpect(jsonPath("$.data[0].active").value(false));
+    }
+
+    @Test
+    void shouldAllowUploadedProductImageUnderTwoMegabytes() throws Exception {
+        String managerToken = TestLoginSupport.loginAndExtractToken(mockMvc, """
+                {
+                  "storeCode": "TW001",
+                  "roleCode": "MANAGER",
+                  "pin": "9999",
+                  "deviceCode": "POS-TABLET-001"
+                }
+                """);
+
+        mockMvc.perform(post("/api/v1/admin/products")
+                        .header("Authorization", "Bearer " + managerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "categoryId": "33333333-3333-3333-3333-333333333331",
+                                  "sku": "drink-uploaded-image",
+                                  "name": "Uploaded Image Tea",
+                                  "description": "Inline uploaded image",
+                                  "imageUrl": "%s",
+                                  "price": 8.50
+                                }
+                                """.formatted(SMALL_PNG_DATA_URL)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.imageUrl").value(SMALL_PNG_DATA_URL));
+    }
+
+    @Test
+    void shouldRejectUploadedProductImageOverTwoMegabytes() throws Exception {
+        String managerToken = TestLoginSupport.loginAndExtractToken(mockMvc, """
+                {
+                  "storeCode": "TW001",
+                  "roleCode": "MANAGER",
+                  "pin": "9999",
+                  "deviceCode": "POS-TABLET-001"
+                }
+                """);
+
+        String oversizedImageUrl = "data:image/png;base64," + "A".repeat(2_800_000);
+
+        mockMvc.perform(post("/api/v1/admin/products")
+                        .header("Authorization", "Bearer " + managerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "categoryId": "33333333-3333-3333-3333-333333333331",
+                                  "sku": "drink-oversized-image",
+                                  "name": "Oversized Image Tea",
+                                  "description": "Should fail",
+                                  "imageUrl": "%s",
+                                  "price": 8.50
+                                }
+                                """.formatted(oversizedImageUrl)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Uploaded image must be 2MB or smaller"));
     }
 
     @Test

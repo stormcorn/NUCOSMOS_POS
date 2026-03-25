@@ -5,6 +5,7 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { useAuthStore } from "@/stores/auth";
 import { usePackagingStore } from "@/stores/packaging";
 import type { PackagingAdminItem, SupplyMovementType } from "@/types/packaging";
+import { isEmbeddedImage, readImageFileAsDataUrl } from "@/utils/image-upload";
 import { formatCurrency, formatDateTime } from "@/utils/format";
 
 const authStore = useAuthStore();
@@ -23,6 +24,9 @@ const form = reactive({
   purchaseUnit: "",
   purchaseToStockRatio: "1",
   specification: "",
+  imageUrl: "",
+  imageUrlInput: "",
+  uploadedImageName: "",
   description: "",
   reorderLevel: "0",
   latestUnitCost: "",
@@ -84,6 +88,9 @@ function resetForm() {
   form.purchaseUnit = "";
   form.purchaseToStockRatio = "1";
   form.specification = "";
+  form.imageUrl = "";
+  form.imageUrlInput = "";
+  form.uploadedImageName = "";
   form.description = "";
   form.reorderLevel = "0";
   form.latestUnitCost = "";
@@ -121,6 +128,9 @@ function openEditForm(item: PackagingAdminItem) {
   form.purchaseUnit = item.purchaseUnit;
   form.purchaseToStockRatio = String(item.purchaseToStockRatio);
   form.specification = item.specification ?? "";
+  form.imageUrl = item.imageUrl ?? "";
+  form.imageUrlInput = isEmbeddedImage(item.imageUrl) ? "" : (item.imageUrl ?? "");
+  form.uploadedImageName = isEmbeddedImage(item.imageUrl) ? "已上傳圖片" : "";
   form.description = item.description ?? "";
   form.reorderLevel = String(item.reorderLevel);
   form.latestUnitCost = item.latestUnitCost === null ? "" : item.latestUnitCost.toFixed(2);
@@ -156,6 +166,7 @@ async function submitForm() {
     purchaseUnit: form.purchaseUnit.trim(),
     purchaseToStockRatio: Number(form.purchaseToStockRatio),
     specification: form.specification.trim(),
+    imageUrl: form.imageUrlInput.trim() || form.imageUrl.trim(),
     description: form.description.trim(),
     reorderLevel: Number(form.reorderLevel),
     latestUnitCost: form.latestUnitCost ? Number(form.latestUnitCost) : null,
@@ -169,6 +180,38 @@ async function submitForm() {
     resetForm();
     isFormOpen.value = false;
   }
+}
+
+async function handleImageUpload(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  try {
+    form.imageUrl = await readImageFileAsDataUrl(file);
+    form.imageUrlInput = "";
+    form.uploadedImageName = file.name;
+    formError.value = "";
+  } catch (error) {
+    formError.value = error instanceof Error ? error.message : "圖片上傳失敗。";
+  } finally {
+    input.value = "";
+  }
+}
+
+function handleImageUrlInput() {
+  form.imageUrl = form.imageUrlInput.trim();
+  if (form.imageUrl) {
+    form.uploadedImageName = "";
+  }
+}
+
+function clearImage() {
+  form.imageUrl = "";
+  form.imageUrlInput = "";
+  form.uploadedImageName = "";
 }
 
 async function submitMovement() {
@@ -263,8 +306,18 @@ onMounted(async () => {
             <tr v-for="item in packagingStore.items" :key="item.id" class="bg-slate-950/25">
               <td class="px-4 py-4 text-slate-300">{{ item.sku }}</td>
               <td class="px-4 py-4">
-                <p class="font-medium text-white">{{ item.name }}</p>
-                <p class="mt-1 text-xs text-slate-400">{{ item.specification || item.description || "無備註" }}</p>
+                <div class="flex items-center gap-3">
+                  <div
+                    class="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-slate-900/70 text-[10px] text-slate-500"
+                  >
+                    <img v-if="item.imageUrl" :src="item.imageUrl" :alt="item.name" class="h-full w-full object-cover" />
+                    <span v-else>無圖</span>
+                  </div>
+                  <div class="min-w-0">
+                    <p class="font-medium text-white">{{ item.name }}</p>
+                    <p class="mt-1 text-xs text-slate-400">{{ item.specification || item.description || "無備註" }}</p>
+                  </div>
+                </div>
               </td>
               <td class="px-4 py-4 text-slate-300">{{ item.unit }}</td>
               <td class="px-4 py-4 text-slate-300">{{ item.purchaseUnit }}</td>
@@ -378,6 +431,44 @@ onMounted(async () => {
           <input v-model="form.specification" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="規格，例如 700cc 杯 / 平口蓋" />
           <input v-model="form.reorderLevel" type="number" min="0" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="補貨門檻" />
           <input v-model="form.latestUnitCost" type="number" min="0" step="0.01" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="最近庫存單位成本" />
+          <div class="rounded-[1.5rem] border border-white/8 bg-white/4 p-4">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="text-sm font-semibold text-white">包裝圖片</p>
+                <p class="mt-1 text-xs text-slate-400">支援 JPG、PNG、GIF、WebP，上傳檔案不可超過 2MB。</p>
+              </div>
+              <button
+                v-if="form.imageUrl"
+                type="button"
+                class="rounded-xl border border-brand-coral/20 px-3 py-2 text-xs text-brand-coral"
+                @click="clearImage"
+              >
+                移除圖片
+              </button>
+            </div>
+            <div class="mt-4 flex items-start gap-4">
+              <div class="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-slate-900/70 text-[11px] text-slate-500">
+                <img v-if="form.imageUrl" :src="form.imageUrl" :alt="form.name || '包裝圖片'" class="h-full w-full object-cover" />
+                <span v-else>尚未上傳</span>
+              </div>
+              <div class="min-w-0 flex-1 space-y-3">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/gif,image/webp"
+                  class="block w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-slate-200 file:mr-4 file:rounded-xl file:border-0 file:bg-brand-aqua file:px-3 file:py-2 file:text-sm file:font-semibold file:text-slate-950"
+                  @change="handleImageUpload"
+                />
+                <p v-if="form.uploadedImageName" class="text-xs text-slate-400">{{ form.uploadedImageName }}</p>
+                <input
+                  v-model="form.imageUrlInput"
+                  type="url"
+                  class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none"
+                  placeholder="圖片網址（可留空，改用上傳）"
+                  @input="handleImageUrlInput"
+                />
+              </div>
+            </div>
+          </div>
           <textarea v-model="form.description" rows="4" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="包裝備註" />
           <button class="w-full rounded-2xl bg-brand-aqua px-5 py-3 text-sm font-semibold text-slate-950" :disabled="packagingStore.saving" @click="submitForm">
             {{ packagingStore.saving ? "處理中..." : editingId ? "更新包裝" : "建立包裝" }}

@@ -34,6 +34,9 @@ public class MaterialItemEntity extends BaseEntity {
     @Column(nullable = false)
     private int purchaseToStockRatio;
 
+    @Column(name = "image_url", columnDefinition = "text")
+    private String imageUrl;
+
     @Column(length = 500)
     private String description;
 
@@ -59,6 +62,7 @@ public class MaterialItemEntity extends BaseEntity {
             String unit,
             String purchaseUnit,
             int purchaseToStockRatio,
+            String imageUrl,
             String description,
             int reorderLevel,
             BigDecimal latestUnitCost
@@ -70,6 +74,7 @@ public class MaterialItemEntity extends BaseEntity {
         entity.unit = unit;
         entity.purchaseUnit = purchaseUnit;
         entity.purchaseToStockRatio = purchaseToStockRatio;
+        entity.imageUrl = normalize(imageUrl);
         entity.description = normalize(description);
         entity.quantityOnHand = 0;
         entity.reorderLevel = reorderLevel;
@@ -84,6 +89,7 @@ public class MaterialItemEntity extends BaseEntity {
             String unit,
             String purchaseUnit,
             int purchaseToStockRatio,
+            String imageUrl,
             String description,
             int reorderLevel,
             BigDecimal latestUnitCost
@@ -93,6 +99,7 @@ public class MaterialItemEntity extends BaseEntity {
         this.unit = unit;
         this.purchaseUnit = purchaseUnit;
         this.purchaseToStockRatio = purchaseToStockRatio;
+        this.imageUrl = normalize(imageUrl);
         this.description = normalize(description);
         this.reorderLevel = reorderLevel;
         this.latestUnitCost = latestUnitCost;
@@ -127,6 +134,10 @@ public class MaterialItemEntity extends BaseEntity {
 
     public String getDescription() {
         return description;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
     }
 
     public String getPurchaseUnit() {

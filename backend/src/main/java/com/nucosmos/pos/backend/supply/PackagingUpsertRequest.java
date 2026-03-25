@@ -15,6 +15,7 @@ public record PackagingUpsertRequest(
         @NotBlank @Size(max = 30) String purchaseUnit,
         @NotNull @Min(1) Integer purchaseToStockRatio,
         @Size(max = 120) String specification,
+        String imageUrl,
         @Size(max = 500) String description,
         @NotNull @Min(0) Integer reorderLevel,
         @DecimalMin("0.0") BigDecimal latestUnitCost

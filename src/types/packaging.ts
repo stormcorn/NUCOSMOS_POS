@@ -9,6 +9,7 @@ export type PackagingAdminItem = {
   purchaseUnit: string;
   purchaseToStockRatio: number;
   specification: string | null;
+  imageUrl: string | null;
   description: string | null;
   quantityOnHand: number;
   reorderLevel: number;
@@ -57,6 +58,7 @@ export type PackagingUpsertRequest = {
   purchaseUnit: string;
   purchaseToStockRatio: number;
   specification: string;
+  imageUrl: string;
   description: string;
   reorderLevel: number;
   latestUnitCost?: number | null;

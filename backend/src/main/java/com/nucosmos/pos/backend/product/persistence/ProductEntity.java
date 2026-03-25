@@ -28,7 +28,7 @@ public class ProductEntity extends BaseEntity {
     @Column(length = 500)
     private String description;
 
-    @Column(name = "image_url", length = 500)
+    @Column(name = "image_url", columnDefinition = "text")
     private String imageUrl;
 
     @Column(nullable = false, precision = 10, scale = 2)
