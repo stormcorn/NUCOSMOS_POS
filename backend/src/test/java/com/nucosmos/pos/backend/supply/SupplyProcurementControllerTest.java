@@ -2,8 +2,10 @@ package com.nucosmos.pos.backend.supply;
 
 import com.nucosmos.pos.backend.auth.TestLoginSupport;
 import com.nucosmos.pos.backend.supply.persistence.MaterialItemEntity;
+import com.nucosmos.pos.backend.supply.persistence.ManufacturedItemEntity;
 import com.nucosmos.pos.backend.supply.persistence.PackagingItemEntity;
 import com.nucosmos.pos.backend.supply.repository.MaterialItemRepository;
+import com.nucosmos.pos.backend.supply.repository.ManufacturedItemRepository;
 import com.nucosmos.pos.backend.supply.repository.PackagingItemRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +40,9 @@ class SupplyProcurementControllerTest {
 
     @Autowired
     private PackagingItemRepository packagingItemRepository;
+
+    @Autowired
+    private ManufacturedItemRepository manufacturedItemRepository;
 
     @Test
     void shouldManageSuppliersAndReceivePurchaseOrder() throws Exception {
@@ -126,13 +131,35 @@ class SupplyProcurementControllerTest {
                 .andExpect(jsonPath("$.data.imageUrl").value(SMALL_PNG_DATA_URL))
                 .andReturn();
 
+        MvcResult manufacturedCreate = mockMvc.perform(post("/api/v1/admin/manufactured-items")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "sku": "FG-TEA-BASE-001",
+                                  "name": "Oolong Tea Base",
+                                  "unit": "ml",
+                                  "purchaseUnit": "bucket",
+                                  "purchaseToStockRatio": 5000,
+                                  "imageUrl": "%s",
+                                  "description": "Prepared tea base for service",
+                                  "reorderLevel": 20,
+                                  "latestUnitCost": 0.08
+                                }
+                                """.formatted(SMALL_PNG_DATA_URL)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.imageUrl").value(SMALL_PNG_DATA_URL))
+                .andReturn();
+
         UUID materialId = TestLoginSupport.extractDataFieldAsUuid(materialCreate, "id");
         UUID packagingId = TestLoginSupport.extractDataFieldAsUuid(packagingCreate, "id");
+        UUID manufacturedId = TestLoginSupport.extractDataFieldAsUuid(manufacturedCreate, "id");
 
         mockMvc.perform(get("/api/v1/admin/replenishment-suggestions")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[?(@.sku=='MAT-SUGAR-001')]").exists())
+                .andExpect(jsonPath("$.data[?(@.sku=='FG-TEA-BASE-001')]").exists())
                 .andExpect(jsonPath("$.data[?(@.sku=='PK-STRAW-001')]").exists());
 
         MvcResult purchaseOrderResult = mockMvc.perform(post("/api/v1/admin/purchase-orders")
@@ -151,6 +178,13 @@ class SupplyProcurementControllerTest {
                                       "note": "Restock sugar"
                                     },
                                     {
+                                      "itemType": "MANUFACTURED",
+                                      "itemId": "%s",
+                                      "orderedQuantity": 24,
+                                      "unitCost": 0.08,
+                                      "note": "Restock tea base"
+                                    },
+                                    {
                                       "itemType": "PACKAGING",
                                       "itemId": "%s",
                                       "orderedQuantity": 80,
@@ -159,13 +193,14 @@ class SupplyProcurementControllerTest {
                                     }
                                   ]
                                 }
-                                """.formatted(supplierId, materialId, packagingId)))
+                                """.formatted(supplierId, materialId, manufacturedId, packagingId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("OPEN"))
-                .andExpect(jsonPath("$.data.lines.length()").value(2))
+                .andExpect(jsonPath("$.data.lines.length()").value(3))
                 .andExpect(jsonPath("$.data.lines[0].unit").value("bag"))
                 .andExpect(jsonPath("$.data.lines[0].stockUnit").value("g"))
                 .andExpect(jsonPath("$.data.lines[0].purchaseToStockRatio").value(1000))
+                .andExpect(jsonPath("$.data.lines[1].itemType").value("MANUFACTURED"))
                 .andReturn();
 
         UUID purchaseOrderId = TestLoginSupport.extractDataFieldAsUuid(purchaseOrderResult, "id");
@@ -182,14 +217,18 @@ class SupplyProcurementControllerTest {
                 .andExpect(jsonPath("$.data.status").value("RECEIVED"))
                 .andExpect(jsonPath("$.data.receivedAt").isNotEmpty())
                 .andExpect(jsonPath("$.data.lines[0].receivedQuantity").value(120))
-                .andExpect(jsonPath("$.data.lines[1].receivedQuantity").value(80))
+                .andExpect(jsonPath("$.data.lines[1].receivedQuantity").value(24))
+                .andExpect(jsonPath("$.data.lines[2].receivedQuantity").value(80))
                 .andExpect(jsonPath("$.data.lines[0].receivedStockQuantity").value(120000))
-                .andExpect(jsonPath("$.data.lines[1].receivedStockQuantity").value(8000));
+                .andExpect(jsonPath("$.data.lines[1].receivedStockQuantity").value(120000))
+                .andExpect(jsonPath("$.data.lines[2].receivedStockQuantity").value(8000));
 
         MaterialItemEntity material = materialItemRepository.findById(materialId).orElseThrow();
+        ManufacturedItemEntity manufactured = manufacturedItemRepository.findById(manufacturedId).orElseThrow();
         PackagingItemEntity packaging = packagingItemRepository.findById(packagingId).orElseThrow();
 
         org.assertj.core.api.Assertions.assertThat(material.getQuantityOnHand()).isEqualTo(120000);
+        org.assertj.core.api.Assertions.assertThat(manufactured.getQuantityOnHand()).isEqualTo(120000);
         org.assertj.core.api.Assertions.assertThat(packaging.getQuantityOnHand()).isEqualTo(8000);
     }
 }

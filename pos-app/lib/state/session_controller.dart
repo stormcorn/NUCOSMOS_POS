@@ -79,6 +79,7 @@ class SessionController extends ChangeNotifier {
   List<PosCartLine> cart = const [];
   OrderReceipt? lastCompletedOrder;
   List<QuickReceiveItem> receiveMaterials = const [];
+  List<QuickReceiveItem> receiveManufacturedItems = const [];
   List<QuickReceiveItem> receivePackagingItems = const [];
 
   bool get isLoggedIn => accessToken != null && session != null;
@@ -131,12 +132,15 @@ class SessionController extends ChangeNotifier {
       cart.fold<double>(0, (total, line) => total + line.lineTotal);
 
   List<QuickReceiveItem> itemsForReceiveType(QuickReceiveItemType type) {
-    final source = type == QuickReceiveItemType.material
-        ? receiveMaterials
-        : receivePackagingItems;
+    final source = switch (type) {
+      QuickReceiveItemType.material => receiveMaterials,
+      QuickReceiveItemType.manufactured => receiveManufacturedItems,
+      QuickReceiveItemType.packaging => receivePackagingItems,
+    };
 
     final result = source
-        .where((item) => item.active && item.sku.isNotEmpty && item.name.isNotEmpty)
+        .where((item) =>
+            item.active && item.sku.isNotEmpty && item.name.isNotEmpty)
         .toList(growable: true)
       ..sort((left, right) {
         if (left.lowStock != right.lowStock) {
@@ -215,7 +219,8 @@ class SessionController extends ChangeNotifier {
       session = await _runWithApiFallback(
         () => _authService.currentSession(response.accessToken),
       );
-      _deviceCode = response.deviceCode.isEmpty ? _deviceCode : response.deviceCode;
+      _deviceCode =
+          response.deviceCode.isEmpty ? _deviceCode : response.deviceCode;
       selectedStoreCode = storeCode;
 
       final prefs = await SharedPreferences.getInstance();
@@ -231,6 +236,7 @@ class SessionController extends ChangeNotifier {
         await loadQuickReceiveCatalog(showLoading: false);
       } else {
         receiveMaterials = const [];
+        receiveManufacturedItems = const [];
         receivePackagingItems = const [];
       }
 
@@ -268,7 +274,8 @@ class SessionController extends ChangeNotifier {
       );
       errorMessage = '';
 
-      final availableCodes = products.map((product) => product.categoryCode).toSet();
+      final availableCodes =
+          products.map((product) => product.categoryCode).toSet();
       if (selectedCategoryCode != null &&
           selectedCategoryCode!.isNotEmpty &&
           !availableCodes.contains(selectedCategoryCode)) {
@@ -289,6 +296,7 @@ class SessionController extends ChangeNotifier {
   Future<void> loadQuickReceiveCatalog({bool showLoading = true}) async {
     if (accessToken == null || !canUseQuickReceive) {
       receiveMaterials = const [];
+      receiveManufacturedItems = const [];
       receivePackagingItems = const [];
       quickReceiveMessage = '';
       notifyListeners();
@@ -304,11 +312,13 @@ class SessionController extends ChangeNotifier {
       final results = await _runWithApiFallback(
         () => Future.wait<List<QuickReceiveItem>>([
           _quickReceiveService.fetchMaterials(accessToken!),
+          _quickReceiveService.fetchManufacturedItems(accessToken!),
           _quickReceiveService.fetchPackagingItems(accessToken!),
         ]),
       );
       receiveMaterials = results[0];
-      receivePackagingItems = results[1];
+      receiveManufacturedItems = results[1];
+      receivePackagingItems = results[2];
       errorMessage = '';
     } on ApiException catch (error) {
       errorMessage = error.message;
@@ -514,12 +524,68 @@ class SessionController extends ChangeNotifier {
     }
   }
 
+  Future<QuickReceiveItem?> createQuickReceiveItem({
+    required QuickReceiveItemType type,
+    required String sku,
+    required String name,
+    required String unit,
+    required String purchaseUnit,
+    required int purchaseToStockRatio,
+    required int reorderLevel,
+    String? description,
+    double? latestUnitCost,
+  }) async {
+    if (accessToken == null || session == null) {
+      errorMessage = '請先登入後再新增收貨品項。';
+      notifyListeners();
+      return null;
+    }
+
+    quickReceiveSaving = true;
+    errorMessage = '';
+    quickReceiveMessage = '';
+    notifyListeners();
+
+    try {
+      final createdItem = await _runWithApiFallback(
+        () => _quickReceiveService.createItem(
+          accessToken: accessToken!,
+          type: type,
+          sku: sku,
+          name: name,
+          unit: unit,
+          purchaseUnit: purchaseUnit,
+          purchaseToStockRatio: purchaseToStockRatio,
+          reorderLevel: reorderLevel,
+          description: description,
+          latestUnitCost: latestUnitCost,
+        ),
+      );
+      quickReceiveMessage = '${type.label} ${createdItem.name} 已建立，可直接收貨。';
+      await loadQuickReceiveCatalog(showLoading: false);
+      return createdItem;
+    } on ApiException catch (error) {
+      errorMessage = error.message;
+      return null;
+    } on Exception {
+      errorMessage = '新增收貨品項失敗，請確認 API：$_apiBaseUrl';
+      return null;
+    } catch (_) {
+      errorMessage = '新增收貨品項失敗，請確認 API：$_apiBaseUrl';
+      return null;
+    } finally {
+      quickReceiveSaving = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> logout() async {
     accessToken = null;
     session = null;
     products = const [];
     cart = const [];
     receiveMaterials = const [];
+    receiveManufacturedItems = const [];
     receivePackagingItems = const [];
     errorMessage = '';
     checkoutMessage = '';
@@ -586,7 +652,9 @@ class SessionController extends ChangeNotifier {
     try {
       final stores = await _runWithApiFallback(_authService.fetchStores);
       availableStores = stores.isEmpty
-          ? const [StoreSummary(code: _fallbackStoreCode, name: _fallbackStoreCode)]
+          ? const [
+              StoreSummary(code: _fallbackStoreCode, name: _fallbackStoreCode)
+            ]
           : stores;
       _ensureSelectedStoreCode();
       errorMessage = '';
@@ -630,7 +698,9 @@ class SessionController extends ChangeNotifier {
         codes.contains(selectedStoreCode)) {
       return;
     }
-    selectedStoreCode = availableStores.isEmpty ? _fallbackStoreCode : availableStores.first.code;
+    selectedStoreCode = availableStores.isEmpty
+        ? _fallbackStoreCode
+        : availableStores.first.code;
   }
 
   List<StoreSummary> _fallbackStores() {
@@ -639,7 +709,9 @@ class SessionController extends ChangeNotifier {
     return [
       StoreSummary(
         code: normalized,
-        name: normalized == _fallbackStoreCode ? 'NUCOSMOS Demo Store' : normalized,
+        name: normalized == _fallbackStoreCode
+            ? 'NUCOSMOS Demo Store'
+            : normalized,
       ),
     ];
   }
@@ -776,7 +848,8 @@ class SessionController extends ChangeNotifier {
     return null;
   }
 
-  List<PosCartSelection> _normalizeSelections(List<PosCartSelection> selections) {
+  List<PosCartSelection> _normalizeSelections(
+      List<PosCartSelection> selections) {
     final nextSelections = [...selections]
       ..sort((left, right) => left.optionId.compareTo(right.optionId));
     return List.unmodifiable(nextSelections);
@@ -849,8 +922,8 @@ class PosCartLine {
     String productId,
     List<PosCartSelection> selectedOptions,
   ) {
-    final optionIds = selectedOptions.map((selection) => selection.optionId).toList()
-      ..sort();
+    final optionIds =
+        selectedOptions.map((selection) => selection.optionId).toList()..sort();
     return '$productId::${optionIds.join(",")}';
   }
 

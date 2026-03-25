@@ -76,6 +76,55 @@ public class SupplyAdminController {
         return ApiResponse.ok(supplyAdminService.createMaterialMovement(currentUser(authentication), materialId, request));
     }
 
+    @GetMapping("/manufactured-items")
+    public ApiResponse<List<ManufacturedAdminResponse>> listManufacturedItems(Authentication authentication) {
+        return ApiResponse.ok(supplyAdminService.listManufacturedItems(currentUser(authentication)));
+    }
+
+    @GetMapping("/manufactured-items/movements")
+    public ApiResponse<List<ManufacturedMovementResponse>> listManufacturedMovements(Authentication authentication) {
+        return ApiResponse.ok(supplyAdminService.listManufacturedMovements(currentUser(authentication)));
+    }
+
+    @GetMapping("/manufactured-items/lots")
+    public ApiResponse<List<ManufacturedLotResponse>> listManufacturedLots(Authentication authentication) {
+        return ApiResponse.ok(supplyAdminService.listManufacturedLots(currentUser(authentication)));
+    }
+
+    @PostMapping("/manufactured-items")
+    public ApiResponse<ManufacturedAdminResponse> createManufacturedItem(
+            Authentication authentication,
+            @Valid @RequestBody ManufacturedUpsertRequest request
+    ) {
+        return ApiResponse.ok(supplyAdminService.createManufacturedItem(currentUser(authentication), request));
+    }
+
+    @PutMapping("/manufactured-items/{manufacturedItemId}")
+    public ApiResponse<ManufacturedAdminResponse> updateManufacturedItem(
+            Authentication authentication,
+            @PathVariable UUID manufacturedItemId,
+            @Valid @RequestBody ManufacturedUpsertRequest request
+    ) {
+        return ApiResponse.ok(supplyAdminService.updateManufacturedItem(currentUser(authentication), manufacturedItemId, request));
+    }
+
+    @PostMapping("/manufactured-items/{manufacturedItemId}/deactivate")
+    public ApiResponse<ManufacturedAdminResponse> deactivateManufacturedItem(
+            Authentication authentication,
+            @PathVariable UUID manufacturedItemId
+    ) {
+        return ApiResponse.ok(supplyAdminService.deactivateManufacturedItem(currentUser(authentication), manufacturedItemId));
+    }
+
+    @PostMapping("/manufactured-items/{manufacturedItemId}/movements")
+    public ApiResponse<ManufacturedMovementResponse> createManufacturedMovement(
+            Authentication authentication,
+            @PathVariable UUID manufacturedItemId,
+            @Valid @RequestBody ManufacturedMovementRequest request
+    ) {
+        return ApiResponse.ok(supplyAdminService.createManufacturedMovement(currentUser(authentication), manufacturedItemId, request));
+    }
+
     @GetMapping("/packaging-items")
     public ApiResponse<List<PackagingAdminResponse>> listPackagingItems(Authentication authentication) {
         return ApiResponse.ok(supplyAdminService.listPackagingItems(currentUser(authentication)));

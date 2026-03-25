@@ -30,6 +30,10 @@ public class PurchaseOrderLineEntity extends BaseEntity {
     @JoinColumn(name = "packaging_item_id")
     private PackagingItemEntity packagingItem;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "manufactured_item_id")
+    private ManufacturedItemEntity manufacturedItem;
+
     @Column(nullable = false, length = 50)
     private String itemSku;
 
@@ -117,6 +121,33 @@ public class PurchaseOrderLineEntity extends BaseEntity {
         return entity;
     }
 
+    public static PurchaseOrderLineEntity createForManufactured(
+            PurchaseOrderEntity purchaseOrder,
+            ManufacturedItemEntity manufacturedItem,
+            int orderedQuantity,
+            BigDecimal unitCost,
+            String batchCode,
+            OffsetDateTime expiryDate,
+            OffsetDateTime manufacturedAt,
+            String note
+    ) {
+        PurchaseOrderLineEntity entity = new PurchaseOrderLineEntity();
+        entity.purchaseOrder = purchaseOrder;
+        entity.itemType = "MANUFACTURED";
+        entity.manufacturedItem = manufacturedItem;
+        entity.itemSku = manufacturedItem.getSku();
+        entity.itemName = manufacturedItem.getName();
+        entity.unit = manufacturedItem.getPurchaseUnit();
+        entity.orderedQuantity = orderedQuantity;
+        entity.receivedQuantity = 0;
+        entity.unitCost = unitCost;
+        entity.batchCode = normalize(batchCode);
+        entity.expiryDate = expiryDate;
+        entity.manufacturedAt = manufacturedAt;
+        entity.note = normalize(note);
+        return entity;
+    }
+
     public void markReceived() {
         this.receivedQuantity = orderedQuantity;
     }
@@ -135,6 +166,10 @@ public class PurchaseOrderLineEntity extends BaseEntity {
 
     public PackagingItemEntity getPackagingItem() {
         return packagingItem;
+    }
+
+    public ManufacturedItemEntity getManufacturedItem() {
+        return manufacturedItem;
     }
 
     public String getItemSku() {

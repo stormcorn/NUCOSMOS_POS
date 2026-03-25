@@ -55,12 +55,10 @@ class _PosHomeScreenState extends State<PosHomeScreen> {
       return;
     }
     setState(() {
-      _selectedReceiveItem ??= widget
-              .controller
-              .itemsForReceiveType(_quickReceiveType)
-              .isNotEmpty
-          ? widget.controller.itemsForReceiveType(_quickReceiveType).first
-          : null;
+      _selectedReceiveItem ??=
+          widget.controller.itemsForReceiveType(_quickReceiveType).isNotEmpty
+              ? widget.controller.itemsForReceiveType(_quickReceiveType).first
+              : null;
     });
   }
 
@@ -98,6 +96,45 @@ class _PosHomeScreenState extends State<PosHomeScreen> {
         content: Text(
           '${item.name} 已入庫 ${result.receivedStockQuantity} ${item.unit}，目前庫存 ${result.quantityAfter} ${item.unit}',
         ),
+      ),
+    );
+  }
+
+  Future<void> _createQuickReceiveItem({
+    required QuickReceiveItemType type,
+    required String sku,
+    required String name,
+    required String unit,
+    required String purchaseUnit,
+    required int purchaseToStockRatio,
+    required int reorderLevel,
+    String? description,
+    double? latestUnitCost,
+  }) async {
+    final createdItem = await widget.controller.createQuickReceiveItem(
+      type: type,
+      sku: sku,
+      name: name,
+      unit: unit,
+      purchaseUnit: purchaseUnit,
+      purchaseToStockRatio: purchaseToStockRatio,
+      reorderLevel: reorderLevel,
+      description: description,
+      latestUnitCost: latestUnitCost,
+    );
+    if (!mounted || createdItem == null) {
+      return;
+    }
+
+    setState(() {
+      _quickReceiveType = createdItem.type;
+      _quickReceiveSearch = '';
+      _selectedReceiveItem = createdItem;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${createdItem.type.label} ${createdItem.name} 已建立'),
       ),
     );
   }
@@ -174,21 +211,20 @@ class _PosHomeScreenState extends State<PosHomeScreen> {
         final contentPadding = desktopLayout ? 20.0 : 14.0;
         final cartWidth = desktopLayout ? 310.0 : 272.0;
         final categoryWidth = desktopLayout ? 148.0 : 126.0;
-        final receiveItems = controller
-            .itemsForReceiveType(_quickReceiveType)
-            .where((item) {
-              final keyword = _quickReceiveSearch.trim().toLowerCase();
-              if (keyword.isEmpty) {
-                return true;
-              }
-              return item.name.toLowerCase().contains(keyword) ||
-                  item.sku.toLowerCase().contains(keyword);
-            })
-            .toList(growable: false);
+        final receiveItems =
+            controller.itemsForReceiveType(_quickReceiveType).where((item) {
+          final keyword = _quickReceiveSearch.trim().toLowerCase();
+          if (keyword.isEmpty) {
+            return true;
+          }
+          return item.name.toLowerCase().contains(keyword) ||
+              item.sku.toLowerCase().contains(keyword);
+        }).toList(growable: false);
         final selectedReceiveItem = receiveItems.any(
-              (item) => item.id == _selectedReceiveItem?.id,
-            )
-            ? receiveItems.firstWhere((item) => item.id == _selectedReceiveItem?.id)
+          (item) => item.id == _selectedReceiveItem?.id,
+        )
+            ? receiveItems
+                .firstWhere((item) => item.id == _selectedReceiveItem?.id)
             : (receiveItems.isNotEmpty ? receiveItems.first : null);
 
         return Scaffold(
@@ -229,6 +265,7 @@ class _PosHomeScreenState extends State<PosHomeScreen> {
                                 _selectedReceiveItem = item;
                               });
                             },
+                            onCreateItem: _createQuickReceiveItem,
                             onSubmit: _submitQuickReceive,
                           )
                         : wideLayout
@@ -236,7 +273,8 @@ class _PosHomeScreenState extends State<PosHomeScreen> {
                                 children: [
                                   SizedBox(
                                     width: categoryWidth,
-                                    child: _CategorySidebar(controller: controller),
+                                    child: _CategorySidebar(
+                                        controller: controller),
                                   ),
                                   Expanded(
                                     child: Padding(
@@ -262,7 +300,8 @@ class _PosHomeScreenState extends State<PosHomeScreen> {
                                           ),
                                           Expanded(
                                             child: ProductGrid(
-                                              products: controller.filteredProducts,
+                                              products:
+                                                  controller.filteredProducts,
                                               onAddProduct: _handleAddProduct,
                                             ),
                                           ),
@@ -304,7 +343,8 @@ class _PosHomeScreenState extends State<PosHomeScreen> {
                                         SizedBox(
                                           height: 720,
                                           child: ProductGrid(
-                                            products: controller.filteredProducts,
+                                            products:
+                                                controller.filteredProducts,
                                             onAddProduct: _handleAddProduct,
                                           ),
                                         ),
@@ -335,7 +375,8 @@ class _PosHomeScreenState extends State<PosHomeScreen> {
       return 'Tea & Drinks';
     }
 
-    final match = controller.categories.where((item) => item.code == selectedCode);
+    final match =
+        controller.categories.where((item) => item.code == selectedCode);
     if (match.isEmpty) {
       return 'Tea & Drinks';
     }
@@ -564,7 +605,8 @@ class _CategorySidebar extends StatelessWidget {
               itemBuilder: (context, index) {
                 final item = categories[index];
                 final active = controller.selectedCategoryCode == item.code ||
-                    (item.code == null && controller.selectedCategoryCode == null);
+                    (item.code == null &&
+                        controller.selectedCategoryCode == null);
                 return InkWell(
                   onTap: () => controller.selectCategory(item.code),
                   borderRadius: BorderRadius.circular(16),
@@ -589,9 +631,8 @@ class _CategorySidebar extends StatelessWidget {
                         Icon(
                           item.icon,
                           size: 16,
-                          color: active
-                              ? const Color(0xFF07111C)
-                              : Colors.white70,
+                          color:
+                              active ? const Color(0xFF07111C) : Colors.white70,
                         ),
                         const SizedBox(width: 8),
                         Expanded(
@@ -714,6 +755,7 @@ class _QuickReceiveWorkspace extends StatelessWidget {
     required this.onSearchChanged,
     required this.onTypeChanged,
     required this.onItemSelected,
+    required this.onCreateItem,
     required this.onSubmit,
   });
 
@@ -729,12 +771,22 @@ class _QuickReceiveWorkspace extends StatelessWidget {
   final ValueChanged<QuickReceiveItemType> onTypeChanged;
   final ValueChanged<QuickReceiveItem> onItemSelected;
   final Future<void> Function({
+    required QuickReceiveItemType type,
+    required String sku,
+    required String name,
+    required String unit,
+    required String purchaseUnit,
+    required int purchaseToStockRatio,
+    required int reorderLevel,
+    String? description,
+    double? latestUnitCost,
+  }) onCreateItem;
+  final Future<void> Function({
     required QuickReceiveItem item,
     required int purchaseQuantity,
     double? purchaseUnitCost,
     String? note,
-  })
-  onSubmit;
+  }) onSubmit;
 
   @override
   Widget build(BuildContext context) {
@@ -759,6 +811,8 @@ class _QuickReceiveWorkspace extends StatelessWidget {
     final formPane = _QuickReceiveFormPane(
       controller: controller,
       item: selectedItem,
+      itemType: receiveType,
+      onCreateItem: onCreateItem,
       onSubmit: onSubmit,
     );
 
@@ -794,7 +848,7 @@ class _QuickReceiveWorkspace extends StatelessWidget {
         const SizedBox(height: 18),
         SizedBox(height: 420, child: listPane),
         const SizedBox(height: 18),
-        SizedBox(height: 560, child: formPane),
+        SizedBox(height: 860, child: formPane),
       ],
     );
   }
@@ -847,7 +901,7 @@ class _QuickReceiveListPane extends StatelessWidget {
               children: [
                 Expanded(
                   child: _TypeToggleChip(
-                    label: '原料',
+                    label: QuickReceiveItemType.material.label,
                     active: receiveType == QuickReceiveItemType.material,
                     onTap: () => onTypeChanged(QuickReceiveItemType.material),
                   ),
@@ -855,7 +909,16 @@ class _QuickReceiveListPane extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: _TypeToggleChip(
-                    label: '包裝',
+                    label: QuickReceiveItemType.manufactured.label,
+                    active: receiveType == QuickReceiveItemType.manufactured,
+                    onTap: () =>
+                        onTypeChanged(QuickReceiveItemType.manufactured),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _TypeToggleChip(
+                    label: QuickReceiveItemType.packaging.label,
                     active: receiveType == QuickReceiveItemType.packaging,
                     onTap: () => onTypeChanged(QuickReceiveItemType.packaging),
                   ),
@@ -870,7 +933,8 @@ class _QuickReceiveListPane extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: '搜尋 SKU 或品項',
                 hintStyle: const TextStyle(color: Colors.white38),
-                prefixIcon: const Icon(Icons.search_rounded, color: Colors.white54),
+                prefixIcon:
+                    const Icon(Icons.search_rounded, color: Colors.white54),
                 filled: true,
                 fillColor: const Color(0xFF1A2332),
                 border: OutlineInputBorder(
@@ -884,94 +948,96 @@ class _QuickReceiveListPane extends StatelessWidget {
               child: controller.quickReceiveLoading
                   ? const Center(child: CircularProgressIndicator())
                   : items.isEmpty
-                  ? const Center(
-                      child: Text(
-                        '目前沒有可收貨品項',
-                        style: TextStyle(color: Colors.white54),
-                      ),
-                    )
-                  : ListView.separated(
-                      itemCount: items.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) {
-                        final item = items[index];
-                        final active = item.id == selectedItem?.id;
-                        return InkWell(
-                          onTap: () => onItemSelected(item),
-                          borderRadius: BorderRadius.circular(18),
-                          child: Ink(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
+                      ? const Center(
+                          child: Text(
+                            '目前沒有可收貨品項',
+                            style: TextStyle(color: Colors.white54),
+                          ),
+                        )
+                      : ListView.separated(
+                          itemCount: items.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final item = items[index];
+                            final active = item.id == selectedItem?.id;
+                            return InkWell(
+                              onTap: () => onItemSelected(item),
                               borderRadius: BorderRadius.circular(18),
-                              color: active
-                                  ? const Color(0xFF223047)
-                                  : const Color(0xFF172132),
-                              border: Border.all(
-                                color: active
-                                    ? const Color(0xFF14F1FF)
-                                    : const Color(0xFF253043),
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
+                              child: Ink(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(18),
+                                  color: active
+                                      ? const Color(0xFF223047)
+                                      : const Color(0xFF172132),
+                                  border: Border.all(
+                                    color: active
+                                        ? const Color(0xFF14F1FF)
+                                        : const Color(0xFF253043),
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Expanded(
-                                      child: Text(
-                                        item.name,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ),
-                                    if (item.lowStock)
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF35161B),
-                                          borderRadius: BorderRadius.circular(999),
-                                        ),
-                                        child: const Text(
-                                          '低庫存',
-                                          style: TextStyle(
-                                            color: Color(0xFFFF8A93),
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w700,
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            item.name,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w700,
+                                            ),
                                           ),
                                         ),
+                                        if (item.lowStock)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF35161B),
+                                              borderRadius:
+                                                  BorderRadius.circular(999),
+                                            ),
+                                            child: const Text(
+                                              '低庫存',
+                                              style: TextStyle(
+                                                color: Color(0xFFFF8A93),
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      '${item.sku} · 現有 ${item.quantityOnHand} ${item.unit}',
+                                      style: const TextStyle(
+                                        color: Color(0xFF8DA2BD),
+                                        fontSize: 12,
                                       ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      item.subtitle,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Colors.white60,
+                                        fontSize: 12,
+                                      ),
+                                    ),
                                   ],
                                 ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  '${item.sku} · 現有 ${item.quantityOnHand} ${item.unit}',
-                                  style: const TextStyle(
-                                    color: Color(0xFF8DA2BD),
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  item.subtitle,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Colors.white60,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                              ),
+                            );
+                          },
+                        ),
             ),
           ],
         ),
@@ -984,27 +1050,53 @@ class _QuickReceiveFormPane extends StatefulWidget {
   const _QuickReceiveFormPane({
     required this.controller,
     required this.item,
+    required this.itemType,
+    required this.onCreateItem,
     required this.onSubmit,
   });
 
   final SessionController controller;
   final QuickReceiveItem? item;
+  final QuickReceiveItemType itemType;
+  final Future<void> Function({
+    required QuickReceiveItemType type,
+    required String sku,
+    required String name,
+    required String unit,
+    required String purchaseUnit,
+    required int purchaseToStockRatio,
+    required int reorderLevel,
+    String? description,
+    double? latestUnitCost,
+  }) onCreateItem;
   final Future<void> Function({
     required QuickReceiveItem item,
     required int purchaseQuantity,
     double? purchaseUnitCost,
     String? note,
-  })
-  onSubmit;
+  }) onSubmit;
 
   @override
   State<_QuickReceiveFormPane> createState() => _QuickReceiveFormPaneState();
 }
 
 class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
-  final TextEditingController _quantityController = TextEditingController(text: '1');
+  final TextEditingController _quantityController =
+      TextEditingController(text: '1');
   final TextEditingController _costController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
+  final TextEditingController _createSkuController = TextEditingController();
+  final TextEditingController _createNameController = TextEditingController();
+  final TextEditingController _createUnitController = TextEditingController();
+  final TextEditingController _createPurchaseUnitController =
+      TextEditingController();
+  final TextEditingController _createRatioController =
+      TextEditingController(text: '1');
+  final TextEditingController _createReorderLevelController =
+      TextEditingController(text: '0');
+  final TextEditingController _createDescriptionController =
+      TextEditingController();
+  final TextEditingController _createCostController = TextEditingController();
   String _localError = '';
 
   @override
@@ -1012,9 +1104,13 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.item?.id != widget.item?.id) {
       _quantityController.text = '1';
-      _costController.text = widget.item?.latestPurchaseUnitCost?.toStringAsFixed(2) ?? '';
+      _costController.text =
+          widget.item?.latestPurchaseUnitCost?.toStringAsFixed(2) ?? '';
       _noteController.clear();
       _localError = '';
+    }
+    if (oldWidget.itemType != widget.itemType) {
+      _clearCreateForm();
     }
   }
 
@@ -1023,6 +1119,14 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
     _quantityController.dispose();
     _costController.dispose();
     _noteController.dispose();
+    _createSkuController.dispose();
+    _createNameController.dispose();
+    _createUnitController.dispose();
+    _createPurchaseUnitController.dispose();
+    _createRatioController.dispose();
+    _createReorderLevelController.dispose();
+    _createDescriptionController.dispose();
+    _createCostController.dispose();
     super.dispose();
   }
 
@@ -1038,11 +1142,21 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: item == null
-            ? const Center(
-                child: Text(
-                  '請先從左側選一個要收貨的品項',
-                  style: TextStyle(color: Colors.white54),
-                ),
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildCreateSection(),
+                  const SizedBox(height: 16),
+                  const Expanded(
+                    child: Center(
+                      child: Text(
+                        '先建立新品項，或回左側選擇既有品項。',
+                        style: TextStyle(color: Colors.white54),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ],
               )
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1062,7 +1176,9 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
                     children: [
                       _InfoPill(label: '類型', value: item.type.label),
                       _InfoPill(label: 'SKU', value: item.sku),
-                      _InfoPill(label: '現有庫存', value: '${item.quantityOnHand} ${item.unit}'),
+                      _InfoPill(
+                          label: '現有庫存',
+                          value: '${item.quantityOnHand} ${item.unit}'),
                       _InfoPill(
                         label: '換算',
                         value:
@@ -1089,6 +1205,9 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
                         message: widget.controller.quickReceiveMessage,
                       ),
                     ),
+                  const SizedBox(height: 12),
+                  _buildCreateSection(),
+                  const SizedBox(height: 18),
                   Expanded(
                     child: ListView(
                       children: [
@@ -1106,8 +1225,7 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
                         const SizedBox(height: 14),
                         _ReceiveField(
                           label: '採購單位成本',
-                          helper:
-                              '選填；填寫後會自動換算成每 ${item.unit} 成本',
+                          helper: '選填；填寫後會自動換算成每 ${item.unit} 成本',
                           child: TextField(
                             controller: _costController,
                             keyboardType: const TextInputType.numberWithOptions(
@@ -1172,7 +1290,9 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
                             )
                           : const Icon(Icons.move_to_inbox_rounded),
                       label: Text(
-                        widget.controller.quickReceiveSaving ? '處理中...' : '確認快速收貨',
+                        widget.controller.quickReceiveSaving
+                            ? '處理中...'
+                            : '確認快速收貨',
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                     ),
@@ -1186,6 +1306,122 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
   int _previewStockQuantity(QuickReceiveItem item) {
     final quantity = int.tryParse(_quantityController.text.trim()) ?? 1;
     return quantity * item.purchaseToStockRatio;
+  }
+
+  Widget _buildCreateSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF151D2C),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFF253043)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '新增${widget.itemType.label}',
+            style: const TextStyle(
+              color: Color(0xFF14F1FF),
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            '現場若沒有既有資料，可以先建立品項再直接收貨。',
+            style: TextStyle(color: Colors.white60, fontSize: 12),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _createSkuController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _inputDecoration('SKU'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: _createNameController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _inputDecoration('名稱'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _createUnitController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _inputDecoration('庫存單位'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: _createPurchaseUnitController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _inputDecoration('採購單位'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _createRatioController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _inputDecoration('換算比'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: _createReorderLevelController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: _inputDecoration('補貨點'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _createCostController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            style: const TextStyle(color: Colors.white),
+            decoration: _inputDecoration('最近採購成本（可選）'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _createDescriptionController,
+            maxLines: 2,
+            style: const TextStyle(color: Colors.white),
+            decoration: _inputDecoration('描述（可選）'),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: widget.controller.quickReceiveSaving
+                  ? null
+                  : _handleCreateItem,
+              icon: const Icon(Icons.add_box_rounded),
+              label: Text('建立${widget.itemType.label}'),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _handleSubmit(QuickReceiveItem item) async {
@@ -1219,6 +1455,76 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
       purchaseUnitCost: purchaseUnitCost,
       note: _noteController.text.trim(),
     );
+  }
+
+  Future<void> _handleCreateItem() async {
+    final ratio = int.tryParse(_createRatioController.text.trim());
+    final reorderLevel =
+        int.tryParse(_createReorderLevelController.text.trim());
+    final latestCost = _createCostController.text.trim().isEmpty
+        ? null
+        : double.tryParse(_createCostController.text.trim());
+
+    if (_createSkuController.text.trim().isEmpty ||
+        _createNameController.text.trim().isEmpty ||
+        _createUnitController.text.trim().isEmpty ||
+        _createPurchaseUnitController.text.trim().isEmpty) {
+      setState(() {
+        _localError = '請完整輸入 SKU、名稱、庫存單位與採購單位。';
+      });
+      return;
+    }
+
+    if (ratio == null || ratio <= 0) {
+      setState(() {
+        _localError = '換算比必須大於 0。';
+      });
+      return;
+    }
+
+    if (reorderLevel == null || reorderLevel < 0) {
+      setState(() {
+        _localError = '補貨點不能小於 0。';
+      });
+      return;
+    }
+
+    if (_createCostController.text.trim().isNotEmpty &&
+        (latestCost == null || latestCost < 0)) {
+      setState(() {
+        _localError = '最近採購成本格式不正確。';
+      });
+      return;
+    }
+
+    setState(() {
+      _localError = '';
+    });
+
+    await widget.onCreateItem(
+      type: widget.itemType,
+      sku: _createSkuController.text.trim(),
+      name: _createNameController.text.trim(),
+      unit: _createUnitController.text.trim(),
+      purchaseUnit: _createPurchaseUnitController.text.trim(),
+      purchaseToStockRatio: ratio,
+      reorderLevel: reorderLevel,
+      description: _createDescriptionController.text.trim(),
+      latestUnitCost: latestCost,
+    );
+
+    _clearCreateForm();
+  }
+
+  void _clearCreateForm() {
+    _createSkuController.clear();
+    _createNameController.clear();
+    _createUnitController.clear();
+    _createPurchaseUnitController.clear();
+    _createRatioController.text = '1';
+    _createReorderLevelController.text = '0';
+    _createDescriptionController.clear();
+    _createCostController.clear();
   }
 
   InputDecoration _inputDecoration(String hintText) {
@@ -1423,10 +1729,8 @@ class _CurrentOrderPanel extends StatelessWidget {
                       final line = cart[index];
                       return _OrderCard(
                         line: line,
-                        onDecrease: () =>
-                            controller.decreaseQuantity(line.key),
-                        onIncrease: () =>
-                            controller.increaseQuantity(line.key),
+                        onDecrease: () => controller.decreaseQuantity(line.key),
+                        onIncrease: () => controller.increaseQuantity(line.key),
                         onRemove: () => controller.removeProduct(line.key),
                         compact: compact,
                       );
@@ -1462,8 +1766,9 @@ class _CurrentOrderPanel extends StatelessWidget {
                 ],
               ),
               child: FilledButton.icon(
-                onPressed:
-                    cart.isEmpty || controller.checkoutLoading ? null : onCheckout,
+                onPressed: cart.isEmpty || controller.checkoutLoading
+                    ? null
+                    : onCheckout,
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
@@ -1707,8 +2012,9 @@ class _PrinterPanel extends StatelessWidget {
                 label: const Text('Scan'),
               ),
               OutlinedButton.icon(
-                onPressed:
-                    printerController.scanning ? printerController.stopScan : null,
+                onPressed: printerController.scanning
+                    ? printerController.stopScan
+                    : null,
                 icon: const Icon(Icons.stop_circle_outlined),
                 label: const Text('Stop'),
               ),
@@ -1742,8 +2048,8 @@ class _PrinterPanel extends StatelessWidget {
                       padding: const EdgeInsets.only(bottom: 10),
                       child: _PrinterDeviceTile(
                         printer: printer,
-                        selected: selected != null &&
-                            _samePrinter(printer, selected),
+                        selected:
+                            selected != null && _samePrinter(printer, selected),
                         connecting: printerController.connecting,
                         onTap: () => printerController.connectPrinter(printer),
                       ),
@@ -2072,7 +2378,8 @@ class _CustomizationSheetState extends State<_CustomizationSheet> {
             runSpacing: 10,
             children: group.options.map((option) {
               final active =
-                  _selectedOptionIdsByGroup[group.id]?.contains(option.id) ?? false;
+                  _selectedOptionIdsByGroup[group.id]?.contains(option.id) ??
+                      false;
               return InkWell(
                 onTap: () => _toggleOption(group, option),
                 borderRadius: BorderRadius.circular(14),
@@ -2099,9 +2406,8 @@ class _CustomizationSheetState extends State<_CustomizationSheet> {
                       Text(
                         option.name,
                         style: TextStyle(
-                          color: active
-                              ? const Color(0xFF07111C)
-                              : Colors.white,
+                          color:
+                              active ? const Color(0xFF07111C) : Colors.white,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -2152,7 +2458,8 @@ class _CustomizationSheetState extends State<_CustomizationSheet> {
         } else if (current.length < group.maxSelections) {
           current.add(option.id);
         } else {
-          _errorMessage = 'This group allows up to ${group.maxSelections} options.';
+          _errorMessage =
+              'This group allows up to ${group.maxSelections} options.';
         }
       }
       _selectedOptionIdsByGroup[group.id] = current;
@@ -2189,8 +2496,10 @@ class _CustomizationSheetState extends State<_CustomizationSheet> {
   List<PosCartSelection> _buildSelections() {
     final selections = <PosCartSelection>[];
     for (final group in widget.product.customizationGroups) {
-      final selectedIds = _selectedOptionIdsByGroup[group.id] ?? const <String>{};
-      for (final option in group.options.where((item) => selectedIds.contains(item.id))) {
+      final selectedIds =
+          _selectedOptionIdsByGroup[group.id] ?? const <String>{};
+      for (final option
+          in group.options.where((item) => selectedIds.contains(item.id))) {
         selections.add(
           PosCartSelection(
             groupId: group.id,

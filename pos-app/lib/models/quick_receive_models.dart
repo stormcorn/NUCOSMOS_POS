@@ -1,13 +1,29 @@
 enum QuickReceiveItemType {
   material,
+  manufactured,
   packaging;
 
-  String get label => this == QuickReceiveItemType.material ? '原料' : '包裝';
+  String get label {
+    switch (this) {
+      case QuickReceiveItemType.material:
+        return '原料';
+      case QuickReceiveItemType.manufactured:
+        return '製成品';
+      case QuickReceiveItemType.packaging:
+        return '包裝';
+    }
+  }
 
-  String get apiPath =>
-      this == QuickReceiveItemType.material
-          ? '/api/v1/admin/materials'
-          : '/api/v1/admin/packaging-items';
+  String get apiPath {
+    switch (this) {
+      case QuickReceiveItemType.material:
+        return '/api/v1/admin/materials';
+      case QuickReceiveItemType.manufactured:
+        return '/api/v1/admin/manufactured-items';
+      case QuickReceiveItemType.packaging:
+        return '/api/v1/admin/packaging-items';
+    }
+  }
 }
 
 class QuickReceiveItem {
@@ -45,10 +61,10 @@ class QuickReceiveItem {
   final double? latestPurchaseUnitCost;
   final String? specification;
 
-  String get subtitle =>
-      type == QuickReceiveItemType.packaging && (specification?.trim().isNotEmpty ?? false)
-          ? specification!.trim()
-          : (description?.trim().isNotEmpty ?? false)
+  String get subtitle => type == QuickReceiveItemType.packaging &&
+          (specification?.trim().isNotEmpty ?? false)
+      ? specification!.trim()
+      : (description?.trim().isNotEmpty ?? false)
           ? description!.trim()
           : '$purchaseUnit x $purchaseToStockRatio $unit';
 
@@ -60,14 +76,37 @@ class QuickReceiveItem {
       name: json['name'] as String? ?? '',
       unit: json['unit'] as String? ?? '',
       purchaseUnit: json['purchaseUnit'] as String? ?? '',
-      purchaseToStockRatio: (json['purchaseToStockRatio'] as num?)?.toInt() ?? 1,
+      purchaseToStockRatio:
+          (json['purchaseToStockRatio'] as num?)?.toInt() ?? 1,
       quantityOnHand: (json['quantityOnHand'] as num?)?.toInt() ?? 0,
       lowStock: json['lowStock'] as bool? ?? false,
       active: json['active'] as bool? ?? true,
       imageUrl: json['imageUrl'] as String?,
       description: json['description'] as String?,
       latestUnitCost: (json['latestUnitCost'] as num?)?.toDouble(),
-      latestPurchaseUnitCost: (json['latestPurchaseUnitCost'] as num?)?.toDouble(),
+      latestPurchaseUnitCost:
+          (json['latestPurchaseUnitCost'] as num?)?.toDouble(),
+    );
+  }
+
+  factory QuickReceiveItem.fromManufacturedJson(Map<String, dynamic> json) {
+    return QuickReceiveItem(
+      id: json['id']?.toString() ?? '',
+      type: QuickReceiveItemType.manufactured,
+      sku: json['sku'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      unit: json['unit'] as String? ?? '',
+      purchaseUnit: json['purchaseUnit'] as String? ?? '',
+      purchaseToStockRatio:
+          (json['purchaseToStockRatio'] as num?)?.toInt() ?? 1,
+      quantityOnHand: (json['quantityOnHand'] as num?)?.toInt() ?? 0,
+      lowStock: json['lowStock'] as bool? ?? false,
+      active: json['active'] as bool? ?? true,
+      imageUrl: json['imageUrl'] as String?,
+      description: json['description'] as String?,
+      latestUnitCost: (json['latestUnitCost'] as num?)?.toDouble(),
+      latestPurchaseUnitCost:
+          (json['latestPurchaseUnitCost'] as num?)?.toDouble(),
     );
   }
 
@@ -79,14 +118,16 @@ class QuickReceiveItem {
       name: json['name'] as String? ?? '',
       unit: json['unit'] as String? ?? '',
       purchaseUnit: json['purchaseUnit'] as String? ?? '',
-      purchaseToStockRatio: (json['purchaseToStockRatio'] as num?)?.toInt() ?? 1,
+      purchaseToStockRatio:
+          (json['purchaseToStockRatio'] as num?)?.toInt() ?? 1,
       quantityOnHand: (json['quantityOnHand'] as num?)?.toInt() ?? 0,
       lowStock: json['lowStock'] as bool? ?? false,
       active: json['active'] as bool? ?? true,
       imageUrl: json['imageUrl'] as String?,
       description: json['description'] as String?,
       latestUnitCost: (json['latestUnitCost'] as num?)?.toDouble(),
-      latestPurchaseUnitCost: (json['latestPurchaseUnitCost'] as num?)?.toDouble(),
+      latestPurchaseUnitCost:
+          (json['latestPurchaseUnitCost'] as num?)?.toDouble(),
       specification: json['specification'] as String?,
     );
   }
@@ -112,6 +153,18 @@ class QuickReceiveResult {
     return QuickReceiveResult(
       itemName: json['materialName'] as String? ?? '',
       itemType: QuickReceiveItemType.material,
+      quantityAfter: (json['quantityAfter'] as num?)?.toInt() ?? 0,
+      receivedStockQuantity: receivedStockQuantity,
+    );
+  }
+
+  factory QuickReceiveResult.fromManufacturedJson(
+    Map<String, dynamic> json, {
+    required int receivedStockQuantity,
+  }) {
+    return QuickReceiveResult(
+      itemName: json['manufacturedName'] as String? ?? '',
+      itemType: QuickReceiveItemType.manufactured,
       quantityAfter: (json['quantityAfter'] as num?)?.toInt() ?? 0,
       receivedStockQuantity: receivedStockQuantity,
     );

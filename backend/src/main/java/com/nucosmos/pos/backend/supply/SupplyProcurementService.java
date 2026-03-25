@@ -8,20 +8,26 @@ import com.nucosmos.pos.backend.common.exception.NotFoundException;
 import com.nucosmos.pos.backend.store.persistence.StoreEntity;
 import com.nucosmos.pos.backend.store.repository.StoreRepository;
 import com.nucosmos.pos.backend.supply.persistence.MaterialItemEntity;
-import com.nucosmos.pos.backend.supply.persistence.MaterialStockLotEntity;
 import com.nucosmos.pos.backend.supply.persistence.MaterialMovementEntity;
+import com.nucosmos.pos.backend.supply.persistence.MaterialStockLotEntity;
+import com.nucosmos.pos.backend.supply.persistence.ManufacturedItemEntity;
+import com.nucosmos.pos.backend.supply.persistence.ManufacturedMovementEntity;
+import com.nucosmos.pos.backend.supply.persistence.ManufacturedStockLotEntity;
 import com.nucosmos.pos.backend.supply.persistence.PackagingItemEntity;
-import com.nucosmos.pos.backend.supply.persistence.PackagingStockLotEntity;
 import com.nucosmos.pos.backend.supply.persistence.PackagingMovementEntity;
+import com.nucosmos.pos.backend.supply.persistence.PackagingStockLotEntity;
 import com.nucosmos.pos.backend.supply.persistence.PurchaseOrderEntity;
 import com.nucosmos.pos.backend.supply.persistence.PurchaseOrderLineEntity;
 import com.nucosmos.pos.backend.supply.persistence.SupplierEntity;
 import com.nucosmos.pos.backend.supply.repository.MaterialItemRepository;
-import com.nucosmos.pos.backend.supply.repository.MaterialStockLotRepository;
 import com.nucosmos.pos.backend.supply.repository.MaterialMovementRepository;
+import com.nucosmos.pos.backend.supply.repository.MaterialStockLotRepository;
+import com.nucosmos.pos.backend.supply.repository.ManufacturedItemRepository;
+import com.nucosmos.pos.backend.supply.repository.ManufacturedMovementRepository;
+import com.nucosmos.pos.backend.supply.repository.ManufacturedStockLotRepository;
 import com.nucosmos.pos.backend.supply.repository.PackagingItemRepository;
-import com.nucosmos.pos.backend.supply.repository.PackagingStockLotRepository;
 import com.nucosmos.pos.backend.supply.repository.PackagingMovementRepository;
+import com.nucosmos.pos.backend.supply.repository.PackagingStockLotRepository;
 import com.nucosmos.pos.backend.supply.repository.PurchaseOrderRepository;
 import com.nucosmos.pos.backend.supply.repository.SupplierRepository;
 import org.springframework.stereotype.Service;
@@ -43,10 +49,13 @@ public class SupplyProcurementService {
     private final UserRepository userRepository;
     private final SupplierRepository supplierRepository;
     private final MaterialItemRepository materialItemRepository;
+    private final ManufacturedItemRepository manufacturedItemRepository;
     private final PackagingItemRepository packagingItemRepository;
     private final MaterialMovementRepository materialMovementRepository;
+    private final ManufacturedMovementRepository manufacturedMovementRepository;
     private final PackagingMovementRepository packagingMovementRepository;
     private final MaterialStockLotRepository materialStockLotRepository;
+    private final ManufacturedStockLotRepository manufacturedStockLotRepository;
     private final PackagingStockLotRepository packagingStockLotRepository;
     private final PurchaseOrderRepository purchaseOrderRepository;
 
@@ -55,10 +64,13 @@ public class SupplyProcurementService {
             UserRepository userRepository,
             SupplierRepository supplierRepository,
             MaterialItemRepository materialItemRepository,
+            ManufacturedItemRepository manufacturedItemRepository,
             PackagingItemRepository packagingItemRepository,
             MaterialMovementRepository materialMovementRepository,
+            ManufacturedMovementRepository manufacturedMovementRepository,
             PackagingMovementRepository packagingMovementRepository,
             MaterialStockLotRepository materialStockLotRepository,
+            ManufacturedStockLotRepository manufacturedStockLotRepository,
             PackagingStockLotRepository packagingStockLotRepository,
             PurchaseOrderRepository purchaseOrderRepository
     ) {
@@ -66,10 +78,13 @@ public class SupplyProcurementService {
         this.userRepository = userRepository;
         this.supplierRepository = supplierRepository;
         this.materialItemRepository = materialItemRepository;
+        this.manufacturedItemRepository = manufacturedItemRepository;
         this.packagingItemRepository = packagingItemRepository;
         this.materialMovementRepository = materialMovementRepository;
+        this.manufacturedMovementRepository = manufacturedMovementRepository;
         this.packagingMovementRepository = packagingMovementRepository;
         this.materialStockLotRepository = materialStockLotRepository;
+        this.manufacturedStockLotRepository = manufacturedStockLotRepository;
         this.packagingStockLotRepository = packagingStockLotRepository;
         this.purchaseOrderRepository = purchaseOrderRepository;
     }
@@ -160,7 +175,27 @@ public class SupplyProcurementService {
                 ))
                 .toList();
 
-        return java.util.stream.Stream.concat(materials.stream(), packaging.stream()).toList();
+        List<ReplenishmentSuggestionResponse> manufactured = manufacturedItemRepository.findAllByStore_CodeOrderByActiveDescNameAsc(user.storeCode())
+                .stream()
+                .filter(ManufacturedItemEntity::isActive)
+                .filter(item -> item.getQuantityOnHand() <= item.getReorderLevel())
+                .map(item -> toSuggestion(
+                        "MANUFACTURED",
+                        item.getId(),
+                        item.getSku(),
+                        item.getName(),
+                        item.getUnit(),
+                        item.getPurchaseUnit(),
+                        item.getPurchaseToStockRatio(),
+                        item.getQuantityOnHand(),
+                        item.getReorderLevel(),
+                        item.getLatestUnitCost()
+                ))
+                .toList();
+
+        return java.util.stream.Stream.of(materials, manufactured, packaging)
+                .flatMap(List::stream)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -192,6 +227,16 @@ public class SupplyProcurementService {
                 case MATERIAL -> PurchaseOrderLineEntity.createForMaterial(
                         purchaseOrder,
                         loadMaterial(user.storeCode(), lineRequest.itemId()),
+                        lineRequest.orderedQuantity(),
+                        lineRequest.unitCost(),
+                        lineRequest.batchCode(),
+                        lineRequest.expiryDate(),
+                        lineRequest.manufacturedAt(),
+                        lineRequest.note()
+                );
+                case MANUFACTURED -> PurchaseOrderLineEntity.createForManufactured(
+                        purchaseOrder,
+                        loadManufacturedItem(user.storeCode(), lineRequest.itemId()),
                         lineRequest.orderedQuantity(),
                         lineRequest.unitCost(),
                         lineRequest.batchCode(),
@@ -255,6 +300,35 @@ public class SupplyProcurementService {
                         stockQuantity,
                         quantityAfter,
                         toStockUnitCost(line.getUnitCost(), materialItem.getPurchaseToStockRatio()),
+                        "Received from purchase order",
+                        "PURCHASE_ORDER",
+                        purchaseOrder.getId(),
+                        receivedAt
+                ));
+            } else if ("MANUFACTURED".equals(line.getItemType())) {
+                ManufacturedItemEntity manufacturedItem = line.getManufacturedItem();
+                int stockQuantity = line.getOrderedQuantity() * manufacturedItem.getPurchaseToStockRatio();
+                int quantityAfter = manufacturedItem.getQuantityOnHand() + stockQuantity;
+                manufacturedItem.applyMovement(stockQuantity, toStockUnitCost(line.getUnitCost(), manufacturedItem.getPurchaseToStockRatio()));
+                manufacturedStockLotRepository.save(ManufacturedStockLotEntity.create(
+                        manufacturedItem,
+                        "PURCHASE_ORDER",
+                        purchaseOrder.getId(),
+                        line.getBatchCode(),
+                        line.getExpiryDate(),
+                        line.getManufacturedAt(),
+                        stockQuantity,
+                        toStockUnitCost(line.getUnitCost(), manufacturedItem.getPurchaseToStockRatio()),
+                        receivedAt
+                ));
+                manufacturedMovementRepository.save(new ManufacturedMovementEntity(
+                        manufacturedItem,
+                        actor,
+                        SupplyMovementType.PURCHASE_IN.name(),
+                        stockQuantity,
+                        stockQuantity,
+                        quantityAfter,
+                        toStockUnitCost(line.getUnitCost(), manufacturedItem.getPurchaseToStockRatio()),
                         "Received from purchase order",
                         "PURCHASE_ORDER",
                         purchaseOrder.getId(),
@@ -362,17 +436,31 @@ public class SupplyProcurementService {
                         .map(line -> new PurchaseOrderLineResponse(
                                 line.getId(),
                                 line.getItemType(),
-                                "MATERIAL".equals(line.getItemType()) ? line.getMaterialItem().getId() : line.getPackagingItem().getId(),
+                                switch (line.getItemType()) {
+                                    case "MATERIAL" -> line.getMaterialItem().getId();
+                                    case "MANUFACTURED" -> line.getManufacturedItem().getId();
+                                    default -> line.getPackagingItem().getId();
+                                },
                                 line.getItemSku(),
                                 line.getItemName(),
                                 line.getUnit(),
-                                "MATERIAL".equals(line.getItemType()) ? line.getMaterialItem().getUnit() : line.getPackagingItem().getUnit(),
-                                "MATERIAL".equals(line.getItemType()) ? line.getMaterialItem().getPurchaseToStockRatio() : line.getPackagingItem().getPurchaseToStockRatio(),
+                                switch (line.getItemType()) {
+                                    case "MATERIAL" -> line.getMaterialItem().getUnit();
+                                    case "MANUFACTURED" -> line.getManufacturedItem().getUnit();
+                                    default -> line.getPackagingItem().getUnit();
+                                },
+                                switch (line.getItemType()) {
+                                    case "MATERIAL" -> line.getMaterialItem().getPurchaseToStockRatio();
+                                    case "MANUFACTURED" -> line.getManufacturedItem().getPurchaseToStockRatio();
+                                    default -> line.getPackagingItem().getPurchaseToStockRatio();
+                                },
                                 line.getOrderedQuantity(),
                                 line.getReceivedQuantity(),
-                                "MATERIAL".equals(line.getItemType())
-                                        ? line.getReceivedQuantity() * line.getMaterialItem().getPurchaseToStockRatio()
-                                        : line.getReceivedQuantity() * line.getPackagingItem().getPurchaseToStockRatio(),
+                                switch (line.getItemType()) {
+                                    case "MATERIAL" -> line.getReceivedQuantity() * line.getMaterialItem().getPurchaseToStockRatio();
+                                    case "MANUFACTURED" -> line.getReceivedQuantity() * line.getManufacturedItem().getPurchaseToStockRatio();
+                                    default -> line.getReceivedQuantity() * line.getPackagingItem().getPurchaseToStockRatio();
+                                },
                                 line.getUnitCost(),
                                 line.getBatchCode(),
                                 line.getExpiryDate(),
@@ -401,6 +489,11 @@ public class SupplyProcurementService {
     private MaterialItemEntity loadMaterial(String storeCode, UUID materialId) {
         return materialItemRepository.findByIdAndStore_Code(materialId, storeCode)
                 .orElseThrow(() -> new NotFoundException("Material item not found"));
+    }
+
+    private ManufacturedItemEntity loadManufacturedItem(String storeCode, UUID manufacturedItemId) {
+        return manufacturedItemRepository.findByIdAndStore_Code(manufacturedItemId, storeCode)
+                .orElseThrow(() -> new NotFoundException("Manufactured item not found"));
     }
 
     private PackagingItemEntity loadPackagingItem(String storeCode, UUID packagingItemId) {

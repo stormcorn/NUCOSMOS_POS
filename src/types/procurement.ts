@@ -19,7 +19,7 @@ export type SupplierUpsertRequest = {
 };
 
 export type ReplenishmentSuggestion = {
-  itemType: "MATERIAL" | "PACKAGING";
+  itemType: "MATERIAL" | "MANUFACTURED" | "PACKAGING";
   itemId: string;
   sku: string;
   name: string;
@@ -36,7 +36,7 @@ export type ReplenishmentSuggestion = {
 
 export type PurchaseOrderLine = {
   id: string;
-  itemType: "MATERIAL" | "PACKAGING";
+  itemType: "MATERIAL" | "MANUFACTURED" | "PACKAGING";
   itemId: string;
   itemSku: string;
   itemName: string;
@@ -69,7 +69,7 @@ export type PurchaseOrder = {
 };
 
 export type PurchaseOrderLineRequest = {
-  itemType: "MATERIAL" | "PACKAGING";
+  itemType: "MATERIAL" | "MANUFACTURED" | "PACKAGING";
   itemId: string;
   orderedQuantity: number;
   unitCost?: number | null;

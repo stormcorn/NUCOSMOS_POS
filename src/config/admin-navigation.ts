@@ -22,86 +22,70 @@ export const adminNavigationItems: AdminNavigationItem[] = [
     to: "/",
     label: "營運總覽",
     short: "OV",
-    description: "集中查看銷售、庫存、成本與門市營運狀態。",
+    description: "查看營收、訂單、熱門商品與關鍵營運指標。",
     permissionKeys: [PERMISSIONS.DASHBOARD_VIEW, PERMISSIONS.REPORTS_VIEW],
   },
   {
     to: "/products",
     label: "商品管理",
     short: "PD",
-    description: "管理商品、售價、活動設定與配方成本。",
+    description: "維護商品、售價、客製化選項與上架狀態。",
     permissionKeys: [PERMISSIONS.PRODUCTS_VIEW],
-  },
-  {
-    to: "/access/users",
-    label: "帳號與權限",
-    short: "AC",
-    description: "管理後台使用者、角色與權限配置。",
-    permissionKeys: [PERMISSIONS.USERS_VIEW, PERMISSIONS.ROLES_VIEW],
-    children: [
-      {
-        to: "/access/users",
-        label: "使用者管理",
-        short: "US",
-        description: "建立、停用與調整後台使用者帳號。",
-        permissionKeys: [PERMISSIONS.USERS_VIEW],
-      },
-      {
-        to: "/access/roles",
-        label: "角色權限",
-        short: "RL",
-        description: "設定角色可檢視與可操作的功能範圍。",
-        permissionKeys: [PERMISSIONS.ROLES_VIEW],
-      },
-    ],
   },
   {
     to: "/product-categories",
     label: "商品分類",
     short: "PC",
-    description: "整理商品分類，支援後台與 POS 顯示排序。",
+    description: "管理前台分類與商品歸屬。",
     permissionKeys: [PERMISSIONS.PRODUCTS_VIEW],
   },
   {
     to: "/inventory",
     label: "庫存管理",
     short: "IV",
-    description: "查看商品、原料、包裝與瑕疵庫存，以及異動與盤點資料。",
+    description: "查看成品、原料、製成品、包裝與盤點資訊。",
     permissionKeys: [PERMISSIONS.INVENTORY_VIEW],
     children: [
       {
         to: "/inventory/stocktakes",
-        label: "商品盤點",
+        label: "盤點作業",
         short: "ST",
-        description: "建立盤點單、比對差異並完成過帳。",
+        description: "進行盤點與調整實際庫存。",
         permissionKeys: [PERMISSIONS.INVENTORY_VIEW],
       },
       {
         to: "/inventory/defective",
-        label: "瑕疵庫存",
+        label: "報廢與瑕疵",
         short: "DF",
-        description: "集中查看瑕疵品、報廢與轉回可售狀態。",
+        description: "追蹤報廢、損壞與瑕疵品數量。",
         permissionKeys: [PERMISSIONS.INVENTORY_VIEW],
       },
       {
         to: "/inventory/materials",
         label: "原料管理",
         short: "RM",
-        description: "管理原料庫存、單位換算、批號與耗用狀態。",
+        description: "管理原料庫存、單位、補貨點與異動。",
+        permissionKeys: [PERMISSIONS.INVENTORY_VIEW],
+      },
+      {
+        to: "/inventory/manufactured",
+        label: "製成品管理",
+        short: "MF",
+        description: "管理半成品與製成品庫存、批次與異動。",
         permissionKeys: [PERMISSIONS.INVENTORY_VIEW],
       },
       {
         to: "/inventory/packaging",
         label: "包裝管理",
         short: "PK",
-        description: "管理杯具、封膜、袋材等包裝品項與庫存。",
+        description: "管理杯子、瓶器、紙盒與其他包材。",
         permissionKeys: [PERMISSIONS.INVENTORY_VIEW],
       },
       {
         to: "/inventory/replenishment",
         label: "補貨建議",
         short: "RP",
-        description: "依補貨門檻與現有庫存產生補貨建議。",
+        description: "彙整原料、製成品與包裝的補貨建議。",
         permissionKeys: [PERMISSIONS.INVENTORY_VIEW],
       },
     ],
@@ -110,36 +94,59 @@ export const adminNavigationItems: AdminNavigationItem[] = [
     to: "/suppliers",
     label: "供應商管理",
     short: "SP",
-    description: "管理供應商資料、聯絡方式與合作狀態。",
+    description: "維護供應商基本資料與聯絡資訊。",
     permissionKeys: [PERMISSIONS.SUPPLIERS_VIEW],
   },
   {
     to: "/procurement",
-    label: "採購與進貨",
+    label: "採購進貨",
     short: "PO",
-    description: "建立採購單、收貨入庫並追蹤進貨狀態。",
+    description: "建立採購單並接收原料、製成品與包裝。",
     permissionKeys: [PERMISSIONS.PROCUREMENT_VIEW],
   },
   {
     to: "/devices",
     label: "裝置管理",
     short: "DV",
-    description: "查看 POS 裝置狀態、綁定門市與連線情況。",
+    description: "管理 POS 平板、列印機與裝置授權。",
     permissionKeys: [PERMISSIONS.DEVICES_VIEW],
   },
   {
     to: "/orders",
     label: "訂單管理",
     short: "OD",
-    description: "查詢訂單、退款、付款與成本回補結果。",
+    description: "查看訂單、付款狀態與退款紀錄。",
     permissionKeys: [PERMISSIONS.ORDERS_VIEW],
   },
   {
     to: "/shifts",
     label: "班次管理",
     short: "SH",
-    description: "管理收銀班次、開班結班與金額統計。",
+    description: "管理交班、結帳與班次狀態。",
     permissionKeys: [PERMISSIONS.SHIFTS_VIEW],
+  },
+  {
+    to: "/access/users",
+    label: "帳號與權限",
+    short: "AC",
+    description: "管理人員帳號、角色與後台權限。",
+    permissionKeys: [PERMISSIONS.USERS_VIEW, PERMISSIONS.ROLES_VIEW],
+    children: [
+      {
+        to: "/access/users",
+        label: "帳號管理",
+        short: "US",
+        description: "建立與維護使用者帳號。",
+        permissionKeys: [PERMISSIONS.USERS_VIEW],
+      },
+      {
+        to: "/access/roles",
+        label: "角色權限",
+        short: "RL",
+        description: "設定角色可用功能與權限範圍。",
+        permissionKeys: [PERMISSIONS.ROLES_VIEW],
+      },
+    ],
   },
 ];
 
@@ -174,15 +181,20 @@ export function findNavigationEntry(path: string) {
 
 export function findFirstAccessiblePath(permissionKeys: readonly string[]) {
   for (const item of adminNavigationItems) {
-    const visibleChildren = (item.children ?? []).filter((child) =>
-      !child.permissionKeys?.length || child.permissionKeys.some((permissionKey) => permissionKeys.includes(permissionKey)),
+    const visibleChildren = (item.children ?? []).filter(
+      (child) =>
+        !child.permissionKeys?.length ||
+        child.permissionKeys.some((permissionKey) => permissionKeys.includes(permissionKey)),
     );
 
     if (visibleChildren.length > 0) {
       return visibleChildren[0].to;
     }
 
-    if (!item.permissionKeys?.length || item.permissionKeys.some((permissionKey) => permissionKeys.includes(permissionKey))) {
+    if (
+      !item.permissionKeys?.length ||
+      item.permissionKeys.some((permissionKey) => permissionKeys.includes(permissionKey))
+    ) {
       return item.to;
     }
   }

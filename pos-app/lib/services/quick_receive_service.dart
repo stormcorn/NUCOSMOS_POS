@@ -12,33 +12,66 @@ class QuickReceiveService {
   }
 
   Future<List<QuickReceiveItem>> fetchMaterials(String accessToken) async {
-    final json = await _apiClient.get(
-      '/api/v1/admin/materials',
+    return _fetchItems(
       accessToken: accessToken,
+      path: '/api/v1/admin/materials',
+      mapper: QuickReceiveItem.fromMaterialJson,
     );
-    final data = (json['data'] as List?) ?? <dynamic>[];
-    return data
-        .map(
-          (item) => QuickReceiveItem.fromMaterialJson(
-            (item as Map).cast<String, dynamic>(),
-          ),
-        )
-        .toList(growable: false);
+  }
+
+  Future<List<QuickReceiveItem>> fetchManufacturedItems(
+    String accessToken,
+  ) async {
+    return _fetchItems(
+      accessToken: accessToken,
+      path: '/api/v1/admin/manufactured-items',
+      mapper: QuickReceiveItem.fromManufacturedJson,
+    );
   }
 
   Future<List<QuickReceiveItem>> fetchPackagingItems(String accessToken) async {
-    final json = await _apiClient.get(
-      '/api/v1/admin/packaging-items',
+    return _fetchItems(
       accessToken: accessToken,
+      path: '/api/v1/admin/packaging-items',
+      mapper: QuickReceiveItem.fromPackagingJson,
     );
-    final data = (json['data'] as List?) ?? <dynamic>[];
-    return data
-        .map(
-          (item) => QuickReceiveItem.fromPackagingJson(
-            (item as Map).cast<String, dynamic>(),
-          ),
-        )
-        .toList(growable: false);
+  }
+
+  Future<QuickReceiveItem> createItem({
+    required String accessToken,
+    required QuickReceiveItemType type,
+    required String sku,
+    required String name,
+    required String unit,
+    required String purchaseUnit,
+    required int purchaseToStockRatio,
+    required int reorderLevel,
+    String? description,
+    double? latestUnitCost,
+  }) async {
+    final payload = {
+      'sku': sku.trim(),
+      'name': name.trim(),
+      'unit': unit.trim(),
+      'purchaseUnit': purchaseUnit.trim(),
+      'purchaseToStockRatio': purchaseToStockRatio,
+      'description': description?.trim() ?? '',
+      'reorderLevel': reorderLevel,
+      'latestUnitCost': latestUnitCost,
+      if (type == QuickReceiveItemType.packaging) 'specification': '',
+      'imageUrl': '',
+    };
+
+    final json = await _apiClient.post(
+      type.apiPath,
+      accessToken: accessToken,
+      body: payload,
+    );
+
+    return ApiEnvelope<QuickReceiveItem>.fromJson(
+      json,
+      (data) => _mapItem(type, data),
+    ).data;
   }
 
   Future<QuickReceiveResult> submitQuickReceive({
@@ -55,7 +88,8 @@ class QuickReceiveService {
     final payload = {
       'movementType': 'PURCHASE_IN',
       'quantity': receivedStockQuantity,
-      if (unitCost != null) 'unitCost': double.parse(unitCost.toStringAsFixed(2)),
+      if (unitCost != null)
+        'unitCost': double.parse(unitCost.toStringAsFixed(2)),
       if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
     };
 
@@ -65,22 +99,63 @@ class QuickReceiveService {
       body: payload,
     );
 
-    if (item.type == QuickReceiveItemType.material) {
-      return ApiEnvelope<QuickReceiveResult>.fromJson(
-        json,
-        (data) => QuickReceiveResult.fromMaterialJson(
-          data,
-          receivedStockQuantity: receivedStockQuantity,
-        ),
-      ).data;
-    }
-
     return ApiEnvelope<QuickReceiveResult>.fromJson(
       json,
-      (data) => QuickReceiveResult.fromPackagingJson(
+      (data) => _mapResult(
+        item.type,
         data,
         receivedStockQuantity: receivedStockQuantity,
       ),
     ).data;
+  }
+
+  Future<List<QuickReceiveItem>> _fetchItems({
+    required String accessToken,
+    required String path,
+    required QuickReceiveItem Function(Map<String, dynamic> json) mapper,
+  }) async {
+    final json = await _apiClient.get(path, accessToken: accessToken);
+    final data = (json['data'] as List?) ?? <dynamic>[];
+    return data
+        .map((item) => mapper((item as Map).cast<String, dynamic>()))
+        .toList(growable: false);
+  }
+
+  QuickReceiveItem _mapItem(
+    QuickReceiveItemType type,
+    Map<String, dynamic> json,
+  ) {
+    switch (type) {
+      case QuickReceiveItemType.material:
+        return QuickReceiveItem.fromMaterialJson(json);
+      case QuickReceiveItemType.manufactured:
+        return QuickReceiveItem.fromManufacturedJson(json);
+      case QuickReceiveItemType.packaging:
+        return QuickReceiveItem.fromPackagingJson(json);
+    }
+  }
+
+  QuickReceiveResult _mapResult(
+    QuickReceiveItemType type,
+    Map<String, dynamic> json, {
+    required int receivedStockQuantity,
+  }) {
+    switch (type) {
+      case QuickReceiveItemType.material:
+        return QuickReceiveResult.fromMaterialJson(
+          json,
+          receivedStockQuantity: receivedStockQuantity,
+        );
+      case QuickReceiveItemType.manufactured:
+        return QuickReceiveResult.fromManufacturedJson(
+          json,
+          receivedStockQuantity: receivedStockQuantity,
+        );
+      case QuickReceiveItemType.packaging:
+        return QuickReceiveResult.fromPackagingJson(
+          json,
+          receivedStockQuantity: receivedStockQuantity,
+        );
+    }
   }
 }

@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 
-import { PERMISSIONS } from "@/constants/permissions";
 import { findFirstAccessiblePath } from "@/config/admin-navigation";
+import { PERMISSIONS } from "@/constants/permissions";
 import { useAuthStore } from "@/stores/auth";
 import { pinia } from "@/stores/pinia";
 import DefectiveInventoryView from "@/views/DefectiveInventoryView.vue";
@@ -9,6 +9,7 @@ import DevicesView from "@/views/DevicesView.vue";
 import InventoryStocktakesView from "@/views/InventoryStocktakesView.vue";
 import InventoryView from "@/views/InventoryView.vue";
 import LoginView from "@/views/LoginView.vue";
+import ManufacturedInventoryView from "@/views/ManufacturedInventoryView.vue";
 import MaterialsInventoryView from "@/views/MaterialsInventoryView.vue";
 import OrdersView from "@/views/OrdersView.vue";
 import PackagingInventoryView from "@/views/PackagingInventoryView.vue";
@@ -51,91 +52,161 @@ const router = createRouter({
       path: "/products",
       name: "products",
       component: ProductsView,
-      meta: { title: "商品管理", requiresAuth: true, permissionKeys: [PERMISSIONS.PRODUCTS_VIEW] },
+      meta: {
+        title: "商品管理",
+        requiresAuth: true,
+        permissionKeys: [PERMISSIONS.PRODUCTS_VIEW],
+      },
     },
     {
       path: "/product-categories",
       name: "product-categories",
       component: ProductCategoriesView,
-      meta: { title: "商品分類", requiresAuth: true, permissionKeys: [PERMISSIONS.PRODUCTS_VIEW] },
+      meta: {
+        title: "商品分類",
+        requiresAuth: true,
+        permissionKeys: [PERMISSIONS.PRODUCTS_VIEW],
+      },
     },
     {
       path: "/inventory",
       name: "inventory",
       component: InventoryView,
-      meta: { title: "庫存管理", requiresAuth: true, permissionKeys: [PERMISSIONS.INVENTORY_VIEW] },
+      meta: {
+        title: "庫存總覽",
+        requiresAuth: true,
+        permissionKeys: [PERMISSIONS.INVENTORY_VIEW],
+      },
     },
     {
       path: "/inventory/stocktakes",
       name: "inventory-stocktakes",
       component: InventoryStocktakesView,
-      meta: { title: "商品盤點", requiresAuth: true, permissionKeys: [PERMISSIONS.INVENTORY_VIEW] },
+      meta: {
+        title: "盤點作業",
+        requiresAuth: true,
+        permissionKeys: [PERMISSIONS.INVENTORY_VIEW],
+      },
     },
     {
       path: "/inventory/defective",
       name: "inventory-defective",
       component: DefectiveInventoryView,
-      meta: { title: "瑕疵庫存", requiresAuth: true, permissionKeys: [PERMISSIONS.INVENTORY_VIEW] },
+      meta: {
+        title: "報廢與瑕疵",
+        requiresAuth: true,
+        permissionKeys: [PERMISSIONS.INVENTORY_VIEW],
+      },
     },
     {
       path: "/inventory/materials",
       name: "inventory-materials",
       component: MaterialsInventoryView,
-      meta: { title: "原料管理", requiresAuth: true, permissionKeys: [PERMISSIONS.INVENTORY_VIEW] },
+      meta: {
+        title: "原料管理",
+        requiresAuth: true,
+        permissionKeys: [PERMISSIONS.INVENTORY_VIEW],
+      },
+    },
+    {
+      path: "/inventory/manufactured",
+      name: "inventory-manufactured",
+      component: ManufacturedInventoryView,
+      meta: {
+        title: "製成品管理",
+        requiresAuth: true,
+        permissionKeys: [PERMISSIONS.INVENTORY_VIEW],
+      },
     },
     {
       path: "/inventory/packaging",
       name: "inventory-packaging",
       component: PackagingInventoryView,
-      meta: { title: "包裝管理", requiresAuth: true, permissionKeys: [PERMISSIONS.INVENTORY_VIEW] },
+      meta: {
+        title: "包裝管理",
+        requiresAuth: true,
+        permissionKeys: [PERMISSIONS.INVENTORY_VIEW],
+      },
     },
     {
       path: "/inventory/replenishment",
       name: "inventory-replenishment",
       component: ReplenishmentView,
-      meta: { title: "補貨建議", requiresAuth: true, permissionKeys: [PERMISSIONS.INVENTORY_VIEW] },
+      meta: {
+        title: "補貨建議",
+        requiresAuth: true,
+        permissionKeys: [PERMISSIONS.INVENTORY_VIEW],
+      },
     },
     {
       path: "/suppliers",
       name: "suppliers",
       component: SuppliersView,
-      meta: { title: "供應商管理", requiresAuth: true, permissionKeys: [PERMISSIONS.SUPPLIERS_VIEW] },
+      meta: {
+        title: "供應商管理",
+        requiresAuth: true,
+        permissionKeys: [PERMISSIONS.SUPPLIERS_VIEW],
+      },
     },
     {
       path: "/procurement",
       name: "procurement",
       component: ProcurementView,
-      meta: { title: "採購與進貨", requiresAuth: true, permissionKeys: [PERMISSIONS.PROCUREMENT_VIEW] },
+      meta: {
+        title: "採購進貨",
+        requiresAuth: true,
+        permissionKeys: [PERMISSIONS.PROCUREMENT_VIEW],
+      },
     },
     {
       path: "/devices",
       name: "devices",
       component: DevicesView,
-      meta: { title: "裝置管理", requiresAuth: true, permissionKeys: [PERMISSIONS.DEVICES_VIEW] },
+      meta: {
+        title: "裝置管理",
+        requiresAuth: true,
+        permissionKeys: [PERMISSIONS.DEVICES_VIEW],
+      },
     },
     {
       path: "/orders",
       name: "orders",
       component: OrdersView,
-      meta: { title: "訂單管理", requiresAuth: true, permissionKeys: [PERMISSIONS.ORDERS_VIEW] },
+      meta: {
+        title: "訂單管理",
+        requiresAuth: true,
+        permissionKeys: [PERMISSIONS.ORDERS_VIEW],
+      },
     },
     {
       path: "/shifts",
       name: "shifts",
       component: ShiftsView,
-      meta: { title: "班次管理", requiresAuth: true, permissionKeys: [PERMISSIONS.SHIFTS_VIEW] },
+      meta: {
+        title: "班次管理",
+        requiresAuth: true,
+        permissionKeys: [PERMISSIONS.SHIFTS_VIEW],
+      },
     },
     {
       path: "/access/users",
       name: "access-users",
       component: UsersAccessView,
-      meta: { title: "使用者管理", requiresAuth: true, permissionKeys: [PERMISSIONS.USERS_VIEW] },
+      meta: {
+        title: "帳號管理",
+        requiresAuth: true,
+        permissionKeys: [PERMISSIONS.USERS_VIEW],
+      },
     },
     {
       path: "/access/roles",
       name: "access-roles",
       component: RolePermissionsView,
-      meta: { title: "角色權限", requiresAuth: true, permissionKeys: [PERMISSIONS.ROLES_VIEW] },
+      meta: {
+        title: "角色權限",
+        requiresAuth: true,
+        permissionKeys: [PERMISSIONS.ROLES_VIEW],
+      },
     },
   ],
 });
@@ -152,8 +223,13 @@ router.beforeEach(async (to) => {
     return findFirstAccessiblePath(authStore.permissionKeys);
   }
 
-  const requiredPermissionKeys = Array.isArray(to.meta.permissionKeys) ? to.meta.permissionKeys : [];
-  if (requiredPermissionKeys.length > 0 && !authStore.hasAnyPermission(requiredPermissionKeys)) {
+  const requiredPermissionKeys = Array.isArray(to.meta.permissionKeys)
+    ? to.meta.permissionKeys
+    : [];
+  if (
+    requiredPermissionKeys.length > 0 &&
+    !authStore.hasAnyPermission(requiredPermissionKeys)
+  ) {
     return findFirstAccessiblePath(authStore.permissionKeys);
   }
 

@@ -8,17 +8,23 @@ import com.nucosmos.pos.backend.common.exception.NotFoundException;
 import com.nucosmos.pos.backend.common.media.ImageReferenceValidator;
 import com.nucosmos.pos.backend.store.repository.StoreRepository;
 import com.nucosmos.pos.backend.supply.persistence.MaterialItemEntity;
-import com.nucosmos.pos.backend.supply.persistence.MaterialStockLotEntity;
 import com.nucosmos.pos.backend.supply.persistence.MaterialMovementEntity;
+import com.nucosmos.pos.backend.supply.persistence.MaterialStockLotEntity;
+import com.nucosmos.pos.backend.supply.persistence.ManufacturedItemEntity;
+import com.nucosmos.pos.backend.supply.persistence.ManufacturedMovementEntity;
+import com.nucosmos.pos.backend.supply.persistence.ManufacturedStockLotEntity;
 import com.nucosmos.pos.backend.supply.persistence.PackagingItemEntity;
-import com.nucosmos.pos.backend.supply.persistence.PackagingStockLotEntity;
 import com.nucosmos.pos.backend.supply.persistence.PackagingMovementEntity;
+import com.nucosmos.pos.backend.supply.persistence.PackagingStockLotEntity;
 import com.nucosmos.pos.backend.supply.repository.MaterialItemRepository;
-import com.nucosmos.pos.backend.supply.repository.MaterialStockLotRepository;
 import com.nucosmos.pos.backend.supply.repository.MaterialMovementRepository;
+import com.nucosmos.pos.backend.supply.repository.MaterialStockLotRepository;
+import com.nucosmos.pos.backend.supply.repository.ManufacturedItemRepository;
+import com.nucosmos.pos.backend.supply.repository.ManufacturedMovementRepository;
+import com.nucosmos.pos.backend.supply.repository.ManufacturedStockLotRepository;
 import com.nucosmos.pos.backend.supply.repository.PackagingItemRepository;
-import com.nucosmos.pos.backend.supply.repository.PackagingStockLotRepository;
 import com.nucosmos.pos.backend.supply.repository.PackagingMovementRepository;
+import com.nucosmos.pos.backend.supply.repository.PackagingStockLotRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +42,9 @@ public class SupplyAdminService {
     private final MaterialItemRepository materialItemRepository;
     private final MaterialMovementRepository materialMovementRepository;
     private final MaterialStockLotRepository materialStockLotRepository;
+    private final ManufacturedItemRepository manufacturedItemRepository;
+    private final ManufacturedMovementRepository manufacturedMovementRepository;
+    private final ManufacturedStockLotRepository manufacturedStockLotRepository;
     private final PackagingItemRepository packagingItemRepository;
     private final PackagingMovementRepository packagingMovementRepository;
     private final PackagingStockLotRepository packagingStockLotRepository;
@@ -47,6 +56,9 @@ public class SupplyAdminService {
             MaterialItemRepository materialItemRepository,
             MaterialMovementRepository materialMovementRepository,
             MaterialStockLotRepository materialStockLotRepository,
+            ManufacturedItemRepository manufacturedItemRepository,
+            ManufacturedMovementRepository manufacturedMovementRepository,
+            ManufacturedStockLotRepository manufacturedStockLotRepository,
             PackagingItemRepository packagingItemRepository,
             PackagingMovementRepository packagingMovementRepository,
             PackagingStockLotRepository packagingStockLotRepository,
@@ -57,6 +69,9 @@ public class SupplyAdminService {
         this.materialItemRepository = materialItemRepository;
         this.materialMovementRepository = materialMovementRepository;
         this.materialStockLotRepository = materialStockLotRepository;
+        this.manufacturedItemRepository = manufacturedItemRepository;
+        this.manufacturedMovementRepository = manufacturedMovementRepository;
+        this.manufacturedStockLotRepository = manufacturedStockLotRepository;
         this.packagingItemRepository = packagingItemRepository;
         this.packagingMovementRepository = packagingMovementRepository;
         this.packagingStockLotRepository = packagingStockLotRepository;
@@ -176,6 +191,125 @@ public class SupplyAdminService {
             ));
         }
         return toMaterialMovementResponse(materialMovementRepository.save(movement));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ManufacturedAdminResponse> listManufacturedItems(AuthenticatedUser user) {
+        ensureStoreExists(user.storeCode());
+        return manufacturedItemRepository.findAllByStore_CodeOrderByActiveDescNameAsc(user.storeCode())
+                .stream()
+                .map(this::toManufacturedResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ManufacturedMovementResponse> listManufacturedMovements(AuthenticatedUser user) {
+        ensureStoreExists(user.storeCode());
+        return manufacturedMovementRepository.findTop100ByManufacturedItem_Store_CodeOrderByOccurredAtDescCreatedAtDesc(user.storeCode())
+                .stream()
+                .map(this::toManufacturedMovementResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ManufacturedLotResponse> listManufacturedLots(AuthenticatedUser user) {
+        ensureStoreExists(user.storeCode());
+        return manufacturedStockLotRepository.findAllByManufacturedItem_Store_CodeOrderByExpiryDateAscReceivedAtAscCreatedAtAsc(user.storeCode())
+                .stream()
+                .map(this::toManufacturedLotResponse)
+                .toList();
+    }
+
+    @Transactional
+    public ManufacturedAdminResponse createManufacturedItem(AuthenticatedUser user, ManufacturedUpsertRequest request) {
+        validateUniqueManufacturedSku(user.storeCode(), request.sku(), null);
+        ManufacturedItemEntity item = ManufacturedItemEntity.create(
+                loadStore(user.storeCode()),
+                request.sku().trim(),
+                request.name().trim(),
+                request.unit().trim(),
+                request.purchaseUnit().trim(),
+                request.purchaseToStockRatio(),
+                ImageReferenceValidator.normalize(request.imageUrl()),
+                request.description(),
+                request.reorderLevel(),
+                request.latestUnitCost()
+        );
+        return toManufacturedResponse(manufacturedItemRepository.save(item));
+    }
+
+    @Transactional
+    public ManufacturedAdminResponse updateManufacturedItem(
+            AuthenticatedUser user,
+            UUID manufacturedItemId,
+            ManufacturedUpsertRequest request
+    ) {
+        ManufacturedItemEntity item = loadManufacturedItem(user.storeCode(), manufacturedItemId);
+        validateUniqueManufacturedSku(user.storeCode(), request.sku(), manufacturedItemId);
+        item.update(
+                request.sku().trim(),
+                request.name().trim(),
+                request.unit().trim(),
+                request.purchaseUnit().trim(),
+                request.purchaseToStockRatio(),
+                ImageReferenceValidator.normalize(request.imageUrl()),
+                request.description(),
+                request.reorderLevel(),
+                request.latestUnitCost()
+        );
+        return toManufacturedResponse(item);
+    }
+
+    @Transactional
+    public ManufacturedAdminResponse deactivateManufacturedItem(AuthenticatedUser user, UUID manufacturedItemId) {
+        ManufacturedItemEntity item = loadManufacturedItem(user.storeCode(), manufacturedItemId);
+        item.deactivate();
+        return toManufacturedResponse(item);
+    }
+
+    @Transactional
+    public ManufacturedMovementResponse createManufacturedMovement(
+            AuthenticatedUser user,
+            UUID manufacturedItemId,
+            ManufacturedMovementRequest request
+    ) {
+        ManufacturedItemEntity item = loadManufacturedItem(user.storeCode(), manufacturedItemId);
+        UserEntity actor = loadUser(user.userId());
+        SupplyMovementType movementType = parseSupplyMovementType(request.movementType());
+        int quantityDelta = movementType.apply(request.quantity());
+        int quantityAfter = item.getQuantityOnHand() + quantityDelta;
+        if (quantityAfter < 0) {
+            throw new BadRequestException("Insufficient manufactured stock for this movement");
+        }
+
+        item.applyMovement(quantityDelta, request.unitCost());
+        ManufacturedMovementEntity movement = new ManufacturedMovementEntity(
+                item,
+                actor,
+                movementType.name(),
+                request.quantity(),
+                quantityDelta,
+                quantityAfter,
+                request.unitCost(),
+                blankToNull(request.note()),
+                null,
+                null,
+                OffsetDateTime.now()
+        );
+        if (movementType == SupplyMovementType.PURCHASE_IN) {
+            manufacturedStockLotRepository.save(ManufacturedStockLotEntity.create(
+                    item,
+                    "MANUAL",
+                    null,
+                    request.batchCode(),
+                    request.expiryDate(),
+                    request.manufacturedAt(),
+                    request.quantity(),
+                    request.unitCost(),
+                    movement.getOccurredAt()
+            ));
+        }
+        return toManufacturedMovementResponse(manufacturedMovementRepository.save(movement));
     }
 
     @Transactional(readOnly = true)
@@ -363,6 +497,11 @@ public class SupplyAdminService {
                 .orElseThrow(() -> new NotFoundException("Material item not found"));
     }
 
+    private ManufacturedItemEntity loadManufacturedItem(String storeCode, UUID manufacturedItemId) {
+        return manufacturedItemRepository.findByIdAndStore_Code(manufacturedItemId, storeCode)
+                .orElseThrow(() -> new NotFoundException("Manufactured item not found"));
+    }
+
     private PackagingItemEntity loadPackagingItem(String storeCode, UUID packagingItemId) {
         return packagingItemRepository.findByIdAndStore_Code(packagingItemId, storeCode)
                 .orElseThrow(() -> new NotFoundException("Packaging item not found"));
@@ -375,6 +514,16 @@ public class SupplyAdminService {
                 : materialItemRepository.existsByStore_CodeAndSkuIgnoreCaseAndIdNot(storeCode, sku, excludeId);
         if (exists) {
             throw new BadRequestException("Material SKU already exists");
+        }
+    }
+
+    private void validateUniqueManufacturedSku(String storeCode, String rawSku, UUID excludeId) {
+        String sku = rawSku.trim();
+        boolean exists = excludeId == null
+                ? manufacturedItemRepository.existsByStore_CodeAndSkuIgnoreCase(storeCode, sku)
+                : manufacturedItemRepository.existsByStore_CodeAndSkuIgnoreCaseAndIdNot(storeCode, sku, excludeId);
+        if (exists) {
+            throw new BadRequestException("Manufactured SKU already exists");
         }
     }
 
@@ -446,6 +595,61 @@ public class SupplyAdminService {
                 lot.getMaterial().getSku(),
                 lot.getMaterial().getName(),
                 lot.getMaterial().getUnit(),
+                lot.getBatchCode(),
+                lot.getExpiryDate(),
+                lot.getManufacturedAt(),
+                lot.getReceivedQuantity(),
+                lot.getRemainingQuantity(),
+                lot.getUnitCost(),
+                lot.getSourceType(),
+                lot.getSourceId(),
+                lot.getReceivedAt()
+        );
+    }
+
+    private ManufacturedAdminResponse toManufacturedResponse(ManufacturedItemEntity item) {
+        return new ManufacturedAdminResponse(
+                item.getId(),
+                item.getSku(),
+                item.getName(),
+                item.getUnit(),
+                item.getPurchaseUnit(),
+                item.getPurchaseToStockRatio(),
+                item.getImageUrl(),
+                item.getDescription(),
+                item.getQuantityOnHand(),
+                item.getReorderLevel(),
+                item.getLatestUnitCost(),
+                toPurchaseUnitCost(item.getLatestUnitCost(), item.getPurchaseToStockRatio()),
+                item.getQuantityOnHand() <= item.getReorderLevel(),
+                item.isActive()
+        );
+    }
+
+    private ManufacturedMovementResponse toManufacturedMovementResponse(ManufacturedMovementEntity movement) {
+        return new ManufacturedMovementResponse(
+                movement.getId(),
+                movement.getManufacturedItem().getId(),
+                movement.getManufacturedItem().getSku(),
+                movement.getManufacturedItem().getName(),
+                movement.getManufacturedItem().getUnit(),
+                movement.getMovementType(),
+                movement.getQuantity(),
+                movement.getQuantityDelta(),
+                movement.getQuantityAfter(),
+                movement.getUnitCost(),
+                movement.getNote(),
+                movement.getOccurredAt()
+        );
+    }
+
+    private ManufacturedLotResponse toManufacturedLotResponse(ManufacturedStockLotEntity lot) {
+        return new ManufacturedLotResponse(
+                lot.getId(),
+                lot.getManufacturedItem().getId(),
+                lot.getManufacturedItem().getSku(),
+                lot.getManufacturedItem().getName(),
+                lot.getManufacturedItem().getUnit(),
                 lot.getBatchCode(),
                 lot.getExpiryDate(),
                 lot.getManufacturedAt(),
