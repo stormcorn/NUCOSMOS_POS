@@ -1,6 +1,7 @@
 package com.nucosmos.pos.backend.auth;
 
 import com.nucosmos.pos.backend.common.api.ApiResponse;
+import com.nucosmos.pos.backend.store.StoreSummaryResponse;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -10,6 +11,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -26,6 +29,11 @@ public class AuthController {
     @PostMapping("/pin-login")
     public ApiResponse<PinLoginResponse> pinLogin(@Valid @RequestBody PinLoginRequest request) {
         return ApiResponse.ok(pinAuthService.login(request));
+    }
+
+    @GetMapping("/stores")
+    public ApiResponse<List<StoreSummaryResponse>> availableStores() {
+        return ApiResponse.ok(pinAuthService.listAvailableStores());
     }
 
     @PreAuthorize("isAuthenticated()")

@@ -42,6 +42,35 @@ class AuthControllerTest {
     }
 
     @Test
+    void shouldInferRoleFromPinWhenRoleNotProvided() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/pin-login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "storeCode": "TW001",
+                                  "pin": "5678",
+                                  "deviceCode": "AUTO-TABLET-001",
+                                  "deviceName": "Galaxy Tab Demo",
+                                  "devicePlatform": "ANDROID"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.deviceCode").value("AUTO-TABLET-001"))
+                .andExpect(jsonPath("$.data.staff.employeeCode").value("EMP-SUPERVISOR-001"))
+                .andExpect(jsonPath("$.data.staff.activeRole").value("MANAGER"));
+    }
+
+    @Test
+    void shouldListAvailableStoresWithoutAuthentication() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/stores"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].code").value("TW001"))
+                .andExpect(jsonPath("$.data[0].name").value("NUCOSMOS Demo Store"));
+    }
+
+    @Test
     void shouldRejectInvalidPin() throws Exception {
         mockMvc.perform(post("/api/v1/auth/pin-login")
                         .contentType(MediaType.APPLICATION_JSON)

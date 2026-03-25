@@ -5,6 +5,7 @@ import 'screens/login_screen.dart';
 import 'screens/pos_home_screen.dart';
 import 'services/api_client.dart';
 import 'services/auth_service.dart';
+import 'services/device_identity_service.dart';
 import 'services/order_service.dart';
 import 'services/printer_service.dart';
 import 'services/product_service.dart';
@@ -31,8 +32,10 @@ class _PosAppState extends State<PosApp> {
     _printerController = PrinterController(
       printerService: PrinterService(),
     )..restoreSettings();
+    final deviceIdentityService = DeviceIdentityService();
     _sessionController = SessionController(
       authService: AuthService(apiClient),
+      deviceIdentityService: deviceIdentityService,
       productService: ProductService(apiClient),
       orderService: OrderService(apiClient),
       quickReceiveService: QuickReceiveService(apiClient),

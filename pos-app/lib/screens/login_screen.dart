@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../models/auth_models.dart';
 import '../state/session_controller.dart';
 import '../widgets/pin_pad.dart';
 
@@ -21,21 +22,14 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  late final TextEditingController _storeCodeController;
-  late final TextEditingController _deviceCodeController;
   late final TextEditingController _apiBaseUrlController;
 
-  String _roleCode = 'CASHIER';
   String _pin = '';
   bool _testingConnection = false;
 
   @override
   void initState() {
     super.initState();
-    _storeCodeController = TextEditingController(text: 'TW001');
-    _deviceCodeController = TextEditingController(
-      text: widget.controller.deviceCode,
-    );
     _apiBaseUrlController = TextEditingController(
       text: widget.controller.apiBaseUrl,
     );
@@ -43,8 +37,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    _storeCodeController.dispose();
-    _deviceCodeController.dispose();
     _apiBaseUrlController.dispose();
     super.dispose();
   }
@@ -52,19 +44,38 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
     await widget.controller.updateApiBaseUrl(_apiBaseUrlController.text.trim());
-    widget.controller.updateDeviceCode(_deviceCodeController.text.trim());
+
+    final storeCode = widget.controller.selectedStoreCode;
+    if (storeCode == null || storeCode.isEmpty) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('請先選擇門市')),
+      );
+      return;
+    }
 
     final success = await widget.controller.login(
-      storeCode: _storeCodeController.text.trim(),
-      roleCode: _roleCode,
+      storeCode: storeCode,
       pin: _pin,
-      deviceCode: _deviceCodeController.text.trim(),
     );
 
-    if (!success && mounted && widget.controller.errorMessage.isNotEmpty) {
+    if (!mounted) {
+      return;
+    }
+
+    if (!success && widget.controller.errorMessage.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(widget.controller.errorMessage)),
       );
+      return;
+    }
+
+    if (success) {
+      setState(() {
+        _pin = '';
+      });
     }
   }
 
@@ -89,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
       SnackBar(
         content: Text(
           success
-              ? '測試連線成功：${widget.controller.apiBaseUrl}'
+              ? '連線成功：${widget.controller.apiBaseUrl}'
               : widget.controller.errorMessage,
         ),
       ),
@@ -135,19 +146,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       final isTabletWide = constraints.maxWidth >= 840;
                       final loginPanel = _LoginPanel(
                         theme: theme,
-                        storeCodeController: _storeCodeController,
-                        deviceCodeController: _deviceCodeController,
+                        stores: widget.controller.availableStores,
+                        selectedStoreCode: widget.controller.selectedStoreCode,
+                        deviceCode: widget.controller.deviceCode,
+                        deviceSummary: widget.controller.deviceSummary,
                         apiBaseUrlController: _apiBaseUrlController,
-                        roleCode: _roleCode,
                         pin: _pin,
                         loading: widget.controller.loading,
                         testingConnection: _testingConnection,
                         errorMessage: widget.controller.errorMessage,
                         currentApiBaseUrl: widget.controller.apiBaseUrl,
-                        onRoleChanged: (value) {
-                          setState(() {
-                            _roleCode = value;
-                          });
+                        onStoreChanged: (value) {
+                          widget.controller.updateSelectedStoreCode(value);
                         },
                         onSubmit: _submit,
                         onTestConnection: _testConnection,
@@ -221,36 +231,42 @@ class _LoginScreenState extends State<LoginScreen> {
 class _LoginPanel extends StatelessWidget {
   const _LoginPanel({
     required this.theme,
-    required this.storeCodeController,
-    required this.deviceCodeController,
+    required this.stores,
+    required this.selectedStoreCode,
+    required this.deviceCode,
+    required this.deviceSummary,
     required this.apiBaseUrlController,
-    required this.roleCode,
     required this.pin,
     required this.loading,
     required this.testingConnection,
     required this.errorMessage,
     required this.currentApiBaseUrl,
-    required this.onRoleChanged,
+    required this.onStoreChanged,
     required this.onSubmit,
     required this.onTestConnection,
   });
 
   final ThemeData theme;
-  final TextEditingController storeCodeController;
-  final TextEditingController deviceCodeController;
+  final List<StoreSummary> stores;
+  final String? selectedStoreCode;
+  final String deviceCode;
+  final String deviceSummary;
   final TextEditingController apiBaseUrlController;
-  final String roleCode;
   final String pin;
   final bool loading;
   final bool testingConnection;
   final String errorMessage;
   final String currentApiBaseUrl;
-  final ValueChanged<String> onRoleChanged;
+  final ValueChanged<String?> onStoreChanged;
   final VoidCallback onSubmit;
   final VoidCallback onTestConnection;
 
   @override
   Widget build(BuildContext context) {
+    final selectedValue = stores.any((store) => store.code == selectedStoreCode)
+        ? selectedStoreCode
+        : null;
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -272,7 +288,7 @@ class _LoginPanel extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Android 平板 POS 測試版',
+              '輸入 PIN 後自動辨識帳號與身分組',
               style: theme.textTheme.titleMedium?.copyWith(
                 color: Colors.white70,
               ),
@@ -309,48 +325,25 @@ class _LoginPanel extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 20),
-            TextField(
-              controller: storeCodeController,
-              textCapitalization: TextCapitalization.characters,
+            DropdownButtonFormField<String>(
+              initialValue: selectedValue,
               decoration: const InputDecoration(
                 labelText: 'Store Code',
-                hintText: 'TW001',
               ),
+              items: stores
+                  .map(
+                    (store) => DropdownMenuItem<String>(
+                      value: store.code,
+                      child: Text('${store.code} · ${store.name}'),
+                    ),
+                  )
+                  .toList(growable: false),
+              onChanged: loading ? null : onStoreChanged,
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: deviceCodeController,
-              textCapitalization: TextCapitalization.characters,
-              decoration: const InputDecoration(
-                labelText: 'Device Code',
-                hintText: 'POS-TABLET-001',
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              '登入角色',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                _RoleChip(
-                  label: '收銀員',
-                  icon: Icons.point_of_sale_rounded,
-                  selected: roleCode == 'CASHIER',
-                  onTap: () => onRoleChanged('CASHIER'),
-                ),
-                _RoleChip(
-                  label: '店長',
-                  icon: Icons.manage_accounts_rounded,
-                  selected: roleCode == 'MANAGER',
-                  onTap: () => onRoleChanged('MANAGER'),
-                ),
-              ],
+            _DeviceCard(
+              deviceCode: deviceCode,
+              deviceSummary: deviceSummary,
             ),
             const SizedBox(height: 24),
             Text(
@@ -419,13 +412,13 @@ class _LoginPanel extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '建議測試設定',
+                    '登入規則',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   SizedBox(height: 10),
-                  Text('1. 正式站請直接填：https://nucosmos.io'),
-                  Text('2. App 會自動在 https 和 http 之間切換'),
-                  Text('3. 模擬器可改用：http://10.0.2.2:8081'),
+                  Text('1. 先選門市，再輸入 4 碼 PIN。'),
+                  Text('2. 系統會自動判斷員工帳號與可用身分組。'),
+                  Text('3. 平板裝置碼會由系統自動讀取並帶入。'),
                 ],
               ),
             ),
@@ -443,44 +436,49 @@ class _LoginPanel extends StatelessWidget {
   }
 }
 
-class _RoleChip extends StatelessWidget {
-  const _RoleChip({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
+class _DeviceCard extends StatelessWidget {
+  const _DeviceCard({
+    required this.deviceCode,
+    required this.deviceSummary,
   });
 
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
+  final String deviceCode;
+  final String deviceSummary;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: Ink(
-        width: 140,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFF12263A) : const Color(0xFF0A111E),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: selected
-                ? const Color(0xFF1FE4FF)
-                : const Color(0xFF2A3856),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF08101D),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFF22314B)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '目前裝置',
+            style: TextStyle(
+              color: Colors.white70,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: Colors.white),
-            const SizedBox(height: 10),
-            Text(label),
-          ],
-        ),
+          const SizedBox(height: 8),
+          Text(
+            deviceSummary,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            deviceCode,
+            style: const TextStyle(color: Colors.white60),
+          ),
+        ],
       ),
     );
   }

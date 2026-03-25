@@ -11,6 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  device_info_plus: ^11.1.0
   esc_pos_utils_plus: ^2.0.4
   flutter_thermal_printer: ^2.0.1
   http: ^1.2.1

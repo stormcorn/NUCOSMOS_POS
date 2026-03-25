@@ -11,19 +11,36 @@ class AuthService {
     _apiClient.baseUrl = baseUrl;
   }
 
+  Future<List<StoreSummary>> fetchStores() async {
+    final json = await _apiClient.get('/api/v1/auth/stores');
+    return ApiEnvelope<List<dynamic>>.fromJson(
+      json,
+      (items) => items as List<dynamic>,
+    ).data.map((item) {
+      return StoreSummary.fromJson(
+        (item as Map).cast<String, dynamic>(),
+      );
+    }).toList(growable: false);
+  }
+
   Future<PinLoginResponse> pinLogin({
     required String storeCode,
-    required String roleCode,
     required String pin,
     required String deviceCode,
+    String? roleCode,
+    String? deviceName,
+    String? devicePlatform,
   }) async {
     final json = await _apiClient.post(
       '/api/v1/auth/pin-login',
       body: {
         'storeCode': storeCode,
-        'roleCode': roleCode,
+        if (roleCode != null && roleCode.isNotEmpty) 'roleCode': roleCode,
         'pin': pin,
         'deviceCode': deviceCode,
+        if (deviceName != null && deviceName.isNotEmpty) 'deviceName': deviceName,
+        if (devicePlatform != null && devicePlatform.isNotEmpty)
+          'devicePlatform': devicePlatform,
       },
     );
 

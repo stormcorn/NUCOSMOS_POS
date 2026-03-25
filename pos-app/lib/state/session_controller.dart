@@ -8,6 +8,7 @@ import '../models/product_summary.dart';
 import '../models/quick_receive_models.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
+import '../services/device_identity_service.dart';
 import '../services/order_service.dart';
 import '../services/product_service.dart';
 import '../services/quick_receive_service.dart';
@@ -15,12 +16,14 @@ import '../services/quick_receive_service.dart';
 class SessionController extends ChangeNotifier {
   SessionController({
     required AuthService authService,
+    required DeviceIdentityService deviceIdentityService,
     required ProductService productService,
     required OrderService orderService,
     required QuickReceiveService quickReceiveService,
     required String defaultApiBaseUrl,
     required String defaultDeviceCode,
   })  : _authService = authService,
+        _deviceIdentityService = deviceIdentityService,
         _productService = productService,
         _orderService = orderService,
         _quickReceiveService = quickReceiveService,
@@ -29,9 +32,14 @@ class SessionController extends ChangeNotifier {
 
   static const _tokenKey = 'pos.access_token';
   static const _deviceCodeKey = 'pos.device_code';
+  static const _deviceNameKey = 'pos.device_name';
+  static const _devicePlatformKey = 'pos.device_platform';
+  static const _selectedStoreCodeKey = 'pos.selected_store_code';
   static const _apiBaseUrlKey = 'pos.api_base_url';
+  static const _fallbackStoreCode = 'TW001';
 
   final AuthService _authService;
+  final DeviceIdentityService _deviceIdentityService;
   final ProductService _productService;
   final OrderService _orderService;
   final QuickReceiveService _quickReceiveService;
@@ -53,8 +61,19 @@ class SessionController extends ChangeNotifier {
   String _deviceCode;
   String get deviceCode => _deviceCode;
 
+  String _deviceName = 'POS Tablet';
+  String get deviceName => _deviceName;
+
+  String _devicePlatform = 'ANDROID';
+  String get devicePlatform => _devicePlatform;
+
+  String _deviceSummary = 'POS Tablet';
+  String get deviceSummary => _deviceSummary;
+
   String? accessToken;
   CurrentSession? session;
+  List<StoreSummary> availableStores = const [];
+  String? selectedStoreCode;
   List<ProductSummary> products = const [];
   String? selectedCategoryCode;
   List<PosCartLine> cart = const [];
@@ -138,7 +157,11 @@ class SessionController extends ChangeNotifier {
     final storedApiBaseUrl = prefs.getString(_apiBaseUrlKey);
     _apiBaseUrl = _resolveInitialApiBaseUrl(storedApiBaseUrl);
     _deviceCode = prefs.getString(_deviceCodeKey) ?? _deviceCode;
+    _deviceName = prefs.getString(_deviceNameKey) ?? _deviceName;
+    _devicePlatform = prefs.getString(_devicePlatformKey) ?? _devicePlatform;
+    selectedStoreCode = prefs.getString(_selectedStoreCodeKey);
     _syncApiBaseUrl();
+    await _hydrateLoginContext(prefs);
 
     if (storedApiBaseUrl != null && storedApiBaseUrl != _apiBaseUrl) {
       await prefs.setString(_apiBaseUrlKey, _apiBaseUrl);
@@ -169,9 +192,7 @@ class SessionController extends ChangeNotifier {
 
   Future<bool> login({
     required String storeCode,
-    required String roleCode,
     required String pin,
-    required String deviceCode,
   }) async {
     loading = true;
     errorMessage = '';
@@ -183,9 +204,10 @@ class SessionController extends ChangeNotifier {
       final response = await _runWithApiFallback(
         () => _authService.pinLogin(
           storeCode: storeCode,
-          roleCode: roleCode,
           pin: pin,
-          deviceCode: deviceCode,
+          deviceCode: _deviceCode,
+          deviceName: _deviceName,
+          devicePlatform: _devicePlatform,
         ),
       );
 
@@ -193,11 +215,15 @@ class SessionController extends ChangeNotifier {
       session = await _runWithApiFallback(
         () => _authService.currentSession(response.accessToken),
       );
-      _deviceCode = deviceCode;
+      _deviceCode = response.deviceCode.isEmpty ? _deviceCode : response.deviceCode;
+      selectedStoreCode = storeCode;
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_tokenKey, response.accessToken);
-      await prefs.setString(_deviceCodeKey, deviceCode);
+      await prefs.setString(_deviceCodeKey, _deviceCode);
+      await prefs.setString(_deviceNameKey, _deviceName);
+      await prefs.setString(_devicePlatformKey, _devicePlatform);
+      await prefs.setString(_selectedStoreCodeKey, storeCode);
       await prefs.setString(_apiBaseUrlKey, _apiBaseUrl);
 
       await loadProducts(showLoading: false);
@@ -536,8 +562,14 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateDeviceCode(String value) {
-    _deviceCode = value;
+  Future<void> updateSelectedStoreCode(String? value) async {
+    selectedStoreCode = value;
+    final prefs = await SharedPreferences.getInstance();
+    if (value == null || value.isEmpty) {
+      await prefs.remove(_selectedStoreCodeKey);
+    } else {
+      await prefs.setString(_selectedStoreCodeKey, value);
+    }
     notifyListeners();
   }
 
@@ -548,6 +580,68 @@ class SessionController extends ChangeNotifier {
     _productService.updateBaseUrl(_apiBaseUrl);
     _orderService.updateBaseUrl(_apiBaseUrl);
     _quickReceiveService.updateBaseUrl(_apiBaseUrl);
+  }
+
+  Future<void> loadAvailableStores({bool notify = true}) async {
+    try {
+      final stores = await _runWithApiFallback(_authService.fetchStores);
+      availableStores = stores.isEmpty
+          ? const [StoreSummary(code: _fallbackStoreCode, name: _fallbackStoreCode)]
+          : stores;
+      _ensureSelectedStoreCode();
+      errorMessage = '';
+    } on ApiException catch (error) {
+      availableStores = _fallbackStores();
+      _ensureSelectedStoreCode();
+      errorMessage = error.message;
+    } on Exception {
+      availableStores = _fallbackStores();
+      _ensureSelectedStoreCode();
+    } catch (_) {
+      availableStores = _fallbackStores();
+      _ensureSelectedStoreCode();
+    } finally {
+      if (notify) {
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<void> _hydrateLoginContext(SharedPreferences prefs) async {
+    await _loadDeviceIdentity(prefs);
+    await loadAvailableStores(notify: false);
+  }
+
+  Future<void> _loadDeviceIdentity(SharedPreferences prefs) async {
+    final identity = await _deviceIdentityService.resolveIdentity();
+    _deviceCode = identity.deviceCode;
+    _deviceName = identity.deviceName;
+    _devicePlatform = identity.devicePlatform;
+    _deviceSummary = identity.deviceSummary;
+    await prefs.setString(_deviceCodeKey, _deviceCode);
+    await prefs.setString(_deviceNameKey, _deviceName);
+    await prefs.setString(_devicePlatformKey, _devicePlatform);
+  }
+
+  void _ensureSelectedStoreCode() {
+    final codes = availableStores.map((store) => store.code).toSet();
+    if (selectedStoreCode != null &&
+        selectedStoreCode!.isNotEmpty &&
+        codes.contains(selectedStoreCode)) {
+      return;
+    }
+    selectedStoreCode = availableStores.isEmpty ? _fallbackStoreCode : availableStores.first.code;
+  }
+
+  List<StoreSummary> _fallbackStores() {
+    final code = (selectedStoreCode ?? _fallbackStoreCode).trim();
+    final normalized = code.isEmpty ? _fallbackStoreCode : code;
+    return [
+      StoreSummary(
+        code: normalized,
+        name: normalized == _fallbackStoreCode ? 'NUCOSMOS Demo Store' : normalized,
+      ),
+    ];
   }
 
   Future<T> _runWithApiFallback<T>(Future<T> Function() action) async {

@@ -8,6 +8,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -42,9 +43,8 @@ class StoreDeviceControllerTest {
                         .param("status", "ACTIVE")
                         .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.length()").value(1))
-                .andExpect(jsonPath("$.data[0].deviceCode").value("POS-TABLET-001"))
-                .andExpect(jsonPath("$.data[0].platform").value("ANDROID"));
+                .andExpect(jsonPath("$.data[*].deviceCode", hasItem("POS-TABLET-001")))
+                .andExpect(jsonPath("$.data[*].platform", hasItem("ANDROID")));
     }
 
     @Test

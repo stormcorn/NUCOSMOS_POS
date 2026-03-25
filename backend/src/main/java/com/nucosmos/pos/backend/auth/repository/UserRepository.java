@@ -31,4 +31,14 @@ public interface UserRepository extends JpaRepository<UserEntity, UUID> {
               and role.active = true
             """)
     List<UserEntity> findCandidatesForPinLogin(String storeCode, String roleCode);
+
+    @Query("""
+            select distinct u
+            from UserEntity u
+            join StoreStaffAssignmentEntity assignment on assignment.user = u
+            where assignment.store.code = :storeCode
+              and assignment.active = true
+              and u.status = 'ACTIVE'
+            """)
+    List<UserEntity> findCandidatesForPinLogin(String storeCode);
 }

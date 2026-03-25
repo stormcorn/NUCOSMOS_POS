@@ -14,6 +14,9 @@ public interface DeviceRepository extends JpaRepository<DeviceEntity, UUID> {
     Optional<DeviceEntity> findByStore_CodeAndDeviceCodeAndStatus(String storeCode, String deviceCode, String status);
 
     @EntityGraph(attributePaths = "store")
+    Optional<DeviceEntity> findByStore_CodeAndDeviceCode(String storeCode, String deviceCode);
+
+    @EntityGraph(attributePaths = "store")
     List<DeviceEntity> findAllByOrderByStore_CodeAscNameAsc();
 
     @EntityGraph(attributePaths = "store")
