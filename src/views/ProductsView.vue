@@ -898,12 +898,12 @@ onMounted(async () => {
 
         <input v-model="form.recipeNote" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="本次配方調整備註" />
 
-        <div class="rounded-[1.5rem] border border-white/8 bg-white/4 p-4">
+        <div class="manufactured-recipe-card rounded-[1.5rem] border border-white/8 bg-white/4 p-4">
           <div class="flex items-center justify-between">
             <p class="text-sm font-semibold text-white">商品配方：原料</p>
             <button v-if="canEditProducts" class="rounded-xl border border-brand-aqua/30 px-3 py-2 text-xs text-brand-aqua" @click="addMaterialComponent">新增原料</button>
           </div>
-          <div class="mt-4 rounded-2xl border border-brand-aqua/15 bg-slate-950/40 p-4">
+          <div class="manufactured-recipe-intro mt-4 rounded-2xl border border-brand-aqua/15 bg-slate-950/40 p-4">
             <div class="flex items-center justify-between gap-3">
               <div>
                 <p class="text-sm font-semibold text-white">商品配方：製成品</p>
@@ -1179,3 +1179,16 @@ onMounted(async () => {
     </aside>
   </section>
 </template>
+
+<style scoped>
+.manufactured-recipe-card > .flex:first-child {
+  display: none;
+}
+
+.manufactured-recipe-intro {
+  margin-top: 0;
+  border-color: transparent;
+  background: transparent;
+  padding: 0;
+}
+</style>
