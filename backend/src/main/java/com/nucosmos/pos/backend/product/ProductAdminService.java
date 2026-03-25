@@ -8,22 +8,28 @@ import com.nucosmos.pos.backend.product.persistence.ProductCategoryEntity;
 import com.nucosmos.pos.backend.product.persistence.ProductCustomizationGroupEntity;
 import com.nucosmos.pos.backend.product.persistence.ProductCustomizationOptionEntity;
 import com.nucosmos.pos.backend.product.persistence.ProductEntity;
+import com.nucosmos.pos.backend.product.persistence.ProductManufacturedRecipeEntity;
 import com.nucosmos.pos.backend.product.persistence.ProductMaterialRecipeEntity;
 import com.nucosmos.pos.backend.product.persistence.ProductPackagingRecipeEntity;
 import com.nucosmos.pos.backend.product.persistence.ProductRecipeVersionEntity;
+import com.nucosmos.pos.backend.product.persistence.ProductRecipeVersionManufacturedEntity;
 import com.nucosmos.pos.backend.product.persistence.ProductRecipeVersionMaterialEntity;
 import com.nucosmos.pos.backend.product.persistence.ProductRecipeVersionPackagingEntity;
 import com.nucosmos.pos.backend.product.repository.ProductCategoryRepository;
 import com.nucosmos.pos.backend.product.repository.ProductCustomizationGroupRepository;
 import com.nucosmos.pos.backend.product.repository.ProductCustomizationOptionRepository;
+import com.nucosmos.pos.backend.product.repository.ProductManufacturedRecipeRepository;
 import com.nucosmos.pos.backend.product.repository.ProductMaterialRecipeRepository;
 import com.nucosmos.pos.backend.product.repository.ProductPackagingRecipeRepository;
+import com.nucosmos.pos.backend.product.repository.ProductRecipeVersionManufacturedRepository;
 import com.nucosmos.pos.backend.product.repository.ProductRecipeVersionMaterialRepository;
 import com.nucosmos.pos.backend.product.repository.ProductRecipeVersionPackagingRepository;
 import com.nucosmos.pos.backend.product.repository.ProductRecipeVersionRepository;
 import com.nucosmos.pos.backend.product.repository.ProductRepository;
+import com.nucosmos.pos.backend.supply.persistence.ManufacturedItemEntity;
 import com.nucosmos.pos.backend.supply.persistence.MaterialItemEntity;
 import com.nucosmos.pos.backend.supply.persistence.PackagingItemEntity;
+import com.nucosmos.pos.backend.supply.repository.ManufacturedItemRepository;
 import com.nucosmos.pos.backend.supply.repository.MaterialItemRepository;
 import com.nucosmos.pos.backend.supply.repository.PackagingItemRepository;
 import org.springframework.stereotype.Service;
@@ -47,11 +53,14 @@ public class ProductAdminService {
     private final ProductCategoryRepository productCategoryRepository;
     private final ProductCustomizationGroupRepository productCustomizationGroupRepository;
     private final ProductCustomizationOptionRepository productCustomizationOptionRepository;
+    private final ProductManufacturedRecipeRepository productManufacturedRecipeRepository;
     private final ProductMaterialRecipeRepository productMaterialRecipeRepository;
     private final ProductPackagingRecipeRepository productPackagingRecipeRepository;
     private final ProductRecipeVersionRepository productRecipeVersionRepository;
+    private final ProductRecipeVersionManufacturedRepository productRecipeVersionManufacturedRepository;
     private final ProductRecipeVersionMaterialRepository productRecipeVersionMaterialRepository;
     private final ProductRecipeVersionPackagingRepository productRecipeVersionPackagingRepository;
+    private final ManufacturedItemRepository manufacturedItemRepository;
     private final MaterialItemRepository materialItemRepository;
     private final PackagingItemRepository packagingItemRepository;
 
@@ -60,11 +69,14 @@ public class ProductAdminService {
             ProductCategoryRepository productCategoryRepository,
             ProductCustomizationGroupRepository productCustomizationGroupRepository,
             ProductCustomizationOptionRepository productCustomizationOptionRepository,
+            ProductManufacturedRecipeRepository productManufacturedRecipeRepository,
             ProductMaterialRecipeRepository productMaterialRecipeRepository,
             ProductPackagingRecipeRepository productPackagingRecipeRepository,
             ProductRecipeVersionRepository productRecipeVersionRepository,
+            ProductRecipeVersionManufacturedRepository productRecipeVersionManufacturedRepository,
             ProductRecipeVersionMaterialRepository productRecipeVersionMaterialRepository,
             ProductRecipeVersionPackagingRepository productRecipeVersionPackagingRepository,
+            ManufacturedItemRepository manufacturedItemRepository,
             MaterialItemRepository materialItemRepository,
             PackagingItemRepository packagingItemRepository
     ) {
@@ -72,11 +84,14 @@ public class ProductAdminService {
         this.productCategoryRepository = productCategoryRepository;
         this.productCustomizationGroupRepository = productCustomizationGroupRepository;
         this.productCustomizationOptionRepository = productCustomizationOptionRepository;
+        this.productManufacturedRecipeRepository = productManufacturedRecipeRepository;
         this.productMaterialRecipeRepository = productMaterialRecipeRepository;
         this.productPackagingRecipeRepository = productPackagingRecipeRepository;
         this.productRecipeVersionRepository = productRecipeVersionRepository;
+        this.productRecipeVersionManufacturedRepository = productRecipeVersionManufacturedRepository;
         this.productRecipeVersionMaterialRepository = productRecipeVersionMaterialRepository;
         this.productRecipeVersionPackagingRepository = productRecipeVersionPackagingRepository;
+        this.manufacturedItemRepository = manufacturedItemRepository;
         this.materialItemRepository = materialItemRepository;
         this.packagingItemRepository = packagingItemRepository;
     }
@@ -250,6 +265,9 @@ public class ProductAdminService {
     }
 
     private void syncRecipeComponents(ProductEntity product, String storeCode, ProductUpsertRequest request, boolean forceVersion) {
+        List<ProductManufacturedComponentRequest> manufacturedComponents = request.manufacturedComponents() == null
+                ? List.of()
+                : request.manufacturedComponents();
         List<ProductMaterialComponentRequest> materialComponents = request.materialComponents() == null
                 ? List.of()
                 : request.materialComponents();
@@ -257,10 +275,17 @@ public class ProductAdminService {
                 ? List.of()
                 : request.packagingComponents();
 
+        validateManufacturedComponents(manufacturedComponents);
         validateMaterialComponents(materialComponents);
         validatePackagingComponents(packagingComponents);
         validateCustomizationGroups(request.customizationGroups());
 
+        List<ResolvedManufacturedComponent> resolvedManufactured = manufacturedComponents.stream()
+                .map(component -> new ResolvedManufacturedComponent(
+                        loadActiveManufactured(component.manufacturedItemId(), storeCode),
+                        component.quantity().setScale(3, RoundingMode.HALF_UP)
+                ))
+                .toList();
         List<ResolvedMaterialComponent> resolvedMaterials = materialComponents.stream()
                 .map(component -> new ResolvedMaterialComponent(
                         loadActiveMaterial(component.materialItemId(), storeCode),
@@ -274,7 +299,7 @@ public class ProductAdminService {
                 ))
                 .toList();
 
-        boolean recipeChanged = forceVersion || hasRecipeChanged(product.getId(), resolvedMaterials, resolvedPackaging);
+        boolean recipeChanged = forceVersion || hasRecipeChanged(product.getId(), resolvedManufactured, resolvedMaterials, resolvedPackaging);
 
         if (!recipeChanged) {
             return;
@@ -283,8 +308,17 @@ public class ProductAdminService {
         bootstrapLegacyRecipeVersionIfMissing(product);
         archiveRecipeVersions(product.getId());
 
+        productManufacturedRecipeRepository.deleteAllByProduct_Id(product.getId());
         productMaterialRecipeRepository.deleteAllByProduct_Id(product.getId());
         productPackagingRecipeRepository.deleteAllByProduct_Id(product.getId());
+
+        for (ResolvedManufacturedComponent component : resolvedManufactured) {
+            productManufacturedRecipeRepository.save(ProductManufacturedRecipeEntity.create(
+                    product,
+                    component.manufacturedItem(),
+                    component.quantity()
+            ));
+        }
 
         for (ResolvedMaterialComponent component : resolvedMaterials) {
             productMaterialRecipeRepository.save(ProductMaterialRecipeEntity.create(
@@ -309,6 +343,14 @@ public class ProductAdminService {
                 OffsetDateTime.now()
         ));
 
+        for (ResolvedManufacturedComponent component : resolvedManufactured) {
+            productRecipeVersionManufacturedRepository.save(ProductRecipeVersionManufacturedEntity.create(
+                    version,
+                    component.manufacturedItem(),
+                    component.quantity()
+            ));
+        }
+
         for (ResolvedMaterialComponent component : resolvedMaterials) {
             productRecipeVersionMaterialRepository.save(ProductRecipeVersionMaterialEntity.create(
                     version,
@@ -325,6 +367,15 @@ public class ProductAdminService {
             ));
         }
 
+    }
+
+    private void validateManufacturedComponents(List<ProductManufacturedComponentRequest> components) {
+        Set<UUID> seenIds = new HashSet<>();
+        for (ProductManufacturedComponentRequest component : components) {
+            if (!seenIds.add(component.manufacturedItemId())) {
+                throw new BadRequestException("Duplicate manufactured component is not allowed");
+            }
+        }
     }
 
     private void validateMaterialComponents(List<ProductMaterialComponentRequest> components) {
@@ -397,6 +448,17 @@ public class ProductAdminService {
         }
     }
 
+    private ManufacturedItemEntity loadActiveManufactured(UUID manufacturedItemId, String storeCode) {
+        ManufacturedItemEntity manufacturedItem = manufacturedItemRepository.findByIdAndStore_Code(manufacturedItemId, storeCode)
+                .orElseThrow(() -> new BadRequestException("Manufactured item is invalid for current store"));
+
+        if (!manufacturedItem.isActive()) {
+            throw new BadRequestException("Manufactured item is inactive");
+        }
+
+        return manufacturedItem;
+    }
+
     private MaterialItemEntity loadActiveMaterial(UUID materialItemId, String storeCode) {
         MaterialItemEntity materialItem = materialItemRepository.findByIdAndStore_Code(materialItemId, storeCode)
                 .orElseThrow(() -> new BadRequestException("Material item is invalid for current store"));
@@ -456,10 +518,14 @@ public class ProductAdminService {
 
     private ProductAdminResponse toAdminResponse(ProductEntity product, String fallbackStoreCode) {
         OffsetDateTime now = OffsetDateTime.now();
+        List<ProductManufacturedRecipeEntity> manufacturedRecipes = productManufacturedRecipeRepository.findAllByProduct_IdOrderByCreatedAtAsc(product.getId());
         List<ProductMaterialRecipeEntity> materialRecipes = productMaterialRecipeRepository.findAllByProduct_IdOrderByCreatedAtAsc(product.getId());
         List<ProductPackagingRecipeEntity> packagingRecipes = productPackagingRecipeRepository.findAllByProduct_IdOrderByCreatedAtAsc(product.getId());
         List<ProductCustomizationGroupResponse> customizationGroups = loadCustomizationGroups(product.getId());
 
+        List<ProductManufacturedComponentResponse> manufacturedComponents = manufacturedRecipes.stream()
+                .map(this::toManufacturedComponentResponse)
+                .toList();
         List<ProductMaterialComponentResponse> materialComponents = materialRecipes.stream()
                 .map(this::toMaterialComponentResponse)
                 .toList();
@@ -467,6 +533,10 @@ public class ProductAdminService {
                 .map(this::toPackagingComponentResponse)
                 .toList();
 
+        BigDecimal manufacturedCost = manufacturedComponents.stream()
+                .map(ProductManufacturedComponentResponse::lineCost)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
         BigDecimal materialCost = materialComponents.stream()
                 .map(ProductMaterialComponentResponse::lineCost)
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
@@ -475,8 +545,8 @@ public class ProductAdminService {
                 .map(ProductPackagingComponentResponse::lineCost)
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(2, RoundingMode.HALF_UP);
-        BigDecimal totalCost = materialCost.add(packagingCost).setScale(2, RoundingMode.HALF_UP);
-        List<ProductRecipeVersionSummaryResponse> recipeVersions = toRecipeVersionSummaries(product, materialRecipes, packagingRecipes);
+        BigDecimal totalCost = manufacturedCost.add(materialCost).add(packagingCost).setScale(2, RoundingMode.HALF_UP);
+        List<ProductRecipeVersionSummaryResponse> recipeVersions = toRecipeVersionSummaries(product, manufacturedRecipes, materialRecipes, packagingRecipes);
 
         return new ProductAdminResponse(
                 product.getId(),
@@ -497,12 +567,30 @@ public class ProductAdminService {
                 product.getDisplayPrice(now),
                 product.isActive(),
                 materialComponents,
+                manufacturedComponents,
                 packagingComponents,
                 customizationGroups,
                 recipeVersions,
                 materialCost,
+                manufacturedCost,
                 packagingCost,
                 totalCost
+        );
+    }
+
+    private ProductManufacturedComponentResponse toManufacturedComponentResponse(ProductManufacturedRecipeEntity recipe) {
+        ManufacturedItemEntity manufacturedItem = recipe.getManufacturedItem();
+        BigDecimal unitCost = manufacturedItem.getLatestUnitCost();
+        BigDecimal lineCost = calculateLineCost(recipe.getQuantity(), unitCost);
+
+        return new ProductManufacturedComponentResponse(
+                manufacturedItem.getId(),
+                manufacturedItem.getSku(),
+                manufacturedItem.getName(),
+                manufacturedItem.getUnit(),
+                recipe.getQuantity(),
+                unitCost,
+                lineCost
         );
     }
 
@@ -600,9 +688,13 @@ public class ProductAdminService {
 
     private boolean hasRecipeChanged(
             UUID productId,
+            List<ResolvedManufacturedComponent> requestedManufactured,
             List<ResolvedMaterialComponent> requestedMaterials,
             List<ResolvedPackagingComponent> requestedPackaging
     ) {
+        Map<UUID, BigDecimal> currentManufacturedMap = productManufacturedRecipeRepository.findAllByProduct_IdOrderByCreatedAtAsc(productId)
+                .stream()
+                .collect(Collectors.toMap(recipe -> recipe.getManufacturedItem().getId(), ProductManufacturedRecipeEntity::getQuantity));
         Map<UUID, BigDecimal> currentMaterialMap = productMaterialRecipeRepository.findAllByProduct_IdOrderByCreatedAtAsc(productId)
                 .stream()
                 .collect(Collectors.toMap(recipe -> recipe.getMaterialItem().getId(), ProductMaterialRecipeEntity::getQuantity));
@@ -610,12 +702,16 @@ public class ProductAdminService {
                 .stream()
                 .collect(Collectors.toMap(recipe -> recipe.getPackagingItem().getId(), ProductPackagingRecipeEntity::getQuantity));
 
+        Map<UUID, BigDecimal> requestedManufacturedMap = requestedManufactured.stream()
+                .collect(Collectors.toMap(component -> component.manufacturedItem().getId(), ResolvedManufacturedComponent::quantity));
         Map<UUID, BigDecimal> requestedMaterialMap = requestedMaterials.stream()
                 .collect(Collectors.toMap(component -> component.materialItem().getId(), ResolvedMaterialComponent::quantity));
         Map<UUID, BigDecimal> requestedPackagingMap = requestedPackaging.stream()
                 .collect(Collectors.toMap(component -> component.packagingItem().getId(), ResolvedPackagingComponent::quantity));
 
-        return !currentMaterialMap.equals(requestedMaterialMap) || !currentPackagingMap.equals(requestedPackagingMap);
+        return !currentManufacturedMap.equals(requestedManufacturedMap)
+                || !currentMaterialMap.equals(requestedMaterialMap)
+                || !currentPackagingMap.equals(requestedPackagingMap);
     }
 
     private void bootstrapLegacyRecipeVersionIfMissing(ProductEntity product) {
@@ -624,9 +720,10 @@ public class ProductAdminService {
             return;
         }
 
+        List<ProductManufacturedRecipeEntity> legacyManufactured = productManufacturedRecipeRepository.findAllByProduct_IdOrderByCreatedAtAsc(product.getId());
         List<ProductMaterialRecipeEntity> legacyMaterials = productMaterialRecipeRepository.findAllByProduct_IdOrderByCreatedAtAsc(product.getId());
         List<ProductPackagingRecipeEntity> legacyPackaging = productPackagingRecipeRepository.findAllByProduct_IdOrderByCreatedAtAsc(product.getId());
-        if (legacyMaterials.isEmpty() && legacyPackaging.isEmpty()) {
+        if (legacyManufactured.isEmpty() && legacyMaterials.isEmpty() && legacyPackaging.isEmpty()) {
             return;
         }
 
@@ -637,6 +734,14 @@ public class ProductAdminService {
                 product.getUpdatedAt()
         ));
         legacyVersion.archive();
+
+        for (ProductManufacturedRecipeEntity recipe : legacyManufactured) {
+            productRecipeVersionManufacturedRepository.save(ProductRecipeVersionManufacturedEntity.create(
+                    legacyVersion,
+                    recipe.getManufacturedItem(),
+                    recipe.getQuantity()
+            ));
+        }
 
         for (ProductMaterialRecipeEntity recipe : legacyMaterials) {
             productRecipeVersionMaterialRepository.save(ProductRecipeVersionMaterialEntity.create(
@@ -673,11 +778,17 @@ public class ProductAdminService {
 
     private List<ProductRecipeVersionSummaryResponse> toRecipeVersionSummaries(
             ProductEntity product,
+            List<ProductManufacturedRecipeEntity> currentManufacturedRecipes,
             List<ProductMaterialRecipeEntity> currentMaterialRecipes,
             List<ProductPackagingRecipeEntity> currentPackagingRecipes
     ) {
         List<ProductRecipeVersionEntity> versions = productRecipeVersionRepository.findAllByProduct_IdOrderByVersionNumberDesc(product.getId());
-        if (versions.isEmpty() && (!currentMaterialRecipes.isEmpty() || !currentPackagingRecipes.isEmpty())) {
+        if (versions.isEmpty() && (!currentManufacturedRecipes.isEmpty() || !currentMaterialRecipes.isEmpty() || !currentPackagingRecipes.isEmpty())) {
+            BigDecimal manufacturedCost = currentManufacturedRecipes.stream()
+                    .map(this::toManufacturedComponentResponse)
+                    .map(ProductManufacturedComponentResponse::lineCost)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .setScale(2, RoundingMode.HALF_UP);
             BigDecimal materialCost = currentMaterialRecipes.stream()
                     .map(this::toMaterialComponentResponse)
                     .map(ProductMaterialComponentResponse::lineCost)
@@ -695,11 +806,13 @@ public class ProductAdminService {
                     "ACTIVE",
                     "Legacy current recipe",
                     product.getUpdatedAt(),
+                    currentManufacturedRecipes.size(),
                     currentMaterialRecipes.size(),
                     currentPackagingRecipes.size(),
+                    manufacturedCost,
                     materialCost,
                     packagingCost,
-                    materialCost.add(packagingCost).setScale(2, RoundingMode.HALF_UP)
+                    manufacturedCost.add(materialCost).add(packagingCost).setScale(2, RoundingMode.HALF_UP)
             ));
         }
 
@@ -709,9 +822,14 @@ public class ProductAdminService {
     }
 
     private ProductRecipeVersionSummaryResponse toRecipeVersionSummary(ProductRecipeVersionEntity version) {
+        List<ProductRecipeVersionManufacturedEntity> manufacturedComponents = productRecipeVersionManufacturedRepository.findAllByRecipeVersion_IdOrderByCreatedAtAsc(version.getId());
         List<ProductRecipeVersionMaterialEntity> materialComponents = productRecipeVersionMaterialRepository.findAllByRecipeVersion_IdOrderByCreatedAtAsc(version.getId());
         List<ProductRecipeVersionPackagingEntity> packagingComponents = productRecipeVersionPackagingRepository.findAllByRecipeVersion_IdOrderByCreatedAtAsc(version.getId());
 
+        BigDecimal manufacturedCost = manufacturedComponents.stream()
+                .map(component -> calculateLineCost(component.getQuantity(), component.getManufacturedItem().getLatestUnitCost()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
         BigDecimal materialCost = materialComponents.stream()
                 .map(component -> calculateLineCost(component.getQuantity(), component.getMaterialItem().getLatestUnitCost()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
@@ -727,12 +845,17 @@ public class ProductAdminService {
                 version.getStatus(),
                 version.getNote(),
                 version.getEffectiveAt(),
+                manufacturedComponents.size(),
                 materialComponents.size(),
                 packagingComponents.size(),
+                manufacturedCost,
                 materialCost,
                 packagingCost,
-                materialCost.add(packagingCost).setScale(2, RoundingMode.HALF_UP)
+                manufacturedCost.add(materialCost).add(packagingCost).setScale(2, RoundingMode.HALF_UP)
         );
+    }
+
+    private record ResolvedManufacturedComponent(ManufacturedItemEntity manufacturedItem, BigDecimal quantity) {
     }
 
     private record ResolvedMaterialComponent(MaterialItemEntity materialItem, BigDecimal quantity) {

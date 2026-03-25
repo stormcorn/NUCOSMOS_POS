@@ -4,10 +4,16 @@ import { computed, onMounted, reactive, ref } from "vue";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useAuthStore } from "@/stores/auth";
 import { useProductStore } from "@/stores/products";
+import type { ManufacturedAdminItem } from "@/types/manufactured";
 import type { MaterialAdminItem } from "@/types/materials";
 import type { PackagingAdminItem } from "@/types/packaging";
 import type { ProductAdminItem } from "@/types/product";
 import { isEmbeddedImage, readImageFileAsDataUrl } from "@/utils/image-upload";
+
+type EditableManufacturedComponent = {
+  manufacturedItemId: string;
+  quantity: string;
+};
 
 type EditableMaterialComponent = {
   materialItemId: string;
@@ -61,6 +67,7 @@ const form = reactive({
   campaignStartsAt: "",
   campaignEndsAt: "",
   recipeNote: "",
+  manufacturedComponents: [] as EditableManufacturedComponent[],
   materialComponents: [] as EditableMaterialComponent[],
   packagingComponents: [] as EditablePackagingComponent[],
   customizationGroups: [] as EditableCustomizationGroup[],
@@ -123,6 +130,7 @@ function resetForm() {
   form.campaignStartsAt = "";
   form.campaignEndsAt = "";
   form.recipeNote = "";
+  form.manufacturedComponents = [];
   form.materialComponents = [];
   form.packagingComponents = [];
   form.customizationGroups = [];
@@ -158,6 +166,10 @@ function openEditForm(product: ProductAdminItem) {
   form.campaignStartsAt = product.campaignStartsAt ? product.campaignStartsAt.slice(0, 16) : "";
   form.campaignEndsAt = product.campaignEndsAt ? product.campaignEndsAt.slice(0, 16) : "";
   form.recipeNote = "";
+  form.manufacturedComponents = product.manufacturedComponents.map((component) => ({
+    manufacturedItemId: component.manufacturedItemId,
+    quantity: component.quantity.toString(),
+  }));
   form.materialComponents = product.materialComponents.map((component) => ({
     materialItemId: component.materialItemId,
     quantity: component.quantity.toString(),
@@ -181,6 +193,17 @@ function openEditForm(product: ProductAdminItem) {
     })),
   }));
   isFormOpen.value = true;
+}
+
+function addManufacturedComponent() {
+  if (!canEditProducts.value) {
+    return;
+  }
+
+  form.manufacturedComponents.push({
+    manufacturedItemId: productStore.manufacturedItems[0]?.id ?? "",
+    quantity: "1",
+  });
 }
 
 function addMaterialComponent() {
@@ -245,6 +268,14 @@ function removeMaterialComponent(index: number) {
   form.materialComponents.splice(index, 1);
 }
 
+function removeManufacturedComponent(index: number) {
+  if (!canEditProducts.value) {
+    return;
+  }
+
+  form.manufacturedComponents.splice(index, 1);
+}
+
 function removePackagingComponent(index: number) {
   if (!canEditProducts.value) {
     return;
@@ -305,6 +336,10 @@ function removeCustomizationOption(groupIndex: number, optionIndex: number) {
   form.customizationGroups[groupIndex]?.options.splice(optionIndex, 1);
 }
 
+function manufacturedItemById(manufacturedItemId: string) {
+  return productStore.manufacturedItems.find((item) => item.id === manufacturedItemId) ?? null;
+}
+
 function materialItemById(materialItemId: string) {
   return productStore.materials.find((item) => item.id === materialItemId) ?? null;
 }
@@ -313,7 +348,7 @@ function packagingItemById(packagingItemId: string) {
   return productStore.packagingItems.find((item) => item.id === packagingItemId) ?? null;
 }
 
-function lineCost(item: MaterialAdminItem | PackagingAdminItem | null, quantityText: string) {
+function lineCost(item: ManufacturedAdminItem | MaterialAdminItem | PackagingAdminItem | null, quantityText: string) {
   const quantity = Number(quantityText);
   if (!item || item.latestUnitCost === null || Number.isNaN(quantity) || quantity <= 0) {
     return 0;
@@ -343,6 +378,26 @@ function campaignStatus(product: ProductAdminItem) {
 }
 
 function validateComponents() {
+  const manufacturedIds = new Set<string>();
+  for (const component of form.manufacturedComponents) {
+    if (!component.manufacturedItemId) {
+      formError.value = "請選擇製成品項目。";
+      return false;
+    }
+
+    const quantity = Number(component.quantity);
+    if (Number.isNaN(quantity) || quantity <= 0) {
+      formError.value = "製成品用量必須大於 0。";
+      return false;
+    }
+
+    if (manufacturedIds.has(component.manufacturedItemId)) {
+      formError.value = "製成品配方項目不可重複。";
+      return false;
+    }
+    manufacturedIds.add(component.manufacturedItemId);
+  }
+
   const materialIds = new Set<string>();
   for (const component of form.materialComponents) {
     if (!component.materialItemId) {
@@ -526,6 +581,10 @@ async function submitForm() {
     campaignStartsAt: form.campaignEnabled && form.campaignStartsAt ? new Date(form.campaignStartsAt).toISOString() : undefined,
     campaignEndsAt: form.campaignEnabled && form.campaignEndsAt ? new Date(form.campaignEndsAt).toISOString() : undefined,
     recipeNote: form.recipeNote.trim() || undefined,
+    manufacturedComponents: form.manufacturedComponents.map((component) => ({
+      manufacturedItemId: component.manufacturedItemId,
+      quantity: Number(component.quantity),
+    })),
     materialComponents: form.materialComponents.map((component) => ({
       materialItemId: component.materialItemId,
       quantity: Number(component.quantity),
@@ -572,6 +631,10 @@ async function deactivate(product: ProductAdminItem) {
   await productStore.deactivateProduct(product.id);
 }
 
+const manufacturedCost = computed(() =>
+  form.manufacturedComponents.reduce((sum, component) => sum + lineCost(manufacturedItemById(component.manufacturedItemId), component.quantity), 0),
+);
+
 const materialCost = computed(() =>
   form.materialComponents.reduce((sum, component) => sum + lineCost(materialItemById(component.materialItemId), component.quantity), 0),
 );
@@ -580,7 +643,7 @@ const packagingCost = computed(() =>
   form.packagingComponents.reduce((sum, component) => sum + lineCost(packagingItemById(component.packagingItemId), component.quantity), 0),
 );
 
-const totalCost = computed(() => materialCost.value + packagingCost.value);
+const totalCost = computed(() => manufacturedCost.value + materialCost.value + packagingCost.value);
 const currentDisplayPrice = computed(() =>
   form.campaignEnabled && form.campaignPrice ? Number(form.campaignPrice) : Number(form.price || 0),
 );
@@ -840,6 +903,36 @@ onMounted(async () => {
             <p class="text-sm font-semibold text-white">商品配方：原料</p>
             <button v-if="canEditProducts" class="rounded-xl border border-brand-aqua/30 px-3 py-2 text-xs text-brand-aqua" @click="addMaterialComponent">新增原料</button>
           </div>
+          <div class="mt-4 rounded-2xl border border-brand-aqua/15 bg-slate-950/40 p-4">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="text-sm font-semibold text-white">商品配方：製成品</p>
+                <p class="mt-1 text-xs text-slate-400">可加入中央廚房或預先製作完成的製成品項目。</p>
+              </div>
+              <button v-if="canEditProducts" class="rounded-xl border border-brand-aqua/30 px-3 py-2 text-xs text-brand-aqua" @click="addManufacturedComponent">新增製成品</button>
+            </div>
+          </div>
+          <div v-for="(component, index) in form.manufacturedComponents" :key="`manufactured-${index}`" class="mt-4 rounded-2xl border border-white/8 bg-slate-900/50 p-4">
+            <select v-model="component.manufacturedItemId" class="w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 py-2 text-sm text-white outline-none">
+              <option value="" disabled>選擇製成品</option>
+              <option v-for="item in productStore.manufacturedItems" :key="item.id" :value="item.id">
+                {{ item.name }} ({{ item.unit }})
+              </option>
+            </select>
+            <input v-model="component.quantity" type="number" min="0.001" step="0.001" class="mt-3 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 py-2 text-sm text-white outline-none" placeholder="使用數量" />
+            <p class="mt-3 text-xs text-slate-400">
+              單位成本 {{ formatCurrency(manufacturedItemById(component.manufacturedItemId)?.latestUnitCost) }}
+              / 行成本 {{ formatCurrency(lineCost(manufacturedItemById(component.manufacturedItemId), component.quantity)) }}
+            </p>
+            <button v-if="canEditProducts" class="mt-3 rounded-xl border border-brand-coral/20 px-3 py-2 text-xs text-brand-coral" @click="removeManufacturedComponent(index)">移除製成品</button>
+          </div>
+        </div>
+
+        <div class="rounded-[1.5rem] border border-white/8 bg-white/4 p-4">
+          <div class="flex items-center justify-between">
+            <p class="text-sm font-semibold text-white">商品配方：原料</p>
+            <button v-if="canEditProducts" class="rounded-xl border border-brand-aqua/30 px-3 py-2 text-xs text-brand-aqua" @click="addMaterialComponent">新增原料</button>
+          </div>
           <div v-for="(component, index) in form.materialComponents" :key="`material-${index}`" class="mt-4 rounded-2xl border border-white/8 bg-slate-900/50 p-4">
             <select v-model="component.materialItemId" class="w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 py-2 text-sm text-white outline-none">
               <option value="" disabled>選擇原料</option>
@@ -1013,6 +1106,10 @@ onMounted(async () => {
           <p class="text-sm font-semibold text-white">成本與毛利試算</p>
           <div class="mt-4 grid gap-3 sm:grid-cols-2">
             <div class="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
+              <p class="text-xs uppercase tracking-[0.18em] text-slate-400">製成品成本</p>
+              <p class="mt-2 text-lg font-semibold text-white">{{ formatCurrency(manufacturedCost) }}</p>
+            </div>
+            <div class="rounded-2xl border border-white/8 bg-slate-950/55 p-3">
               <p class="text-xs uppercase tracking-[0.18em] text-slate-400">原料成本</p>
               <p class="mt-2 text-lg font-semibold text-white">{{ formatCurrency(materialCost) }}</p>
             </div>
@@ -1045,6 +1142,7 @@ onMounted(async () => {
               </div>
               <p class="mt-2 text-slate-300">{{ version.note || "無備註" }}</p>
               <p class="mt-2 text-xs text-slate-400">
+                製成品 {{ version.manufacturedComponentCount }} 項 /
                 原料 {{ version.materialComponentCount }} 項 / 包裝 {{ version.packagingComponentCount }} 項 /
                 總成本 {{ formatCurrency(version.totalCost) }}
               </p>

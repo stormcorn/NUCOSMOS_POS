@@ -11,8 +11,10 @@ public record ProductRecipeVersionSummaryResponse(
         String note,
         OffsetDateTime effectiveAt,
         int materialComponentCount,
+        int manufacturedComponentCount,
         int packagingComponentCount,
         BigDecimal materialCost,
+        BigDecimal manufacturedCost,
         BigDecimal packagingCost,
         BigDecimal totalCost
 ) {

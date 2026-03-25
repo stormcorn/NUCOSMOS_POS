@@ -24,10 +24,12 @@ public record ProductAdminResponse(
         BigDecimal displayPrice,
         boolean active,
         List<ProductMaterialComponentResponse> materialComponents,
+        List<ProductManufacturedComponentResponse> manufacturedComponents,
         List<ProductPackagingComponentResponse> packagingComponents,
         List<ProductCustomizationGroupResponse> customizationGroups,
         List<ProductRecipeVersionSummaryResponse> recipeVersions,
         BigDecimal materialCost,
+        BigDecimal manufacturedCost,
         BigDecimal packagingCost,
         BigDecimal totalCost
 ) {

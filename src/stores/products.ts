@@ -2,6 +2,7 @@ import { computed, ref } from "vue";
 import { defineStore } from "pinia";
 
 import { ApiError } from "@/api/http";
+import { fetchManufacturedItems } from "@/api/manufactured";
 import { fetchMaterials } from "@/api/materials";
 import { fetchPackagingItems } from "@/api/packaging";
 import {
@@ -11,6 +12,7 @@ import {
   fetchProducts,
   updateProduct as updateProductRequest,
 } from "@/api/products";
+import type { ManufacturedAdminItem } from "@/types/manufactured";
 import type { MaterialAdminItem } from "@/types/materials";
 import type { PackagingAdminItem } from "@/types/packaging";
 import type { ProductAdminItem, ProductCategory, ProductUpsertRequest } from "@/types/product";
@@ -18,6 +20,7 @@ import type { ProductAdminItem, ProductCategory, ProductUpsertRequest } from "@/
 export const useProductStore = defineStore("products", () => {
   const categories = ref<ProductCategory[]>([]);
   const products = ref<ProductAdminItem[]>([]);
+  const manufacturedItems = ref<ManufacturedAdminItem[]>([]);
   const materials = ref<MaterialAdminItem[]>([]);
   const packagingItems = ref<PackagingAdminItem[]>([]);
   const loading = ref(false);
@@ -62,10 +65,12 @@ export const useProductStore = defineStore("products", () => {
     errorMessage.value = "";
 
     try {
-      const [nextMaterials, nextPackagingItems] = await Promise.all([
+      const [nextManufacturedItems, nextMaterials, nextPackagingItems] = await Promise.all([
+        fetchManufacturedItems(),
         fetchMaterials(),
         fetchPackagingItems(),
       ]);
+      manufacturedItems.value = nextManufacturedItems.filter((item) => item.active);
       materials.value = nextMaterials.filter((item) => item.active);
       packagingItems.value = nextPackagingItems.filter((item) => item.active);
     } catch (error) {
@@ -80,14 +85,16 @@ export const useProductStore = defineStore("products", () => {
 
     try {
       const active = filter === "all" ? undefined : filter === "active";
-      const [nextCategories, nextProducts, nextMaterials, nextPackagingItems] = await Promise.all([
+      const [nextCategories, nextProducts, nextManufacturedItems, nextMaterials, nextPackagingItems] = await Promise.all([
         fetchProductCategories(),
         fetchProducts(active),
+        fetchManufacturedItems(),
         fetchMaterials(),
         fetchPackagingItems(),
       ]);
       categories.value = nextCategories;
       products.value = nextProducts;
+      manufacturedItems.value = nextManufacturedItems.filter((item) => item.active);
       materials.value = nextMaterials.filter((item) => item.active);
       packagingItems.value = nextPackagingItems.filter((item) => item.active);
     } catch (error) {
@@ -157,6 +164,7 @@ export const useProductStore = defineStore("products", () => {
     loadProducts,
     loadRecipeOptions,
     loading,
+    manufacturedItems,
     materials,
     packagingItems,
     products,

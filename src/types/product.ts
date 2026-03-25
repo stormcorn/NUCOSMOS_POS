@@ -8,6 +8,16 @@ export type ProductMaterialComponent = {
   lineCost: number;
 };
 
+export type ProductManufacturedComponent = {
+  manufacturedItemId: string;
+  sku: string;
+  name: string;
+  unit: string;
+  quantity: number;
+  latestUnitCost: number | null;
+  lineCost: number;
+};
+
 export type ProductPackagingComponent = {
   packagingItemId: string;
   sku: string;
@@ -25,8 +35,10 @@ export type ProductRecipeVersion = {
   status: string;
   note: string | null;
   effectiveAt: string;
+  manufacturedComponentCount: number;
   materialComponentCount: number;
   packagingComponentCount: number;
+  manufacturedCost: number;
   materialCost: number;
   packagingCost: number;
   totalCost: number;
@@ -85,10 +97,12 @@ export type ProductAdminItem = {
   campaignEndsAt: string | null;
   displayPrice: number;
   active: boolean;
+  manufacturedComponents: ProductManufacturedComponent[];
   materialComponents: ProductMaterialComponent[];
   packagingComponents: ProductPackagingComponent[];
   customizationGroups: ProductCustomizationGroup[];
   recipeVersions: ProductRecipeVersion[];
+  manufacturedCost: number;
   materialCost: number;
   packagingCost: number;
   totalCost: number;
@@ -107,6 +121,10 @@ export type ProductUpsertRequest = {
   campaignStartsAt?: string;
   campaignEndsAt?: string;
   recipeNote?: string;
+  manufacturedComponents: Array<{
+    manufacturedItemId: string;
+    quantity: number;
+  }>;
   materialComponents: Array<{
     materialItemId: string;
     quantity: number;
