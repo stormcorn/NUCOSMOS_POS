@@ -56,3 +56,25 @@ The currently verified production routing on the VPS is:
 
 This is the path that was validated after VPS recovery and should be treated as the canonical
 reference unless a future deployment intentionally changes it.
+
+## VPS memory stability note
+
+During the `2026-03-25` to `2026-03-26` production rollout, the VPS became unstable because:
+
+- total RAM was about `2 GB`
+- swap was initially `0`
+- the Linux OOM killer terminated `java`, `php-cgi`, and `mariadbd`
+
+The production baseline is now expected to include:
+
+- a `2 GB` swap file
+- `vm.swappiness=10`
+- backend JVM limits through `JAVA_TOOL_OPTIONS`
+
+Recommended production JVM settings:
+
+```text
+-Xms128m -Xmx384m -XX:MaxMetaspaceSize=192m
+```
+
+These values are now reflected in the production compose defaults.

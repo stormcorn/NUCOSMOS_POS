@@ -1,10 +1,8 @@
 import type { PermissionKey } from "@/constants/permissions";
 
-export type RoleCode = "MANAGER" | "ADMIN";
-
 export type LoginRequest = {
   storeCode: string;
-  roleCode: RoleCode;
+  roleCode?: string;
   pin: string;
   deviceCode?: string;
 };

@@ -87,6 +87,40 @@ class AuthControllerTest {
     }
 
     @Test
+    void shouldThrottleRepeatedInvalidPinAttempts() throws Exception {
+        String payload = """
+                {
+                  "storeCode": "TW001",
+                  "pin": "0000",
+                  "deviceCode": "POS-TABLET-SECURITY"
+                }
+                """;
+
+        for (int attempt = 0; attempt < 5; attempt++) {
+            mockMvc.perform(post("/api/v1/auth/pin-login")
+                            .header("X-Forwarded-For", "203.0.113.10")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.success").value(false));
+        }
+
+        mockMvc.perform(post("/api/v1/auth/pin-login")
+                        .header("X-Forwarded-For", "203.0.113.10")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "storeCode": "TW001",
+                                  "pin": "9999",
+                                  "deviceCode": "POS-TABLET-SECURITY"
+                                }
+                                """))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.message").value("Too many PIN login attempts. Please wait 15 minutes and try again."));
+    }
+
+    @Test
     void shouldReturnCurrentSessionWhenTokenPresent() throws Exception {
         String token = TestLoginSupport.loginAndExtractToken(mockMvc, """
                 {

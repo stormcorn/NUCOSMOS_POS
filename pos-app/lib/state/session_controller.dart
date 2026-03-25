@@ -57,6 +57,7 @@ class SessionController extends ChangeNotifier {
 
   String _apiBaseUrl;
   String get apiBaseUrl => _apiBaseUrl;
+  bool get canEditApiBaseUrl => !kReleaseMode;
 
   String _deviceCode;
   String get deviceCode => _deviceCode;
@@ -621,6 +622,13 @@ class SessionController extends ChangeNotifier {
   }
 
   Future<void> updateApiBaseUrl(String value) async {
+    if (!canEditApiBaseUrl) {
+      _apiBaseUrl = AppConfig.apiBaseUrl;
+      _syncApiBaseUrl();
+      notifyListeners();
+      return;
+    }
+
     _apiBaseUrl = _sanitizeApiBaseUrl(value);
     _syncApiBaseUrl();
     final prefs = await SharedPreferences.getInstance();
@@ -768,6 +776,10 @@ class SessionController extends ChangeNotifier {
   }
 
   String _resolveInitialApiBaseUrl(String? storedApiBaseUrl) {
+    if (!canEditApiBaseUrl) {
+      return AppConfig.apiBaseUrl;
+    }
+
     final normalizedStored = _normalizeApiBaseUrl(storedApiBaseUrl);
     final normalizedDefault =
         _normalizeApiBaseUrl(AppConfig.apiBaseUrl) ?? AppConfig.apiBaseUrl;
@@ -820,6 +832,10 @@ class SessionController extends ChangeNotifier {
   }
 
   String? _alternateApiBaseUrl(String value) {
+    if (!canEditApiBaseUrl) {
+      return null;
+    }
+
     final current = Uri.tryParse(_sanitizeApiBaseUrl(value));
     if (current == null) {
       return null;

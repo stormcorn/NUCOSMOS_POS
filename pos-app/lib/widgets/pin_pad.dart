@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 class PinPad extends StatelessWidget {
   const PinPad({
+    required this.minPinLength,
     required this.maxPinLength,
     required this.pinLength,
     required this.loading,
@@ -11,6 +12,7 @@ class PinPad extends StatelessWidget {
     super.key,
   });
 
+  final int minPinLength;
   final int maxPinLength;
   final int pinLength;
   final bool loading;
@@ -47,15 +49,15 @@ class PinPad extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'PIN 數字鍵盤',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            'PIN keypad',
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
-          const Text(
-            '固定 4 碼 PIN，右下角為確認鍵。',
-            style: TextStyle(color: Colors.white70),
+          Text(
+            'Enter a $minPinLength-$maxPinLength digit PIN and tap check to continue.',
+            style: const TextStyle(color: Colors.white70),
           ),
           const SizedBox(height: 16),
           Expanded(
@@ -98,9 +100,9 @@ class PinPad extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            pinLength == maxPinLength
-                ? 'PIN 已輸入完成，可按確認登入。'
-                : 'PIN 需要輸入 $maxPinLength 碼。',
+            pinLength >= minPinLength
+                ? 'PIN ready to submit.'
+                : 'PIN must be at least $minPinLength digits.',
             style: const TextStyle(color: Colors.white70),
           ),
         ],
