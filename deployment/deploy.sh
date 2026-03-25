@@ -28,8 +28,21 @@ docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" pull || true
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --build
 
 echo "[deploy] waiting for backend health..."
-sleep 8
-curl -fsS "http://127.0.0.1:${ADMIN_WEB_PORT}/api/v1/health"
+HEALTH_URL="http://127.0.0.1:${ADMIN_WEB_PORT}/api/v1/health"
+HEALTH_TIMEOUT_SECONDS="${HEALTH_TIMEOUT_SECONDS:-60}"
+HEALTH_INTERVAL_SECONDS="${HEALTH_INTERVAL_SECONDS:-2}"
+elapsed=0
+
+until curl -fsS "$HEALTH_URL"; do
+  elapsed=$((elapsed + HEALTH_INTERVAL_SECONDS))
+  if [ "$elapsed" -ge "$HEALTH_TIMEOUT_SECONDS" ]; then
+    echo
+    echo "[deploy] backend health check timed out after ${HEALTH_TIMEOUT_SECONDS}s"
+    exit 1
+  fi
+  echo "[deploy] backend not ready yet (${elapsed}s/${HEALTH_TIMEOUT_SECONDS}s), retrying..."
+  sleep "$HEALTH_INTERVAL_SECONDS"
+done
 
 echo
 echo "[deploy] deployment complete"
