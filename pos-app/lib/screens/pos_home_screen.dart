@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_thermal_printer/utils/printer.dart';
 
 import '../models/product_summary.dart';
+import '../models/quick_receive_models.dart';
 import '../state/printer_controller.dart';
 import '../state/session_controller.dart';
 import '../widgets/product_grid.dart';
+
+enum _PosWorkspace { sales, quickReceive }
 
 class PosHomeScreen extends StatefulWidget {
   const PosHomeScreen({
@@ -21,6 +24,11 @@ class PosHomeScreen extends StatefulWidget {
 }
 
 class _PosHomeScreenState extends State<PosHomeScreen> {
+  _PosWorkspace _workspace = _PosWorkspace.sales;
+  QuickReceiveItemType _quickReceiveType = QuickReceiveItemType.material;
+  String _quickReceiveSearch = '';
+  QuickReceiveItem? _selectedReceiveItem;
+
   Future<void> _handleAddProduct(ProductSummary product) async {
     if (product.customizationGroups.isEmpty) {
       widget.controller.addProduct(product);
@@ -33,6 +41,65 @@ class _PosHomeScreenState extends State<PosHomeScreen> {
     }
 
     widget.controller.addProduct(product, selectedOptions: selections);
+  }
+
+  Future<void> _openQuickReceiveWorkspace() async {
+    if (!widget.controller.canUseQuickReceive) {
+      return;
+    }
+    setState(() {
+      _workspace = _PosWorkspace.quickReceive;
+    });
+    await widget.controller.loadQuickReceiveCatalog();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _selectedReceiveItem ??= widget
+              .controller
+              .itemsForReceiveType(_quickReceiveType)
+              .isNotEmpty
+          ? widget.controller.itemsForReceiveType(_quickReceiveType).first
+          : null;
+    });
+  }
+
+  void _openSalesWorkspace() {
+    setState(() {
+      _workspace = _PosWorkspace.sales;
+    });
+  }
+
+  void _setQuickReceiveType(QuickReceiveItemType type) {
+    setState(() {
+      _quickReceiveType = type;
+      _selectedReceiveItem = null;
+    });
+  }
+
+  Future<void> _submitQuickReceive({
+    required QuickReceiveItem item,
+    required int purchaseQuantity,
+    double? purchaseUnitCost,
+    String? note,
+  }) async {
+    final result = await widget.controller.submitQuickReceive(
+      item: item,
+      purchaseQuantity: purchaseQuantity,
+      purchaseUnitCost: purchaseUnitCost,
+      note: note,
+    );
+    if (!mounted || result == null) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '${item.name} 已入庫 ${result.receivedStockQuantity} ${item.unit}，目前庫存 ${result.quantityAfter} ${item.unit}',
+        ),
+      ),
+    );
   }
 
   Future<void> _checkoutCash() async {
@@ -107,12 +174,33 @@ class _PosHomeScreenState extends State<PosHomeScreen> {
         final contentPadding = desktopLayout ? 20.0 : 14.0;
         final cartWidth = desktopLayout ? 310.0 : 272.0;
         final categoryWidth = desktopLayout ? 148.0 : 126.0;
+        final receiveItems = controller
+            .itemsForReceiveType(_quickReceiveType)
+            .where((item) {
+              final keyword = _quickReceiveSearch.trim().toLowerCase();
+              if (keyword.isEmpty) {
+                return true;
+              }
+              return item.name.toLowerCase().contains(keyword) ||
+                  item.sku.toLowerCase().contains(keyword);
+            })
+            .toList(growable: false);
+        final selectedReceiveItem = receiveItems.any(
+              (item) => item.id == _selectedReceiveItem?.id,
+            )
+            ? receiveItems.firstWhere((item) => item.id == _selectedReceiveItem?.id)
+            : (receiveItems.isNotEmpty ? receiveItems.first : null);
 
         return Scaffold(
           body: SafeArea(
             child: Row(
               children: [
                 _NavigationRail(
+                  salesActive: _workspace == _PosWorkspace.sales,
+                  receiveActive: _workspace == _PosWorkspace.quickReceive,
+                  showQuickReceive: controller.canUseQuickReceive,
+                  onOpenSales: _openSalesWorkspace,
+                  onOpenQuickReceive: _openQuickReceiveWorkspace,
                   onOpenPrinter: _openPrinterSheet,
                   onLogout: controller.logout,
                   onRefresh: () => controller.loadProducts(),
@@ -120,85 +208,117 @@ class _PosHomeScreenState extends State<PosHomeScreen> {
                 Expanded(
                   child: Container(
                     color: const Color(0xFF171F2E),
-                    child: wideLayout
-                        ? Row(
-                            children: [
-                              SizedBox(
-                                width: categoryWidth,
-                                child: _CategorySidebar(controller: controller),
-                              ),
-                              Expanded(
-                                child: Padding(
-                                  padding: EdgeInsets.fromLTRB(
-                                    contentPadding,
-                                    16,
-                                    contentPadding,
-                                    16,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      _HeaderSection(
-                                        title: selectedCategoryName,
-                                        subtitle: 'Select your favorite beverages',
-                                        sessionController: controller,
-                                        compact: !desktopLayout,
-                                      ),
-                                      SizedBox(height: desktopLayout ? 16 : 12),
-                                      Expanded(
-                                        child: ProductGrid(
-                                          products: controller.filteredProducts,
-                                          onAddProduct: _handleAddProduct,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              SizedBox(
-                                width: cartWidth,
-                                child: _CurrentOrderPanel(
-                                  controller: controller,
-                                  onCheckout: _checkoutCash,
-                                  compact: !desktopLayout,
-                                ),
-                              ),
-                            ],
+                    child: _workspace == _PosWorkspace.quickReceive
+                        ? _QuickReceiveWorkspace(
+                            controller: controller,
+                            items: receiveItems,
+                            selectedItem: selectedReceiveItem,
+                            receiveType: _quickReceiveType,
+                            wideLayout: wideLayout,
+                            desktopLayout: desktopLayout,
+                            contentPadding: contentPadding,
+                            searchValue: _quickReceiveSearch,
+                            onSearchChanged: (value) {
+                              setState(() {
+                                _quickReceiveSearch = value;
+                              });
+                            },
+                            onTypeChanged: _setQuickReceiveType,
+                            onItemSelected: (item) {
+                              setState(() {
+                                _selectedReceiveItem = item;
+                              });
+                            },
+                            onSubmit: _submitQuickReceive,
                           )
-                        : Column(
-                            children: [
-                              Expanded(
-                                child: ListView(
-                                  padding: const EdgeInsets.fromLTRB(18, 20, 18, 24),
-                                  children: [
-                                    _HeaderSection(
-                                      title: selectedCategoryName,
-                                      subtitle:
-                                          'Select your favorite beverages',
-                                      sessionController: controller,
-                                      compact: true,
-                                    ),
-                                    const SizedBox(height: 18),
-                                    _CategoryChips(controller: controller),
-                                    const SizedBox(height: 18),
-                                    SizedBox(
-                                      height: 720,
-                                      child: ProductGrid(
-                                        products: controller.filteredProducts,
-                                        onAddProduct: _handleAddProduct,
+                        : wideLayout
+                            ? Row(
+                                children: [
+                                  SizedBox(
+                                    width: categoryWidth,
+                                    child: _CategorySidebar(controller: controller),
+                                  ),
+                                  Expanded(
+                                    child: Padding(
+                                      padding: EdgeInsets.fromLTRB(
+                                        contentPadding,
+                                        16,
+                                        contentPadding,
+                                        16,
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          _HeaderSection(
+                                            title: selectedCategoryName,
+                                            subtitle:
+                                                'Select your favorite beverages',
+                                            sessionController: controller,
+                                            compact: !desktopLayout,
+                                          ),
+                                          SizedBox(
+                                            height: desktopLayout ? 16 : 12,
+                                          ),
+                                          Expanded(
+                                            child: ProductGrid(
+                                              products: controller.filteredProducts,
+                                              onAddProduct: _handleAddProduct,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                    const SizedBox(height: 18),
-                                    _CurrentOrderPanel(
+                                  ),
+                                  SizedBox(
+                                    width: cartWidth,
+                                    child: _CurrentOrderPanel(
                                       controller: controller,
                                       onCheckout: _checkoutCash,
-                                      compact: true,
+                                      compact: !desktopLayout,
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
+                              )
+                            : Column(
+                                children: [
+                                  Expanded(
+                                    child: ListView(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        18,
+                                        20,
+                                        18,
+                                        24,
+                                      ),
+                                      children: [
+                                        _HeaderSection(
+                                          title: selectedCategoryName,
+                                          subtitle:
+                                              'Select your favorite beverages',
+                                          sessionController: controller,
+                                          compact: true,
+                                        ),
+                                        const SizedBox(height: 18),
+                                        _CategoryChips(controller: controller),
+                                        const SizedBox(height: 18),
+                                        SizedBox(
+                                          height: 720,
+                                          child: ProductGrid(
+                                            products: controller.filteredProducts,
+                                            onAddProduct: _handleAddProduct,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 18),
+                                        _CurrentOrderPanel(
+                                          controller: controller,
+                                          onCheckout: _checkoutCash,
+                                          compact: true,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
                   ),
                 ),
               ],
@@ -226,11 +346,21 @@ class _PosHomeScreenState extends State<PosHomeScreen> {
 
 class _NavigationRail extends StatelessWidget {
   const _NavigationRail({
+    required this.salesActive,
+    required this.receiveActive,
+    required this.showQuickReceive,
+    required this.onOpenSales,
+    required this.onOpenQuickReceive,
     required this.onOpenPrinter,
     required this.onLogout,
     required this.onRefresh,
   });
 
+  final bool salesActive;
+  final bool receiveActive;
+  final bool showQuickReceive;
+  final VoidCallback onOpenSales;
+  final VoidCallback onOpenQuickReceive;
   final VoidCallback onOpenPrinter;
   final VoidCallback onLogout;
   final VoidCallback onRefresh;
@@ -264,9 +394,15 @@ class _NavigationRail extends StatelessWidget {
           const SizedBox(height: 26),
           _RailButton(
             icon: Icons.local_cafe_rounded,
-            active: true,
-            onTap: () {},
+            active: salesActive,
+            onTap: onOpenSales,
           ),
+          if (showQuickReceive)
+            _RailButton(
+              icon: Icons.inventory_2_rounded,
+              active: receiveActive,
+              onTap: onOpenQuickReceive,
+            ),
           _RailButton(
             icon: Icons.grid_view_rounded,
             onTap: onRefresh,
@@ -560,6 +696,659 @@ class _CategoryChip extends StatelessWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _QuickReceiveWorkspace extends StatelessWidget {
+  const _QuickReceiveWorkspace({
+    required this.controller,
+    required this.items,
+    required this.selectedItem,
+    required this.receiveType,
+    required this.wideLayout,
+    required this.desktopLayout,
+    required this.contentPadding,
+    required this.searchValue,
+    required this.onSearchChanged,
+    required this.onTypeChanged,
+    required this.onItemSelected,
+    required this.onSubmit,
+  });
+
+  final SessionController controller;
+  final List<QuickReceiveItem> items;
+  final QuickReceiveItem? selectedItem;
+  final QuickReceiveItemType receiveType;
+  final bool wideLayout;
+  final bool desktopLayout;
+  final double contentPadding;
+  final String searchValue;
+  final ValueChanged<String> onSearchChanged;
+  final ValueChanged<QuickReceiveItemType> onTypeChanged;
+  final ValueChanged<QuickReceiveItem> onItemSelected;
+  final Future<void> Function({
+    required QuickReceiveItem item,
+    required int purchaseQuantity,
+    double? purchaseUnitCost,
+    String? note,
+  })
+  onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    final header = _HeaderSection(
+      title: '快速收貨',
+      subtitle: '原料與包裝現場入庫',
+      sessionController: controller,
+      compact: !desktopLayout,
+    );
+
+    final listPane = _QuickReceiveListPane(
+      controller: controller,
+      items: items,
+      selectedItem: selectedItem,
+      receiveType: receiveType,
+      searchValue: searchValue,
+      onSearchChanged: onSearchChanged,
+      onTypeChanged: onTypeChanged,
+      onItemSelected: onItemSelected,
+    );
+
+    final formPane = _QuickReceiveFormPane(
+      controller: controller,
+      item: selectedItem,
+      onSubmit: onSubmit,
+    );
+
+    if (wideLayout) {
+      return Padding(
+        padding: EdgeInsets.fromLTRB(contentPadding, 16, contentPadding, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            header,
+            SizedBox(height: desktopLayout ? 16 : 12),
+            Expanded(
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: desktopLayout ? 390 : 342,
+                    child: listPane,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(child: formPane),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(18, 20, 18, 24),
+      children: [
+        header,
+        const SizedBox(height: 18),
+        SizedBox(height: 420, child: listPane),
+        const SizedBox(height: 18),
+        SizedBox(height: 560, child: formPane),
+      ],
+    );
+  }
+}
+
+class _QuickReceiveListPane extends StatelessWidget {
+  const _QuickReceiveListPane({
+    required this.controller,
+    required this.items,
+    required this.selectedItem,
+    required this.receiveType,
+    required this.searchValue,
+    required this.onSearchChanged,
+    required this.onTypeChanged,
+    required this.onItemSelected,
+  });
+
+  final SessionController controller;
+  final List<QuickReceiveItem> items;
+  final QuickReceiveItem? selectedItem;
+  final QuickReceiveItemType receiveType;
+  final String searchValue;
+  final ValueChanged<String> onSearchChanged;
+  final ValueChanged<QuickReceiveItemType> onTypeChanged;
+  final ValueChanged<QuickReceiveItem> onItemSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF121927),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFF253043)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '收貨清單',
+              style: TextStyle(
+                color: Color(0xFF14F1FF),
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _TypeToggleChip(
+                    label: '原料',
+                    active: receiveType == QuickReceiveItemType.material,
+                    onTap: () => onTypeChanged(QuickReceiveItemType.material),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _TypeToggleChip(
+                    label: '包裝',
+                    active: receiveType == QuickReceiveItemType.packaging,
+                    onTap: () => onTypeChanged(QuickReceiveItemType.packaging),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              onChanged: onSearchChanged,
+              initialValue: searchValue,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: '搜尋 SKU 或品項',
+                hintStyle: const TextStyle(color: Colors.white38),
+                prefixIcon: const Icon(Icons.search_rounded, color: Colors.white54),
+                filled: true,
+                fillColor: const Color(0xFF1A2332),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: controller.quickReceiveLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : items.isEmpty
+                  ? const Center(
+                      child: Text(
+                        '目前沒有可收貨品項',
+                        style: TextStyle(color: Colors.white54),
+                      ),
+                    )
+                  : ListView.separated(
+                      itemCount: items.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        final item = items[index];
+                        final active = item.id == selectedItem?.id;
+                        return InkWell(
+                          onTap: () => onItemSelected(item),
+                          borderRadius: BorderRadius.circular(18),
+                          child: Ink(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(18),
+                              color: active
+                                  ? const Color(0xFF223047)
+                                  : const Color(0xFF172132),
+                              border: Border.all(
+                                color: active
+                                    ? const Color(0xFF14F1FF)
+                                    : const Color(0xFF253043),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        item.name,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                    if (item.lowStock)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF35161B),
+                                          borderRadius: BorderRadius.circular(999),
+                                        ),
+                                        child: const Text(
+                                          '低庫存',
+                                          style: TextStyle(
+                                            color: Color(0xFFFF8A93),
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  '${item.sku} · 現有 ${item.quantityOnHand} ${item.unit}',
+                                  style: const TextStyle(
+                                    color: Color(0xFF8DA2BD),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  item.subtitle,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white60,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickReceiveFormPane extends StatefulWidget {
+  const _QuickReceiveFormPane({
+    required this.controller,
+    required this.item,
+    required this.onSubmit,
+  });
+
+  final SessionController controller;
+  final QuickReceiveItem? item;
+  final Future<void> Function({
+    required QuickReceiveItem item,
+    required int purchaseQuantity,
+    double? purchaseUnitCost,
+    String? note,
+  })
+  onSubmit;
+
+  @override
+  State<_QuickReceiveFormPane> createState() => _QuickReceiveFormPaneState();
+}
+
+class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
+  final TextEditingController _quantityController = TextEditingController(text: '1');
+  final TextEditingController _costController = TextEditingController();
+  final TextEditingController _noteController = TextEditingController();
+  String _localError = '';
+
+  @override
+  void didUpdateWidget(covariant _QuickReceiveFormPane oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.item?.id != widget.item?.id) {
+      _quantityController.text = '1';
+      _costController.text = widget.item?.latestPurchaseUnitCost?.toStringAsFixed(2) ?? '';
+      _noteController.clear();
+      _localError = '';
+    }
+  }
+
+  @override
+  void dispose() {
+    _quantityController.dispose();
+    _costController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final item = widget.item;
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF0C1118),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFF253043)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: item == null
+            ? const Center(
+                child: Text(
+                  '請先從左側選一個要收貨的品項',
+                  style: TextStyle(color: Colors.white54),
+                ),
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      _InfoPill(label: '類型', value: item.type.label),
+                      _InfoPill(label: 'SKU', value: item.sku),
+                      _InfoPill(label: '現有庫存', value: '${item.quantityOnHand} ${item.unit}'),
+                      _InfoPill(
+                        label: '換算',
+                        value:
+                            '1 ${item.purchaseUnit} = ${item.purchaseToStockRatio} ${item.unit}',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  if (_localError.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _BannerMessage(
+                        color: const Color(0xFF35161B),
+                        borderColor: const Color(0xFFB74B57),
+                        message: _localError,
+                      ),
+                    ),
+                  if (widget.controller.quickReceiveMessage.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _BannerMessage(
+                        color: const Color(0xFF122A27),
+                        borderColor: const Color(0xFF14F1FF),
+                        message: widget.controller.quickReceiveMessage,
+                      ),
+                    ),
+                  Expanded(
+                    child: ListView(
+                      children: [
+                        _ReceiveField(
+                          label: '採購單位數量',
+                          child: TextField(
+                            controller: _quantityController,
+                            keyboardType: TextInputType.number,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: _inputDecoration(
+                              '輸入 ${item.purchaseUnit} 數量',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        _ReceiveField(
+                          label: '採購單位成本',
+                          helper:
+                              '選填；填寫後會自動換算成每 ${item.unit} 成本',
+                          child: TextField(
+                            controller: _costController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            style: const TextStyle(color: Colors.white),
+                            decoration: _inputDecoration('例如 320.00'),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        _ReceiveField(
+                          label: '備註',
+                          child: TextField(
+                            controller: _noteController,
+                            maxLines: 3,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: _inputDecoration('例如：晨間補貨 / 臨時加單'),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF151D2C),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: const Color(0xFF253043)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                '收貨預覽',
+                                style: TextStyle(
+                                  color: Color(0xFF14F1FF),
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                '送出後會以 PURCHASE_IN 入庫，並增加 ${_previewStockQuantity(item)} ${item.unit}',
+                                style: const TextStyle(color: Colors.white70),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: FilledButton.icon(
+                      onPressed: widget.controller.quickReceiveSaving
+                          ? null
+                          : () => _handleSubmit(item),
+                      icon: widget.controller.quickReceiveSaving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.move_to_inbox_rounded),
+                      label: Text(
+                        widget.controller.quickReceiveSaving ? '處理中...' : '確認快速收貨',
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  int _previewStockQuantity(QuickReceiveItem item) {
+    final quantity = int.tryParse(_quantityController.text.trim()) ?? 1;
+    return quantity * item.purchaseToStockRatio;
+  }
+
+  Future<void> _handleSubmit(QuickReceiveItem item) async {
+    final purchaseQuantity = int.tryParse(_quantityController.text.trim());
+    final purchaseUnitCost = _costController.text.trim().isEmpty
+        ? null
+        : double.tryParse(_costController.text.trim());
+
+    if (purchaseQuantity == null || purchaseQuantity <= 0) {
+      setState(() {
+        _localError = '請輸入正確的收貨數量。';
+      });
+      return;
+    }
+
+    if (_costController.text.trim().isNotEmpty &&
+        (purchaseUnitCost == null || purchaseUnitCost < 0)) {
+      setState(() {
+        _localError = '請輸入正確的採購成本。';
+      });
+      return;
+    }
+
+    setState(() {
+      _localError = '';
+    });
+
+    await widget.onSubmit(
+      item: item,
+      purchaseQuantity: purchaseQuantity,
+      purchaseUnitCost: purchaseUnitCost,
+      note: _noteController.text.trim(),
+    );
+  }
+
+  InputDecoration _inputDecoration(String hintText) {
+    return InputDecoration(
+      hintText: hintText,
+      hintStyle: const TextStyle(color: Colors.white38),
+      filled: true,
+      fillColor: const Color(0xFF182131),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide.none,
+      ),
+    );
+  }
+}
+
+class _ReceiveField extends StatelessWidget {
+  const _ReceiveField({
+    required this.label,
+    required this.child,
+    this.helper,
+  });
+
+  final String label;
+  final String? helper;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        if (helper != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            helper!,
+            style: const TextStyle(
+              color: Colors.white54,
+              fontSize: 12,
+            ),
+          ),
+        ],
+        const SizedBox(height: 8),
+        child,
+      ],
+    );
+  }
+}
+
+class _TypeToggleChip extends StatelessWidget {
+  const _TypeToggleChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Ink(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          color: active ? const Color(0xFF14F1FF) : const Color(0xFF1A2332),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: active ? const Color(0xFF07111C) : Colors.white,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoPill extends StatelessWidget {
+  const _InfoPill({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF172132),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF253043)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF8DA2BD),
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }

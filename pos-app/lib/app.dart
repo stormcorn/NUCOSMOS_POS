@@ -8,6 +8,7 @@ import 'services/auth_service.dart';
 import 'services/order_service.dart';
 import 'services/printer_service.dart';
 import 'services/product_service.dart';
+import 'services/quick_receive_service.dart';
 import 'state/printer_controller.dart';
 import 'state/session_controller.dart';
 
@@ -34,6 +35,7 @@ class _PosAppState extends State<PosApp> {
       authService: AuthService(apiClient),
       productService: ProductService(apiClient),
       orderService: OrderService(apiClient),
+      quickReceiveService: QuickReceiveService(apiClient),
       defaultApiBaseUrl: AppConfig.apiBaseUrl,
       defaultDeviceCode: AppConfig.defaultDeviceCode,
     )..restoreSession();

@@ -5,21 +5,25 @@ import '../config/app_config.dart';
 import '../models/auth_models.dart';
 import '../models/order_models.dart';
 import '../models/product_summary.dart';
+import '../models/quick_receive_models.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../services/order_service.dart';
 import '../services/product_service.dart';
+import '../services/quick_receive_service.dart';
 
 class SessionController extends ChangeNotifier {
   SessionController({
     required AuthService authService,
     required ProductService productService,
     required OrderService orderService,
+    required QuickReceiveService quickReceiveService,
     required String defaultApiBaseUrl,
     required String defaultDeviceCode,
   })  : _authService = authService,
         _productService = productService,
         _orderService = orderService,
+        _quickReceiveService = quickReceiveService,
         _apiBaseUrl = defaultApiBaseUrl,
         _deviceCode = defaultDeviceCode;
 
@@ -30,13 +34,18 @@ class SessionController extends ChangeNotifier {
   final AuthService _authService;
   final ProductService _productService;
   final OrderService _orderService;
+  final QuickReceiveService _quickReceiveService;
 
   bool bootstrapping = true;
   bool loading = false;
   bool catalogLoading = false;
   bool checkoutLoading = false;
+  bool quickReceiveLoading = false;
+  bool quickReceiveSaving = false;
+
   String errorMessage = '';
   String checkoutMessage = '';
+  String quickReceiveMessage = '';
 
   String _apiBaseUrl;
   String get apiBaseUrl => _apiBaseUrl;
@@ -50,8 +59,15 @@ class SessionController extends ChangeNotifier {
   String? selectedCategoryCode;
   List<PosCartLine> cart = const [];
   OrderReceipt? lastCompletedOrder;
+  List<QuickReceiveItem> receiveMaterials = const [];
+  List<QuickReceiveItem> receivePackagingItems = const [];
 
   bool get isLoggedIn => accessToken != null && session != null;
+
+  bool get canUseQuickReceive {
+    final activeRole = session?.activeRole.toUpperCase() ?? '';
+    return activeRole == 'MANAGER' || activeRole == 'ADMIN';
+  }
 
   List<ProductSummary> get availableProducts =>
       products.where((product) => product.available).toList(growable: false);
@@ -84,9 +100,9 @@ class SessionController extends ChangeNotifier {
       }
     }
 
-    final result = counts.values.toList(growable: false)
+    final result = counts.values.toList(growable: true)
       ..sort((left, right) => left.name.compareTo(right.name));
-    return result;
+    return List.unmodifiable(result);
   }
 
   int get cartItemCount =>
@@ -94,6 +110,24 @@ class SessionController extends ChangeNotifier {
 
   double get cartSubtotal =>
       cart.fold<double>(0, (total, line) => total + line.lineTotal);
+
+  List<QuickReceiveItem> itemsForReceiveType(QuickReceiveItemType type) {
+    final source = type == QuickReceiveItemType.material
+        ? receiveMaterials
+        : receivePackagingItems;
+
+    final result = source
+        .where((item) => item.active && item.sku.isNotEmpty && item.name.isNotEmpty)
+        .toList(growable: true)
+      ..sort((left, right) {
+        if (left.lowStock != right.lowStock) {
+          return left.lowStock ? -1 : 1;
+        }
+        return left.name.compareTo(right.name);
+      });
+
+    return List.unmodifiable(result);
+  }
 
   Future<void> restoreSession() async {
     bootstrapping = true;
@@ -122,6 +156,9 @@ class SessionController extends ChangeNotifier {
         () => _authService.currentSession(storedToken),
       );
       await loadProducts(showLoading: false);
+      if (canUseQuickReceive) {
+        await loadQuickReceiveCatalog(showLoading: false);
+      }
     } catch (_) {
       await logout();
     } finally {
@@ -139,6 +176,7 @@ class SessionController extends ChangeNotifier {
     loading = true;
     errorMessage = '';
     checkoutMessage = '';
+    quickReceiveMessage = '';
     notifyListeners();
 
     try {
@@ -163,6 +201,13 @@ class SessionController extends ChangeNotifier {
       await prefs.setString(_apiBaseUrlKey, _apiBaseUrl);
 
       await loadProducts(showLoading: false);
+      if (canUseQuickReceive) {
+        await loadQuickReceiveCatalog(showLoading: false);
+      } else {
+        receiveMaterials = const [];
+        receivePackagingItems = const [];
+      }
+
       return true;
     } on ApiException catch (error) {
       errorMessage = error.message;
@@ -197,8 +242,7 @@ class SessionController extends ChangeNotifier {
       );
       errorMessage = '';
 
-      final availableCodes =
-          products.map((product) => product.categoryCode).toSet();
+      final availableCodes = products.map((product) => product.categoryCode).toSet();
       if (selectedCategoryCode != null &&
           selectedCategoryCode!.isNotEmpty &&
           !availableCodes.contains(selectedCategoryCode)) {
@@ -212,6 +256,42 @@ class SessionController extends ChangeNotifier {
       errorMessage = '無法取得商品資料，請檢查 API：$_apiBaseUrl';
     } finally {
       catalogLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadQuickReceiveCatalog({bool showLoading = true}) async {
+    if (accessToken == null || !canUseQuickReceive) {
+      receiveMaterials = const [];
+      receivePackagingItems = const [];
+      quickReceiveMessage = '';
+      notifyListeners();
+      return;
+    }
+
+    if (showLoading) {
+      quickReceiveLoading = true;
+      notifyListeners();
+    }
+
+    try {
+      final results = await _runWithApiFallback(
+        () => Future.wait<List<QuickReceiveItem>>([
+          _quickReceiveService.fetchMaterials(accessToken!),
+          _quickReceiveService.fetchPackagingItems(accessToken!),
+        ]),
+      );
+      receiveMaterials = results[0];
+      receivePackagingItems = results[1];
+      errorMessage = '';
+    } on ApiException catch (error) {
+      errorMessage = error.message;
+    } on Exception {
+      errorMessage = '無法取得收貨品項，請檢查 API：$_apiBaseUrl';
+    } catch (_) {
+      errorMessage = '無法取得收貨品項，請檢查 API：$_apiBaseUrl';
+    } finally {
+      quickReceiveLoading = false;
       notifyListeners();
     }
   }
@@ -245,7 +325,7 @@ class SessionController extends ChangeNotifier {
       );
     }
 
-    cart = nextCart;
+    cart = List.unmodifiable(nextCart);
     checkoutMessage = '';
     notifyListeners();
   }
@@ -260,7 +340,7 @@ class SessionController extends ChangeNotifier {
     nextCart[index] = nextCart[index].copyWith(
       quantity: nextCart[index].quantity + 1,
     );
-    cart = nextCart;
+    cart = List.unmodifiable(nextCart);
     notifyListeners();
   }
 
@@ -278,12 +358,14 @@ class SessionController extends ChangeNotifier {
       nextCart[index] = current.copyWith(quantity: current.quantity - 1);
     }
 
-    cart = nextCart;
+    cart = List.unmodifiable(nextCart);
     notifyListeners();
   }
 
   void removeProduct(String cartKey) {
-    cart = cart.where((line) => line.key != cartKey).toList(growable: false);
+    cart = List.unmodifiable(
+      cart.where((line) => line.key != cartKey).toList(growable: false),
+    );
     notifyListeners();
   }
 
@@ -341,20 +423,67 @@ class SessionController extends ChangeNotifier {
       lastCompletedOrder = paidOrder;
       cart = const [];
       checkoutMessage =
-          '訂單 ${paidOrder.orderNumber} 已完成，收款 ${paidOrder.paidAmount.toStringAsFixed(2)}。';
+          '訂單 ${paidOrder.orderNumber} 已完成，現金收款 ${paidOrder.paidAmount.toStringAsFixed(2)} 元';
       await loadProducts(showLoading: false);
       return paidOrder;
     } on ApiException catch (error) {
       errorMessage = error.message;
       return null;
     } on Exception {
-      errorMessage = '結帳失敗，請檢查 API：$_apiBaseUrl';
+      errorMessage = '結帳失敗，請確認 API：$_apiBaseUrl';
       return null;
     } catch (_) {
-      errorMessage = '結帳失敗，請檢查 API：$_apiBaseUrl';
+      errorMessage = '結帳失敗，請確認 API：$_apiBaseUrl';
       return null;
     } finally {
       checkoutLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<QuickReceiveResult?> submitQuickReceive({
+    required QuickReceiveItem item,
+    required int purchaseQuantity,
+    double? purchaseUnitCost,
+    String? note,
+  }) async {
+    if (accessToken == null || session == null) {
+      errorMessage = '請先登入後再進行收貨。';
+      notifyListeners();
+      return null;
+    }
+
+    quickReceiveSaving = true;
+    errorMessage = '';
+    quickReceiveMessage = '';
+    notifyListeners();
+
+    try {
+      final result = await _runWithApiFallback(
+        () => _quickReceiveService.submitQuickReceive(
+          accessToken: accessToken!,
+          item: item,
+          purchaseQuantity: purchaseQuantity,
+          purchaseUnitCost: purchaseUnitCost,
+          note: note,
+        ),
+      );
+      quickReceiveMessage =
+          '${item.type.label} ${result.itemName} 已收貨 $purchaseQuantity ${item.purchaseUnit}'
+          '（入庫 ${result.receivedStockQuantity} ${item.unit}）';
+      await loadQuickReceiveCatalog(showLoading: false);
+      return result;
+    } on ApiException catch (error) {
+      errorMessage = error.message;
+      return null;
+    } on Exception {
+      errorMessage = '快速收貨失敗，請檢查 API：$_apiBaseUrl';
+      return null;
+    } catch (_) {
+      errorMessage = '快速收貨失敗，請檢查 API：$_apiBaseUrl';
+      return null;
+    } finally {
+      quickReceiveSaving = false;
       notifyListeners();
     }
   }
@@ -364,8 +493,11 @@ class SessionController extends ChangeNotifier {
     session = null;
     products = const [];
     cart = const [];
+    receiveMaterials = const [];
+    receivePackagingItems = const [];
     errorMessage = '';
     checkoutMessage = '';
+    quickReceiveMessage = '';
     lastCompletedOrder = null;
     selectedCategoryCode = null;
 
@@ -386,10 +518,10 @@ class SessionController extends ChangeNotifier {
       errorMessage = error.message;
       return false;
     } on Exception {
-      errorMessage = '無法連線到 $_apiBaseUrl';
+      errorMessage = '目前無法連線到 $_apiBaseUrl';
       return false;
     } catch (_) {
-      errorMessage = '無法連線到 $_apiBaseUrl';
+      errorMessage = '目前無法連線到 $_apiBaseUrl';
       return false;
     } finally {
       notifyListeners();
@@ -415,6 +547,7 @@ class SessionController extends ChangeNotifier {
     _authService.updateBaseUrl(_apiBaseUrl);
     _productService.updateBaseUrl(_apiBaseUrl);
     _orderService.updateBaseUrl(_apiBaseUrl);
+    _quickReceiveService.updateBaseUrl(_apiBaseUrl);
   }
 
   Future<T> _runWithApiFallback<T>(Future<T> Function() action) async {
@@ -454,7 +587,15 @@ class SessionController extends ChangeNotifier {
     }
 
     if (!normalized.contains('://')) {
-      normalized = 'http://$normalized';
+      const localOnlyHosts = {
+        'localhost',
+        '127.0.0.1',
+        '10.0.2.2',
+        '10.0.3.2',
+      };
+      normalized = localOnlyHosts.contains(normalized.toLowerCase())
+          ? 'http://$normalized'
+          : 'https://$normalized';
     }
 
     return normalized.replaceAll(RegExp(r'/$'), '');

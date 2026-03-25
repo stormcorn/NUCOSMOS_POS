@@ -34,6 +34,8 @@ services:
       JWT_ACCESS_TOKEN_MINUTES: ${JWT_ACCESS_TOKEN_MINUTES}
       SERVER_PORT: 8081
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN}
+    ports:
+      - "127.0.0.1:${BACKEND_PUBLIC_PORT:-8081}:8081"
 
   admin-web:
     build:

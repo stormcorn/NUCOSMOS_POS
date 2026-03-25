@@ -89,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
       SnackBar(
         content: Text(
           success
-              ? '已成功連線到 ${widget.controller.apiBaseUrl}'
+              ? '測試連線成功：${widget.controller.apiBaseUrl}'
               : widget.controller.errorMessage,
         ),
       ),
@@ -287,7 +287,7 @@ class _LoginPanel extends StatelessWidget {
               controller: apiBaseUrlController,
               decoration: const InputDecoration(
                 labelText: 'API Base URL',
-                hintText: 'http://nucosmos.io',
+                hintText: 'https://nucosmos.io',
               ),
             ),
             const SizedBox(height: 12),
@@ -423,8 +423,8 @@ class _LoginPanel extends StatelessWidget {
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   SizedBox(height: 10),
-                  Text('1. 正式站請直接填：http://nucosmos.io'),
-                  Text('2. App 會自動嘗試 http 與 https'),
+                  Text('1. 正式站請直接填：https://nucosmos.io'),
+                  Text('2. App 會自動在 https 和 http 之間切換'),
                   Text('3. 模擬器可改用：http://10.0.2.2:8081'),
                 ],
               ),
