@@ -812,6 +812,7 @@ class _QuickReceiveWorkspace extends StatelessWidget {
       controller: controller,
       item: selectedItem,
       itemType: receiveType,
+      embedInParentScroll: !wideLayout,
       onCreateItem: onCreateItem,
       onSubmit: onSubmit,
     );
@@ -848,7 +849,7 @@ class _QuickReceiveWorkspace extends StatelessWidget {
         const SizedBox(height: 18),
         SizedBox(height: 420, child: listPane),
         const SizedBox(height: 18),
-        SizedBox(height: 860, child: formPane),
+        formPane,
       ],
     );
   }
@@ -1051,6 +1052,7 @@ class _QuickReceiveFormPane extends StatefulWidget {
     required this.controller,
     required this.item,
     required this.itemType,
+    required this.embedInParentScroll,
     required this.onCreateItem,
     required this.onSubmit,
   });
@@ -1058,6 +1060,7 @@ class _QuickReceiveFormPane extends StatefulWidget {
   final SessionController controller;
   final QuickReceiveItem? item;
   final QuickReceiveItemType itemType;
+  final bool embedInParentScroll;
   final Future<void> Function({
     required QuickReceiveItemType type,
     required String sku,
@@ -1133,6 +1136,7 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
+    final useEmbeddedLayout = widget.embedInParentScroll;
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF0C1118),
@@ -1142,22 +1146,7 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: item == null
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildCreateSection(),
-                  const SizedBox(height: 16),
-                  const Expanded(
-                    child: Center(
-                      child: Text(
-                        '先建立新品項，或回左側選擇既有品項。',
-                        style: TextStyle(color: Colors.white54),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                ],
-              )
+            ? _buildEmptyState(useEmbeddedLayout)
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1208,72 +1197,81 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
                   const SizedBox(height: 12),
                   _buildCreateSection(),
                   const SizedBox(height: 18),
-                  Expanded(
-                    child: ListView(
-                      children: [
-                        _ReceiveField(
-                          label: '採購單位數量',
-                          child: TextField(
-                            controller: _quantityController,
-                            keyboardType: TextInputType.number,
-                            style: const TextStyle(color: Colors.white),
-                            decoration: _inputDecoration(
-                              '輸入 ${item.purchaseUnit} 數量',
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        _ReceiveField(
-                          label: '採購單位成本',
-                          helper: '選填；填寫後會自動換算成每 ${item.unit} 成本',
-                          child: TextField(
-                            controller: _costController,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            style: const TextStyle(color: Colors.white),
-                            decoration: _inputDecoration('例如 320.00'),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        _ReceiveField(
-                          label: '備註',
-                          child: TextField(
-                            controller: _noteController,
-                            maxLines: 3,
-                            style: const TextStyle(color: Colors.white),
-                            decoration: _inputDecoration('例如：晨間補貨 / 臨時加單'),
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF151D2C),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: const Color(0xFF253043)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                  useEmbeddedLayout
+                      ? Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: _buildReceiveFormFields(item),
+                        )
+                      : Expanded(
+                          child: ListView(
                             children: [
-                              const Text(
-                                '收貨預覽',
-                                style: TextStyle(
-                                  color: Color(0xFF14F1FF),
-                                  fontWeight: FontWeight.w800,
+                              _ReceiveField(
+                                label: '採購單位數量',
+                                child: TextField(
+                                  controller: _quantityController,
+                                  keyboardType: TextInputType.number,
+                                  style: const TextStyle(color: Colors.white),
+                                  decoration: _inputDecoration(
+                                    '輸入 ${item.purchaseUnit} 數量',
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: 10),
-                              Text(
-                                '送出後會以 PURCHASE_IN 入庫，並增加 ${_previewStockQuantity(item)} ${item.unit}',
-                                style: const TextStyle(color: Colors.white70),
+                              const SizedBox(height: 14),
+                              _ReceiveField(
+                                label: '採購單位成本',
+                                helper: '選填；填寫後會自動換算成每 ${item.unit} 成本',
+                                child: TextField(
+                                  controller: _costController,
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
+                                  style: const TextStyle(color: Colors.white),
+                                  decoration: _inputDecoration('例如 320.00'),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              _ReceiveField(
+                                label: '備註',
+                                child: TextField(
+                                  controller: _noteController,
+                                  maxLines: 3,
+                                  style: const TextStyle(color: Colors.white),
+                                  decoration:
+                                      _inputDecoration('例如：晨間補貨 / 臨時加單'),
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF151D2C),
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(
+                                      color: const Color(0xFF253043)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      '收貨預覽',
+                                      style: TextStyle(
+                                        color: Color(0xFF14F1FF),
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      '送出後會以 PURCHASE_IN 入庫，並增加 ${_previewStockQuantity(item)} ${item.unit}',
+                                      style: const TextStyle(
+                                          color: Colors.white70),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
                   const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
@@ -1301,6 +1299,105 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
               ),
       ),
     );
+  }
+
+  Widget _buildEmptyState(bool useEmbeddedLayout) {
+    const emptyHint = Center(
+      child: Text(
+        '??????????????????????????',
+        style: TextStyle(color: Colors.white54),
+        textAlign: TextAlign.center,
+      ),
+    );
+
+    if (useEmbeddedLayout) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildCreateSection(),
+          const SizedBox(height: 16),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: emptyHint,
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildCreateSection(),
+        const SizedBox(height: 16),
+        const Expanded(child: emptyHint),
+      ],
+    );
+  }
+
+  List<Widget> _buildReceiveFormFields(QuickReceiveItem item) {
+    return [
+      _ReceiveField(
+        label: '????',
+        child: TextField(
+          controller: _quantityController,
+          keyboardType: TextInputType.number,
+          style: const TextStyle(color: Colors.white),
+          decoration: _inputDecoration(
+            '??? ${item.purchaseUnit} ??',
+          ),
+        ),
+      ),
+      const SizedBox(height: 14),
+      _ReceiveField(
+        label: '????',
+        helper: '??????????? ${item.unit} ??????',
+        child: TextField(
+          controller: _costController,
+          keyboardType: const TextInputType.numberWithOptions(
+            decimal: true,
+          ),
+          style: const TextStyle(color: Colors.white),
+          decoration: _inputDecoration('?? 320.00'),
+        ),
+      ),
+      const SizedBox(height: 14),
+      _ReceiveField(
+        label: '??',
+        child: TextField(
+          controller: _noteController,
+          maxLines: 3,
+          style: const TextStyle(color: Colors.white),
+          decoration: _inputDecoration('?? ?????????????'),
+        ),
+      ),
+      const SizedBox(height: 18),
+      Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF151D2C),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFF253043)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '????',
+              style: TextStyle(
+                color: Color(0xFF14F1FF),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '?????? PURCHASE_IN ?????? ${_previewStockQuantity(item)} ${item.unit} ???',
+              style: const TextStyle(color: Colors.white70),
+            ),
+          ],
+        ),
+      ),
+    ];
   }
 
   int _previewStockQuantity(QuickReceiveItem item) {
