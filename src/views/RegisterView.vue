@@ -112,15 +112,15 @@ async function requestCode() {
     );
     registrationId.value = response.registrationId;
     infoMessage.value =
-      `Verification code sent to ${response.phoneNumber}. ` +
-      "Enter the SMS code to activate your account.";
+      `驗證碼已發送至 ${response.phoneNumber}。` +
+      "請輸入收到的簡訊驗證碼以啟用帳號。";
   } catch (error) {
     if (error instanceof ApiError) {
       errorMessage.value = error.message;
     } else if (error instanceof FirebaseError) {
-      errorMessage.value = `Firebase SMS error: ${error.code}`;
+      errorMessage.value = `Firebase 簡訊驗證錯誤：${error.code}`;
     } else {
-      errorMessage.value = error instanceof Error ? error.message : "Failed to start registration.";
+      errorMessage.value = error instanceof Error ? error.message : "無法開始註冊流程。";
     }
     if (!(error instanceof ApiError)) {
       registrationId.value = "";
@@ -144,7 +144,7 @@ async function verifyCode() {
 
   try {
     if (!confirmationResult) {
-      throw new Error("Firebase confirmation has not started yet.");
+      throw new Error("Firebase 驗證流程尚未開始。");
     }
 
     const credential = await confirmationResult.confirm(form.verificationCode.trim());
@@ -158,9 +158,9 @@ async function verifyCode() {
     registrationId.value = "";
     confirmationResult = null;
     infoMessage.value =
-      `Registration completed for ${response.phoneNumber}. You can now sign in with your 6-digit PIN.`;
+      `${response.phoneNumber} 已完成註冊，現在可以使用 6 位數 PIN 登入。`;
   } catch (error) {
-    errorMessage.value = error instanceof ApiError ? error.message : "Failed to complete registration.";
+    errorMessage.value = error instanceof ApiError ? error.message : "無法完成註冊。";
   } finally {
     verifying.value = false;
   }
@@ -182,28 +182,28 @@ onBeforeUnmount(() => {
     <div class="w-full max-w-3xl rounded-[2.25rem] border border-white/10 bg-slate-950/70 p-8 shadow-soft shadow-black/30">
       <div class="flex items-start justify-between gap-6">
         <div>
-          <p class="text-xs uppercase tracking-[0.36em] text-brand-aqua/70">Self Registration</p>
-          <h1 class="mt-3 text-3xl font-semibold text-white">Register with phone number and 6-digit PIN</h1>
+          <p class="text-xs uppercase tracking-[0.36em] text-brand-aqua/70">自行註冊</p>
+          <h1 class="mt-3 text-3xl font-semibold text-white">使用手機號碼與 6 位數 PIN 註冊</h1>
           <p class="mt-3 max-w-2xl text-sm leading-7 text-slate-300">
-            Complete Firebase SMS verification once, and your phone number plus 6-digit PIN will be activated for future sign-in.
+            完成一次 Firebase 簡訊驗證後，你的手機號碼與 6 位數 PIN 就能用於後續登入。
           </p>
         </div>
         <button
           class="rounded-2xl border border-white/10 px-4 py-2 text-sm text-slate-300 transition hover:border-brand-aqua/30 hover:text-white"
           @click="router.push({ name: 'login' })"
         >
-          Back to login
+          返回登入
         </button>
       </div>
 
       <div class="mt-8 grid gap-6 lg:grid-cols-2">
         <section class="rounded-[1.75rem] border border-white/8 bg-white/5 p-5">
-          <p class="text-xs uppercase tracking-[0.28em] text-slate-500">Step 1</p>
-          <h2 class="mt-2 text-xl font-semibold text-white">Request verification code</h2>
+          <p class="text-xs uppercase tracking-[0.28em] text-slate-500">步驟 1</p>
+          <h2 class="mt-2 text-xl font-semibold text-white">申請驗證碼</h2>
 
           <div class="mt-5 space-y-4">
             <label class="block">
-              <span class="mb-2 block text-sm text-slate-300">Store Code</span>
+              <span class="mb-2 block text-sm text-slate-300">門市代碼</span>
               <select
                 v-model="form.storeCode"
                 class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none"
@@ -216,22 +216,22 @@ onBeforeUnmount(() => {
             </label>
 
             <label class="block">
-              <span class="mb-2 block text-sm text-slate-300">Phone Number</span>
+              <span class="mb-2 block text-sm text-slate-300">手機號碼</span>
               <input
                 v-model="form.phoneNumber"
                 type="tel"
                 autocomplete="tel"
-                placeholder="+886912345678 or 0912345678"
+                placeholder="+886912345678 或 0912345678"
                 class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none"
               />
               <span class="mt-2 block text-xs text-slate-500">
-                Taiwan mobile numbers entered as <code class="font-mono">09xxxxxxxx</code> will be converted to
-                <code class="font-mono">+8869xxxxxxxx</code> automatically.
+                台灣手機若輸入為 <code class="font-mono">09xxxxxxxx</code>，系統會自動轉換為
+                <code class="font-mono">+8869xxxxxxxx</code>。
               </span>
             </label>
 
             <label class="block">
-              <span class="mb-2 block text-sm text-slate-300">6-digit PIN</span>
+              <span class="mb-2 block text-sm text-slate-300">6 位數 PIN</span>
               <input
                 v-model="form.pin"
                 type="password"
@@ -247,7 +247,7 @@ onBeforeUnmount(() => {
               :disabled="sendingCode || !canRequestCode"
               @click="requestCode"
             >
-              {{ sendingCode ? "Requesting..." : "Get verification code" }}
+              {{ sendingCode ? "發送中..." : "取得驗證碼" }}
             </button>
 
             <div :id="recaptchaContainerId" />
@@ -255,12 +255,12 @@ onBeforeUnmount(() => {
         </section>
 
         <section class="rounded-[1.75rem] border border-white/8 bg-white/5 p-5">
-          <p class="text-xs uppercase tracking-[0.28em] text-slate-500">Step 2</p>
-          <h2 class="mt-2 text-xl font-semibold text-white">Verify and activate</h2>
+          <p class="text-xs uppercase tracking-[0.28em] text-slate-500">步驟 2</p>
+          <h2 class="mt-2 text-xl font-semibold text-white">驗證並啟用</h2>
 
           <div class="mt-5 space-y-4">
             <label class="block">
-              <span class="mb-2 block text-sm text-slate-300">SMS Verification Code</span>
+              <span class="mb-2 block text-sm text-slate-300">簡訊驗證碼</span>
               <input
                 v-model="form.verificationCode"
                 type="text"
@@ -273,8 +273,8 @@ onBeforeUnmount(() => {
 
             <div class="rounded-2xl border border-white/8 bg-slate-900/70 px-4 py-4 text-sm text-slate-300">
               {{ firebaseConfigured
-                ? "After the SMS code is verified, the backend will validate the Firebase ID token before activating the account."
-                : "Firebase web auth env vars are not configured yet. Add the VITE_FIREBASE_* values before using SMS registration." }}
+                ? "簡訊驗證成功後，後端會再驗證 Firebase ID Token，確認無誤後才會啟用帳號。"
+                : "Firebase 網頁驗證環境變數尚未設定，請先補上 VITE_FIREBASE_* 後再使用簡訊註冊。" }}
             </div>
 
             <button
@@ -282,7 +282,7 @@ onBeforeUnmount(() => {
               :disabled="verifying || !canVerifyCode"
               @click="verifyCode"
             >
-              {{ verifying ? "Verifying..." : "Complete registration" }}
+              {{ verifying ? "驗證中..." : "完成註冊" }}
             </button>
           </div>
         </section>
