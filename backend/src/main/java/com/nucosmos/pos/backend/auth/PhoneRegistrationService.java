@@ -25,6 +25,7 @@ import java.util.List;
 public class PhoneRegistrationService {
 
     private static final String ACTIVE_STATUS = "ACTIVE";
+    private static final String EXPIRED_STATUS = "EXPIRED";
     private static final String PENDING_STATUS = "PENDING_VERIFICATION";
     private static final String VERIFIED_STATUS = "VERIFIED";
     private static final String FIREBASE_PROVIDER = "FIREBASE_SMS";
@@ -75,8 +76,8 @@ public class PhoneRegistrationService {
                 List.of(PENDING_STATUS, VERIFIED_STATUS)
         );
         for (PhoneRegistrationRequestEntity existingRequest : existingRequests) {
-            if (PENDING_STATUS.equals(existingRequest.getStatus()) && existingRequest.getExpiresAt().isBefore(now)) {
-                existingRequest.setStatus("EXPIRED");
+            if (PENDING_STATUS.equals(existingRequest.getStatus())) {
+                existingRequest.setStatus(EXPIRED_STATUS);
                 continue;
             }
 
@@ -113,7 +114,7 @@ public class PhoneRegistrationService {
         }
 
         if (registration.getExpiresAt().isBefore(OffsetDateTime.now())) {
-            registration.setStatus("EXPIRED");
+            registration.setStatus(EXPIRED_STATUS);
             throw new BadRequestException("Registration request has expired");
         }
 

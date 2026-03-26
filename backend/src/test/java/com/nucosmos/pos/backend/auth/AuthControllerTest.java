@@ -144,6 +144,48 @@ class AuthControllerTest {
     }
 
     @Test
+    void shouldReplacePreviousPendingRegistrationWhenRetryingSamePhoneNumber() throws Exception {
+        String payload = """
+                {
+                  "storeCode": "TW001",
+                  "phoneNumber": "+886912345683",
+                  "pin": "654321"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/auth/register/start")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isOk());
+
+        var firstRequest = phoneRegistrationRequestRepository.findAllByPhoneNumberAndStatusIn(
+                "+886912345683",
+                List.of("PENDING_VERIFICATION")
+        ).get(0);
+
+        mockMvc.perform(post("/api/v1/auth/register/start")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.phoneNumber").value("+886912345683"));
+
+        var expiredRequests = phoneRegistrationRequestRepository.findAll().stream()
+                .filter(request -> "+886912345683".equals(request.getPhoneNumber()))
+                .filter(request -> "EXPIRED".equals(request.getStatus()))
+                .toList();
+        var activeRequests = phoneRegistrationRequestRepository.findAllByPhoneNumberAndStatusIn(
+                "+886912345683",
+                List.of("PENDING_VERIFICATION")
+        );
+
+        org.assertj.core.api.Assertions.assertThat(expiredRequests)
+                .extracting(request -> request.getId())
+                .contains(firstRequest.getId());
+        org.assertj.core.api.Assertions.assertThat(activeRequests).hasSize(1);
+    }
+
+    @Test
     void shouldRejectInvalidPin() throws Exception {
         mockMvc.perform(post("/api/v1/auth/pin-login")
                         .contentType(MediaType.APPLICATION_JSON)
