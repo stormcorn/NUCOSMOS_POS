@@ -1,5 +1,6 @@
 package com.nucosmos.pos.backend.auth;
 
+import com.nucosmos.pos.backend.auth.repository.PhoneRegistrationRequestRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -7,6 +8,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.OffsetDateTime;
+import java.util.List;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -21,6 +25,9 @@ class AuthControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private PhoneRegistrationRequestRepository phoneRegistrationRequestRepository;
 
     @Test
     void shouldLoginWithValidPin() throws Exception {
@@ -105,6 +112,35 @@ class AuthControllerTest {
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void shouldAllowRestartingRegistrationWhenPreviousRequestExpired() throws Exception {
+        String payload = """
+                {
+                  "storeCode": "TW001",
+                  "phoneNumber": "+886912345681",
+                  "pin": "654321"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/auth/register/start")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isOk());
+
+        var existingRequest = phoneRegistrationRequestRepository.findAllByPhoneNumberAndStatusIn(
+                "+886912345681",
+                List.of("PENDING_VERIFICATION")
+        ).get(0);
+        existingRequest.setExpiresAt(OffsetDateTime.now().minusMinutes(1));
+
+        mockMvc.perform(post("/api/v1/auth/register/start")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.phoneNumber").value("+886912345681"));
     }
 
     @Test

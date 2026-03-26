@@ -64,15 +64,22 @@ public class PhoneRegistrationService {
         StoreEntity store = storeRepository.findByCodeAndStatus(request.storeCode().trim(), ACTIVE_STATUS)
                 .orElseThrow(() -> new BadRequestException("Store not found"));
         String normalizedPhoneNumber = normalizePhoneNumber(request.phoneNumber());
+        OffsetDateTime now = OffsetDateTime.now();
 
         if (userRepository.existsByPhoneNumber(normalizedPhoneNumber)) {
             throw new BadRequestException("This phone number is already registered");
         }
 
-        if (phoneRegistrationRequestRepository.existsByPhoneNumberAndStatusIn(
+        List<PhoneRegistrationRequestEntity> existingRequests = phoneRegistrationRequestRepository.findAllByPhoneNumberAndStatusIn(
                 normalizedPhoneNumber,
                 List.of(PENDING_STATUS, VERIFIED_STATUS)
-        )) {
+        );
+        for (PhoneRegistrationRequestEntity existingRequest : existingRequests) {
+            if (PENDING_STATUS.equals(existingRequest.getStatus()) && existingRequest.getExpiresAt().isBefore(now)) {
+                existingRequest.setStatus("EXPIRED");
+                continue;
+            }
+
             throw new BadRequestException("A registration request is already in progress for this phone number");
         }
 
@@ -83,7 +90,7 @@ public class PhoneRegistrationService {
         registration.setStatus(PENDING_STATUS);
         registration.setProvider(FIREBASE_PROVIDER);
         registration.setVerificationSessionId(null);
-        registration.setExpiresAt(OffsetDateTime.now().plusMinutes(10));
+        registration.setExpiresAt(now.plusMinutes(10));
         phoneRegistrationRequestRepository.save(registration);
 
         return new RegistrationStartResponse(

@@ -18,5 +18,7 @@ public interface PhoneRegistrationRequestRepository extends JpaRepository<PhoneR
             """)
     Optional<PhoneRegistrationRequestEntity> findDetailedById(UUID registrationId);
 
+    List<PhoneRegistrationRequestEntity> findAllByPhoneNumberAndStatusIn(String phoneNumber, List<String> statuses);
+
     boolean existsByPhoneNumberAndStatusIn(String phoneNumber, List<String> statuses);
 }
