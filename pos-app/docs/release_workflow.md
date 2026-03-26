@@ -3,7 +3,10 @@
 ## Required checks for every POS APP update
 
 1. Record any new device constraints in `docs/field_devices.md`.
-2. Review RWD against the primary tablet baseline: 21.5 cm x 13.5 cm.
+2. Review RWD against the primary tablet baseline:
+   - width: 21.5 cm
+   - height: 13.5 cm
+   - expected orientation: landscape
 3. Run text audit to block suspicious UI literals such as `???` or replacement characters.
 4. Run `flutter test`.
 5. Build release APK with `scripts/build_release_apk.ps1`.

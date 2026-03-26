@@ -3,7 +3,10 @@
 ## Primary tablet baseline
 
 - Purpose: POS APP RWD and touch-flow validation
-- Physical size: 21.5 cm x 13.5 cm
+- Physical size:
+  - Width: 21.5 cm
+  - Height: 13.5 cm
+- Expected orientation: landscape
 - Notes:
   - Treat this as the primary tablet baseline for layout checks.
   - Quick receive, checkout, login, and long forms must remain fully reachable by touch scrolling on this device class.
