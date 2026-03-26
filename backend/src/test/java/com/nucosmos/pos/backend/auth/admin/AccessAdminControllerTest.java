@@ -32,24 +32,24 @@ class AccessAdminControllerTest {
 
     @Test
     void shouldListUsersRolesAndPermissions() throws Exception {
-        String managerToken = managerToken();
+        String adminToken = adminToken();
 
         mockMvc.perform(get("/api/v1/admin/access/users")
-                        .header("Authorization", "Bearer " + managerToken))
+                        .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").isArray())
                 .andExpect(jsonPath("$.data[0].employeeCode").exists())
                 .andExpect(jsonPath("$.data[0].roleCodes").isArray());
 
         mockMvc.perform(get("/api/v1/admin/access/roles")
-                        .header("Authorization", "Bearer " + managerToken))
+                        .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").isArray())
                 .andExpect(jsonPath("$.data[0].code").exists())
                 .andExpect(jsonPath("$.data[0].permissionKeys").isArray());
 
         mockMvc.perform(get("/api/v1/admin/access/permissions")
-                        .header("Authorization", "Bearer " + managerToken))
+                        .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").isArray())
                 .andExpect(jsonPath("$.data[0].key").exists())
@@ -58,10 +58,10 @@ class AccessAdminControllerTest {
 
     @Test
     void shouldCreateAndUpdateUser() throws Exception {
-        String managerToken = managerToken();
+        String adminToken = adminToken();
 
         MvcResult createResult = mockMvc.perform(post("/api/v1/admin/access/users")
-                        .header("Authorization", "Bearer " + managerToken)
+                        .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -82,7 +82,7 @@ class AccessAdminControllerTest {
         UUID userId = TestLoginSupport.extractDataFieldAsUuid(createResult, "id");
 
         mockMvc.perform(put("/api/v1/admin/access/users/{userId}", userId)
-                        .header("Authorization", "Bearer " + managerToken)
+                        .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -102,7 +102,7 @@ class AccessAdminControllerTest {
 
     @Test
     void shouldClearPendingPhoneRegistrations() throws Exception {
-        String managerToken = managerToken();
+        String adminToken = adminToken();
 
         mockMvc.perform(post("/api/v1/auth/register/start")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -116,7 +116,7 @@ class AccessAdminControllerTest {
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/v1/admin/access/phone-registrations/clear-pending")
-                        .header("Authorization", "Bearer " + managerToken)
+                        .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -138,10 +138,10 @@ class AccessAdminControllerTest {
 
     @Test
     void shouldCreateAndUpdateRolePermissions() throws Exception {
-        String managerToken = managerToken();
+        String adminToken = adminToken();
 
         MvcResult createResult = mockMvc.perform(post("/api/v1/admin/access/roles")
-                        .header("Authorization", "Bearer " + managerToken)
+                        .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -160,7 +160,7 @@ class AccessAdminControllerTest {
         UUID roleId = TestLoginSupport.extractDataFieldAsUuid(createResult, "id");
 
         mockMvc.perform(put("/api/v1/admin/access/roles/{roleId}", roleId)
-                        .header("Authorization", "Bearer " + managerToken)
+                        .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -179,12 +179,12 @@ class AccessAdminControllerTest {
     }
 
     @Test
-    void shouldAuthorizeUsingSelectedActiveRoleForMultiRoleUser() throws Exception {
+    void shouldRestrictAccessManagementToAdminRole() throws Exception {
         String cashierToken = TestLoginSupport.loginAndExtractToken(mockMvc, """
                 {
                   "storeCode": "TW001",
                   "roleCode": "CASHIER",
-                  "pin": "567890",
+                  "pin": "123456",
                   "deviceCode": "POS-TABLET-001"
                 }
                 """);
@@ -193,7 +193,7 @@ class AccessAdminControllerTest {
                 {
                   "storeCode": "TW001",
                   "roleCode": "MANAGER",
-                  "pin": "567890",
+                  "pin": "999999",
                   "deviceCode": "POS-TABLET-001"
                 }
                 """);
@@ -204,15 +204,19 @@ class AccessAdminControllerTest {
 
         mockMvc.perform(get("/api/v1/admin/access/users")
                         .header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/v1/admin/access/users")
+                        .header("Authorization", "Bearer " + adminToken()))
                 .andExpect(status().isOk());
     }
 
-    private String managerToken() throws Exception {
+    private String adminToken() throws Exception {
         return TestLoginSupport.loginAndExtractToken(mockMvc, """
                 {
                   "storeCode": "TW001",
-                  "roleCode": "MANAGER",
-                  "pin": "999999",
+                  "roleCode": "ADMIN",
+                  "pin": "654265",
                   "deviceCode": "POS-TABLET-001"
                 }
                 """);

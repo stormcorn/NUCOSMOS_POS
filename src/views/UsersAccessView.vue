@@ -27,6 +27,7 @@ const form = reactive({
 });
 
 const canEditUsers = computed(() => authStore.hasPermission(PERMISSIONS.USERS_EDIT));
+const canAssignManagers = computed(() => canEditUsers.value && authStore.activeRole === "ADMIN");
 const titleText = computed(() => (editingUserId.value ? "Edit user" : "Create user"));
 
 function normalizePhoneNumber(rawValue: string) {
@@ -92,6 +93,34 @@ function openEditForm(user: UserAdminItem) {
 
 function toggleSelection(list: string[], value: string) {
   return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
+}
+
+function hasRole(user: UserAdminItem, roleCode: string) {
+  return user.roleCodes.includes(roleCode);
+}
+
+function canToggleManager(user: UserAdminItem) {
+  return canAssignManagers.value && !hasRole(user, "ADMIN") && hasRole(user, "CASHIER");
+}
+
+async function toggleManagerAssignment(user: UserAdminItem) {
+  if (!canToggleManager(user)) {
+    return;
+  }
+
+  const roleCodes = hasRole(user, "MANAGER")
+    ? user.roleCodes.filter((roleCode) => roleCode !== "MANAGER")
+    : [...user.roleCodes, "MANAGER"];
+
+  formError.value = "";
+  await accessStore.updateUser(user.id, {
+    employeeCode: user.employeeCode,
+    displayName: user.displayName,
+    pin: "",
+    status: user.status,
+    roleCodes,
+    storeCodes: [...user.storeCodes],
+  });
 }
 
 async function saveUser() {
@@ -260,13 +289,25 @@ onMounted(() => {
               </td>
               <td class="px-4 py-3 text-slate-400">{{ formatDateTime(user.lastLoginAt) }}</td>
               <td class="px-4 py-3 text-right">
-                <button
-                  v-if="canEditUsers"
-                  class="rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-200 transition hover:border-brand-aqua/30 hover:text-white"
-                  @click="openEditForm(user)"
-                >
-                  Edit
-                </button>
+                <div class="flex justify-end gap-2">
+                  <button
+                    v-if="canToggleManager(user)"
+                    class="rounded-xl border px-3 py-2 text-xs transition"
+                    :class="hasRole(user, 'MANAGER')
+                      ? 'border-brand-coral/20 text-brand-coral hover:border-brand-coral/40'
+                      : 'border-brand-aqua/30 text-brand-aqua hover:border-brand-aqua/50'"
+                    @click="toggleManagerAssignment(user)"
+                  >
+                    {{ hasRole(user, "MANAGER") ? "Remove manager" : "Assign manager" }}
+                  </button>
+                  <button
+                    v-if="canEditUsers"
+                    class="rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-200 transition hover:border-brand-aqua/30 hover:text-white"
+                    @click="openEditForm(user)"
+                  >
+                    Edit
+                  </button>
+                </div>
               </td>
             </tr>
             <tr v-if="accessStore.users.length === 0">

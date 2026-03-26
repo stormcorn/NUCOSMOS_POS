@@ -57,7 +57,7 @@ class AuthControllerTest {
                         .content("""
                                 {
                                   "storeCode": "TW001",
-                                  "pin": "567890",
+                                  "pin": "654265",
                                   "deviceCode": "AUTO-TABLET-001",
                                   "deviceName": "Galaxy Tab Demo",
                                   "devicePlatform": "ANDROID"
@@ -66,8 +66,8 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.deviceCode").value("AUTO-TABLET-001"))
-                .andExpect(jsonPath("$.data.staff.employeeCode").value("EMP-SUPERVISOR-001"))
-                .andExpect(jsonPath("$.data.staff.activeRole").value("MANAGER"));
+                .andExpect(jsonPath("$.data.staff.employeeCode").value("EMP-ADMIN-001"))
+                .andExpect(jsonPath("$.data.staff.activeRole").value("ADMIN"));
     }
 
     @Test

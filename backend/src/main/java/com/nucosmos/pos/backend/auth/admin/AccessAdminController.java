@@ -17,7 +17,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/admin/access")
-@PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
+@PreAuthorize("hasRole('ADMIN')")
 public class AccessAdminController {
 
     private final AccessAdminService accessAdminService;
