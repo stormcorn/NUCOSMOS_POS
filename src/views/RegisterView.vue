@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
+import { FirebaseError } from "firebase/app";
 import { type ConfirmationResult, RecaptchaVerifier, signInWithPhoneNumber, signOut } from "firebase/auth";
 
 import { completeRegistration, fetchAvailableStores, startRegistration } from "@/api/auth";
@@ -41,6 +42,22 @@ const canVerifyCode = computed(() =>
   registrationId.value.length > 0 &&
   /^\d{6}$/.test(form.verificationCode.trim()),
 );
+
+function normalizePhoneNumber(rawValue: string) {
+  const compact = rawValue.replace(/[\s\-()]/g, "").trim();
+
+  if (/^09\d{8}$/.test(compact)) {
+    return `+886${compact.slice(1)}`;
+  }
+
+  if (/^\+?\d{10,15}$/.test(compact)) {
+    return compact.startsWith("+") ? compact : `+${compact}`;
+  }
+
+  return compact;
+}
+
+const normalizedPhoneNumber = computed(() => normalizePhoneNumber(form.phoneNumber));
 
 async function ensureRecaptchaVerifier() {
   if (recaptchaVerifier) {
@@ -84,13 +101,13 @@ async function requestCode() {
     const auth = getFirebaseAuthClient();
     const response = await startRegistration({
       storeCode: form.storeCode.trim(),
-      phoneNumber: form.phoneNumber.trim(),
+      phoneNumber: normalizedPhoneNumber.value,
       pin: form.pin.trim(),
     });
     const verifier = await ensureRecaptchaVerifier();
     confirmationResult = await signInWithPhoneNumber(
       auth,
-      form.phoneNumber.trim(),
+      normalizedPhoneNumber.value,
       verifier,
     );
     registrationId.value = response.registrationId;
@@ -98,7 +115,13 @@ async function requestCode() {
       `Verification code sent to ${response.phoneNumber}. ` +
       "Enter the SMS code to activate your account.";
   } catch (error) {
-    errorMessage.value = error instanceof ApiError ? error.message : "Failed to start registration.";
+    if (error instanceof ApiError) {
+      errorMessage.value = error.message;
+    } else if (error instanceof FirebaseError) {
+      errorMessage.value = `Firebase SMS error: ${error.code}`;
+    } else {
+      errorMessage.value = error instanceof Error ? error.message : "Failed to start registration.";
+    }
     if (!(error instanceof ApiError)) {
       registrationId.value = "";
       confirmationResult = null;
@@ -198,9 +221,13 @@ onBeforeUnmount(() => {
                 v-model="form.phoneNumber"
                 type="tel"
                 autocomplete="tel"
-                placeholder="+886912345678"
+                placeholder="+886912345678 or 0912345678"
                 class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none"
               />
+              <span class="mt-2 block text-xs text-slate-500">
+                Taiwan mobile numbers entered as <code class="font-mono">09xxxxxxxx</code> will be converted to
+                <code class="font-mono">+8869xxxxxxxx</code> automatically.
+              </span>
             </label>
 
             <label class="block">
