@@ -43,6 +43,7 @@ function Convert-ToSlug {
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectDir = Split-Path -Parent $scriptDir
+$auditScript = Join-Path $scriptDir "audit_text_encoding.py"
 
 $commitMessage = if ($Label) { $Label } else { Get-GitValue -Arguments @("log", "-1", "--pretty=%s") }
 $commitSha = if ($Revision) { $Revision } else { Get-GitValue -Arguments @("rev-parse", "--short", "HEAD") }
@@ -53,6 +54,13 @@ $apkName = "nucosmos-pos-$apkLabel-$apkRevision.apk"
 
 Push-Location $projectDir
 try {
+    if (Test-Path $auditScript) {
+        py -3 $auditScript
+        if ($LASTEXITCODE -ne 0) {
+            throw "Text audit failed. Fix suspicious text literals before packaging."
+        }
+    }
+
     flutter build apk --release
 
     $outputDir = Join-Path $projectDir "build\app\outputs\flutter-apk"
@@ -60,11 +68,11 @@ try {
     $namedApk = Join-Path $outputDir $apkName
 
     if (-not (Test-Path $defaultApk)) {
-        throw "找不到 release APK：$defaultApk"
+        throw "Could not find release APK at $defaultApk"
     }
 
     Copy-Item -Path $defaultApk -Destination $namedApk -Force
-    Write-Host "已產出：$namedApk"
+    Write-Host "Created $namedApk"
 } finally {
     Pop-Location
 }

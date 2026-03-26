@@ -5,6 +5,7 @@ import '../models/product_summary.dart';
 import '../models/quick_receive_models.dart';
 import '../state/printer_controller.dart';
 import '../state/session_controller.dart';
+import '../widgets/adaptive_scroll_body.dart';
 import '../widgets/product_grid.dart';
 
 enum _PosWorkspace { sales, quickReceive }
@@ -340,13 +341,10 @@ class _PosHomeScreenState extends State<PosHomeScreen> {
                                         const SizedBox(height: 18),
                                         _CategoryChips(controller: controller),
                                         const SizedBox(height: 18),
-                                        SizedBox(
-                                          height: 720,
-                                          child: ProductGrid(
-                                            products:
-                                                controller.filteredProducts,
-                                            onAddProduct: _handleAddProduct,
-                                          ),
+                                        ProductGrid(
+                                          products: controller.filteredProducts,
+                                          onAddProduct: _handleAddProduct,
+                                          embedInParentScroll: true,
                                         ),
                                         const SizedBox(height: 18),
                                         _CurrentOrderPanel(
@@ -1160,10 +1158,14 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
                   ),
                   const SizedBox(height: 8),
                   if (useEmbeddedLayout)
-                    ..._buildSelectedItemScrollableContent(item)
+                    AdaptiveScrollBody(
+                      embedInParentScroll: true,
+                      children: _buildSelectedItemScrollableContent(item),
+                    )
                   else
                     Expanded(
-                      child: ListView(
+                      child: AdaptiveScrollBody(
+                        embedInParentScroll: false,
                         children: _buildSelectedItemScrollableContent(item),
                       ),
                     ),
@@ -1181,10 +1183,12 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
         children: [
           _InfoPill(label: '類型', value: item.type.label),
           _InfoPill(label: 'SKU', value: item.sku),
-          _InfoPill(label: '現有庫存', value: '${item.quantityOnHand} ${item.unit}'),
+          _InfoPill(
+              label: '現有庫存', value: '${item.quantityOnHand} ${item.unit}'),
           _InfoPill(
             label: '換算',
-            value: '1 ${item.purchaseUnit} = ${item.purchaseToStockRatio} ${item.unit}',
+            value:
+                '1 ${item.purchaseUnit} = ${item.purchaseToStockRatio} ${item.unit}',
           ),
         ],
       ),
@@ -1244,22 +1248,8 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
       ),
     );
 
-    if (useEmbeddedLayout) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildCreateSection(),
-          const SizedBox(height: 16),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: emptyHint,
-          ),
-        ],
-      );
-    }
-
-    return ListView(
+    return AdaptiveScrollBody(
+      embedInParentScroll: useEmbeddedLayout,
       children: [
         _buildCreateSection(),
         const SizedBox(height: 16),

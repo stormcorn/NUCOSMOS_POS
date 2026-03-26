@@ -6,11 +6,13 @@ class ProductGrid extends StatelessWidget {
   const ProductGrid({
     required this.products,
     required this.onAddProduct,
+    this.embedInParentScroll = false,
     super.key,
   });
 
   final List<ProductSummary> products;
   final ValueChanged<ProductSummary> onAddProduct;
+  final bool embedInParentScroll;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +46,9 @@ class ProductGrid extends StatelessWidget {
         final compactCard = width < 920;
 
         return GridView.builder(
+          shrinkWrap: embedInParentScroll,
+          physics:
+              embedInParentScroll ? const NeverScrollableScrollPhysics() : null,
           itemCount: products.length,
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
@@ -190,7 +195,8 @@ class _ProductCard extends StatelessWidget {
                               vertical: 0,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(compact ? 10 : 12),
+                              borderRadius:
+                                  BorderRadius.circular(compact ? 10 : 12),
                             ),
                           ),
                           child: Text(
