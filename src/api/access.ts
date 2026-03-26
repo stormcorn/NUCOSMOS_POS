@@ -1,5 +1,7 @@
 import { apiRequest } from "@/api/http";
 import type {
+  ClearPendingPhoneRegistrationRequest,
+  ClearPendingPhoneRegistrationResponse,
   PermissionDefinition,
   RoleAdminItem,
   RoleAdminRequest,
@@ -23,6 +25,13 @@ export function createAdminUser(payload: UserAdminRequest) {
 export function updateAdminUser(userId: string, payload: UserAdminRequest) {
   return apiRequest<UserAdminItem>(`/api/v1/admin/access/users/${userId}`, {
     method: "PUT",
+    body: payload,
+  });
+}
+
+export function clearPendingPhoneRegistrations(payload: ClearPendingPhoneRegistrationRequest) {
+  return apiRequest<ClearPendingPhoneRegistrationResponse>("/api/v1/admin/access/phone-registrations/clear-pending", {
+    method: "POST",
     body: payload,
   });
 }

@@ -25,6 +25,16 @@ export type UserAdminRequest = {
   storeCodes: string[];
 };
 
+export type ClearPendingPhoneRegistrationRequest = {
+  phoneNumber: string;
+};
+
+export type ClearPendingPhoneRegistrationResponse = {
+  phoneNumber: string;
+  clearedCount: number;
+  clearedStatus: string;
+};
+
 export type RoleAdminItem = {
   id: string;
   code: string;

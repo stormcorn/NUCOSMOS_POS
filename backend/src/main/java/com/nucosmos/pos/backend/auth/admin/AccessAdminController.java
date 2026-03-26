@@ -47,6 +47,13 @@ public class AccessAdminController {
         return ApiResponse.ok(accessAdminService.updateUser(userId, request));
     }
 
+    @PostMapping("/phone-registrations/clear-pending")
+    public ApiResponse<ClearPendingPhoneRegistrationResponse> clearPendingPhoneRegistrations(
+            @Valid @RequestBody ClearPendingPhoneRegistrationRequest request
+    ) {
+        return ApiResponse.ok(accessAdminService.clearPendingPhoneRegistrations(request));
+    }
+
     @GetMapping("/roles")
     public ApiResponse<List<RoleAdminResponse>> roles() {
         return ApiResponse.ok(accessAdminService.listRoles());

@@ -1,6 +1,7 @@
 package com.nucosmos.pos.backend.auth.admin;
 
 import com.nucosmos.pos.backend.auth.TestLoginSupport;
+import com.nucosmos.pos.backend.auth.repository.PhoneRegistrationRequestRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -25,6 +26,9 @@ class AccessAdminControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private PhoneRegistrationRequestRepository phoneRegistrationRequestRepository;
 
     @Test
     void shouldListUsersRolesAndPermissions() throws Exception {
@@ -94,6 +98,42 @@ class AccessAdminControllerTest {
                 .andExpect(jsonPath("$.data.displayName").value("Diana Supervisor"))
                 .andExpect(jsonPath("$.data.status").value("INACTIVE"))
                 .andExpect(jsonPath("$.data.roleCodes[0]").value("MANAGER"));
+    }
+
+    @Test
+    void shouldClearPendingPhoneRegistrations() throws Exception {
+        String managerToken = managerToken();
+
+        mockMvc.perform(post("/api/v1/auth/register/start")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "storeCode": "TW001",
+                                  "phoneNumber": "0912345682",
+                                  "pin": "654321"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/admin/access/phone-registrations/clear-pending")
+                        .header("Authorization", "Bearer " + managerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "phoneNumber": "0912345682"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.phoneNumber").value("+886912345682"))
+                .andExpect(jsonPath("$.data.clearedCount").value(1))
+                .andExpect(jsonPath("$.data.clearedStatus").value("EXPIRED"));
+
+        org.assertj.core.api.Assertions.assertThat(
+                        phoneRegistrationRequestRepository.findAllByPhoneNumberAndStatusIn(
+                                "+886912345682",
+                                java.util.List.of("PENDING_VERIFICATION")
+                        ))
+                .isEmpty();
     }
 
     @Test

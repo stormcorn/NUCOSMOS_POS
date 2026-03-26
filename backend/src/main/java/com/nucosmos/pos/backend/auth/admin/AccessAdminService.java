@@ -1,10 +1,12 @@
 package com.nucosmos.pos.backend.auth.admin;
 
+import com.nucosmos.pos.backend.auth.persistence.PhoneRegistrationRequestEntity;
 import com.nucosmos.pos.backend.auth.persistence.RoleEntity;
 import com.nucosmos.pos.backend.auth.persistence.RolePermissionEntity;
 import com.nucosmos.pos.backend.auth.persistence.StoreStaffAssignmentEntity;
 import com.nucosmos.pos.backend.auth.persistence.UserEntity;
 import com.nucosmos.pos.backend.auth.persistence.UserRoleEntity;
+import com.nucosmos.pos.backend.auth.repository.PhoneRegistrationRequestRepository;
 import com.nucosmos.pos.backend.auth.repository.RolePermissionRepository;
 import com.nucosmos.pos.backend.auth.repository.RoleRepository;
 import com.nucosmos.pos.backend.auth.repository.StoreStaffAssignmentRepository;
@@ -29,12 +31,15 @@ import java.util.UUID;
 
 @Service
 public class AccessAdminService {
+    private static final String PENDING_PHONE_REGISTRATION_STATUS = "PENDING_VERIFICATION";
+    private static final String EXPIRED_PHONE_REGISTRATION_STATUS = "EXPIRED";
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
     private final StoreRepository storeRepository;
     private final StoreStaffAssignmentRepository storeStaffAssignmentRepository;
+    private final PhoneRegistrationRequestRepository phoneRegistrationRequestRepository;
     private final RolePermissionRepository rolePermissionRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -44,6 +49,7 @@ public class AccessAdminService {
             UserRoleRepository userRoleRepository,
             StoreRepository storeRepository,
             StoreStaffAssignmentRepository storeStaffAssignmentRepository,
+            PhoneRegistrationRequestRepository phoneRegistrationRequestRepository,
             RolePermissionRepository rolePermissionRepository,
             PasswordEncoder passwordEncoder
     ) {
@@ -52,6 +58,7 @@ public class AccessAdminService {
         this.userRoleRepository = userRoleRepository;
         this.storeRepository = storeRepository;
         this.storeStaffAssignmentRepository = storeStaffAssignmentRepository;
+        this.phoneRegistrationRequestRepository = phoneRegistrationRequestRepository;
         this.rolePermissionRepository = rolePermissionRepository;
         this.passwordEncoder = passwordEncoder;
     }
@@ -112,6 +119,25 @@ public class AccessAdminService {
         userRepository.save(user);
         syncUserAssignments(user, request);
         return loadUserResponse(userId);
+    }
+
+    @Transactional
+    public ClearPendingPhoneRegistrationResponse clearPendingPhoneRegistrations(ClearPendingPhoneRegistrationRequest request) {
+        String normalizedPhoneNumber = normalizePhoneNumber(request.phoneNumber());
+        List<PhoneRegistrationRequestEntity> pendingRequests = phoneRegistrationRequestRepository.findAllByPhoneNumberAndStatusIn(
+                normalizedPhoneNumber,
+                List.of(PENDING_PHONE_REGISTRATION_STATUS)
+        );
+
+        for (PhoneRegistrationRequestEntity pendingRequest : pendingRequests) {
+            pendingRequest.setStatus(EXPIRED_PHONE_REGISTRATION_STATUS);
+        }
+
+        return new ClearPendingPhoneRegistrationResponse(
+                normalizedPhoneNumber,
+                pendingRequests.size(),
+                EXPIRED_PHONE_REGISTRATION_STATUS
+        );
     }
 
     @Transactional(readOnly = true)
@@ -324,5 +350,19 @@ public class AccessAdminService {
             throw new BadRequestException("PIN must contain exactly 6 digits");
         }
         return normalizedPin;
+    }
+
+    private String normalizePhoneNumber(String rawValue) {
+        String normalized = rawValue == null ? "" : rawValue.replaceAll("[\\s\\-()]", "").trim();
+        if (normalized.matches("^09\\d{8}$")) {
+            return "+886" + normalized.substring(1);
+        }
+        if (normalized.matches("^\\d{10,15}$")) {
+            return "+" + normalized;
+        }
+        if (!normalized.matches("^\\+\\d{10,15}$")) {
+            throw new BadRequestException("Phone number format is invalid");
+        }
+        return normalized;
     }
 }

@@ -14,6 +14,8 @@ const storeContextStore = useStoreContextStore();
 const isFormOpen = ref(false);
 const editingUserId = ref<string | null>(null);
 const formError = ref("");
+const phoneRegistrationPhoneNumber = ref("");
+const phoneRegistrationFormError = ref("");
 
 const form = reactive({
   employeeCode: "",
@@ -26,6 +28,20 @@ const form = reactive({
 
 const canEditUsers = computed(() => authStore.hasPermission(PERMISSIONS.USERS_EDIT));
 const titleText = computed(() => (editingUserId.value ? "Edit user" : "Create user"));
+
+function normalizePhoneNumber(rawValue: string) {
+  const compact = rawValue.replace(/[\s\-()]/g, "").trim();
+
+  if (/^09\d{8}$/.test(compact)) {
+    return `+886${compact.slice(1)}`;
+  }
+
+  if (/^\d{10,15}$/.test(compact)) {
+    return `+${compact}`;
+  }
+
+  return compact;
+}
 
 function formatDateTime(value: string | null) {
   if (!value) {
@@ -126,6 +142,26 @@ async function saveUser() {
   if (success) {
     isFormOpen.value = false;
     resetForm();
+  }
+}
+
+async function clearPendingRegistration() {
+  if (!canEditUsers.value) {
+    return;
+  }
+
+  phoneRegistrationFormError.value = "";
+  accessStore.phoneRegistrationActionMessage = "";
+
+  const normalizedPhoneNumber = normalizePhoneNumber(phoneRegistrationPhoneNumber.value);
+  if (!/^\+\d{10,15}$/.test(normalizedPhoneNumber)) {
+    phoneRegistrationFormError.value = "Enter a valid phone number, for example 0912345678 or +886912345678.";
+    return;
+  }
+
+  const response = await accessStore.clearPendingRegistration(normalizedPhoneNumber);
+  if (response) {
+    phoneRegistrationPhoneNumber.value = normalizedPhoneNumber;
   }
 }
 
@@ -367,6 +403,41 @@ onMounted(() => {
           @click="saveUser"
         >
           {{ accessStore.saving ? "Saving..." : editingUserId ? "Update user" : "Create user" }}
+        </button>
+      </div>
+
+      <div v-if="canEditUsers" class="mt-8 rounded-[1.5rem] border border-white/8 bg-white/4 p-5">
+        <p class="text-xs uppercase tracking-[0.28em] text-brand-aqua/70">Registration Recovery</p>
+        <h4 class="mt-2 text-lg font-semibold text-white">Clear pending phone registration</h4>
+        <p class="mt-2 text-sm leading-6 text-slate-400">
+          Use this when a staff member is stuck in SMS registration and needs the current pending request cleared before retrying.
+        </p>
+
+        <label class="mt-5 block">
+          <span class="mb-2 block text-sm text-slate-300">Phone Number</span>
+          <input
+            v-model="phoneRegistrationPhoneNumber"
+            type="tel"
+            placeholder="0912345678 or +886912345678"
+            class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none"
+          />
+          <span class="mt-2 block text-xs text-slate-500">
+            Taiwan mobile numbers entered as <code class="font-mono">09xxxxxxxx</code> will be converted to
+            <code class="font-mono">+8869xxxxxxxx</code> automatically.
+          </span>
+        </label>
+
+        <p v-if="phoneRegistrationFormError" class="mt-3 text-sm text-brand-coral">{{ phoneRegistrationFormError }}</p>
+        <p v-else-if="accessStore.phoneRegistrationActionMessage" class="mt-3 text-sm text-emerald-300">
+          {{ accessStore.phoneRegistrationActionMessage }}
+        </p>
+
+        <button
+          class="mt-4 w-full rounded-2xl border border-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:border-brand-aqua/30 disabled:cursor-not-allowed disabled:opacity-70"
+          :disabled="accessStore.saving"
+          @click="clearPendingRegistration"
+        >
+          {{ accessStore.saving ? "Clearing..." : "Clear pending registration" }}
         </button>
       </div>
     </aside>

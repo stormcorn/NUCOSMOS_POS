@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 
 import { ApiError } from "@/api/http";
 import {
+  clearPendingPhoneRegistrations,
   createAdminRole,
   createAdminUser,
   fetchAdminRoles,
@@ -12,6 +13,7 @@ import {
   updateAdminUser,
 } from "@/api/access";
 import type {
+  ClearPendingPhoneRegistrationResponse,
   PermissionDefinition,
   RoleAdminItem,
   RoleAdminRequest,
@@ -27,6 +29,7 @@ export const useAccessControlStore = defineStore("accessControl", () => {
   const loadingRoles = ref(false);
   const saving = ref(false);
   const errorMessage = ref("");
+  const phoneRegistrationActionMessage = ref("");
   const userStatusFilter = ref("");
   const userStoreFilter = ref("");
 
@@ -119,6 +122,26 @@ export const useAccessControlStore = defineStore("accessControl", () => {
     }
   }
 
+  async function clearPendingRegistration(phoneNumber: string) {
+    saving.value = true;
+    errorMessage.value = "";
+    phoneRegistrationActionMessage.value = "";
+
+    try {
+      const response: ClearPendingPhoneRegistrationResponse = await clearPendingPhoneRegistrations({ phoneNumber });
+      phoneRegistrationActionMessage.value =
+        response.clearedCount > 0
+          ? `Cleared ${response.clearedCount} pending request(s) for ${response.phoneNumber}.`
+          : `No pending registration was found for ${response.phoneNumber}.`;
+      return response;
+    } catch (error) {
+      errorMessage.value = error instanceof ApiError ? error.message : "Failed to clear pending registration.";
+      return null;
+    } finally {
+      saving.value = false;
+    }
+  }
+
   async function createRole(payload: RoleAdminRequest) {
     saving.value = true;
     errorMessage.value = "";
@@ -153,6 +176,7 @@ export const useAccessControlStore = defineStore("accessControl", () => {
 
   return {
     bootstrap,
+    clearPendingRegistration,
     createRole,
     createUser,
     errorMessage,
@@ -163,6 +187,7 @@ export const useAccessControlStore = defineStore("accessControl", () => {
     loadUsers,
     permissions,
     permissionsByGroup,
+    phoneRegistrationActionMessage,
     roles,
     saving,
     updateRole,

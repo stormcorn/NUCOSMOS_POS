@@ -170,7 +170,13 @@ public class PhoneRegistrationService {
 
     private String normalizePhoneNumber(String rawValue) {
         String normalized = rawValue == null ? "" : rawValue.replaceAll("[\\s\\-()]", "").trim();
-        if (!normalized.matches("^\\+?\\d{10,15}$")) {
+        if (normalized.matches("^09\\d{8}$")) {
+            return "+886" + normalized.substring(1);
+        }
+        if (normalized.matches("^\\d{10,15}$")) {
+            return "+" + normalized;
+        }
+        if (!normalized.matches("^\\+\\d{10,15}$")) {
             throw new BadRequestException("Phone number format is invalid");
         }
         return normalized;
