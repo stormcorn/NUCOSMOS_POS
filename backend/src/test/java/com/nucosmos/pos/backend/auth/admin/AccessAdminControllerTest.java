@@ -63,7 +63,7 @@ class AccessAdminControllerTest {
                                 {
                                   "employeeCode": "EMP-NEW-001",
                                   "displayName": "Diana Operator",
-                                  "pin": "2468",
+                                  "pin": "246810",
                                   "status": "ACTIVE",
                                   "roleCodes": ["CASHIER"],
                                   "storeCodes": ["TW001"]
@@ -144,7 +144,7 @@ class AccessAdminControllerTest {
                 {
                   "storeCode": "TW001",
                   "roleCode": "CASHIER",
-                  "pin": "5678",
+                  "pin": "567890",
                   "deviceCode": "POS-TABLET-001"
                 }
                 """);
@@ -153,7 +153,7 @@ class AccessAdminControllerTest {
                 {
                   "storeCode": "TW001",
                   "roleCode": "MANAGER",
-                  "pin": "5678",
+                  "pin": "567890",
                   "deviceCode": "POS-TABLET-001"
                 }
                 """);
@@ -172,7 +172,7 @@ class AccessAdminControllerTest {
                 {
                   "storeCode": "TW001",
                   "roleCode": "MANAGER",
-                  "pin": "9999",
+                  "pin": "999999",
                   "deviceCode": "POS-TABLET-001"
                 }
                 """);

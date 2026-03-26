@@ -71,7 +71,7 @@ async function submit() {
             <p class="text-xs uppercase tracking-[0.24em] text-slate-500">
               PIN Policy
             </p>
-            <p class="mt-3 text-lg font-semibold text-white">4-6 digits</p>
+            <p class="mt-3 text-lg font-semibold text-white">6 digits</p>
           </div>
           <div class="rounded-[1.5rem] border border-white/8 bg-white/5 p-4">
             <p class="text-xs uppercase tracking-[0.24em] text-slate-500">
@@ -109,7 +109,7 @@ async function submit() {
                 inputmode="numeric"
                 autocomplete="current-password"
                 class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none transition focus:border-brand-aqua/40 focus:ring-2 focus:ring-brand-aqua/15"
-                placeholder="4-6 digit PIN"
+                placeholder="6-digit PIN"
               />
             </label>
 
@@ -137,6 +137,13 @@ async function submit() {
             >
               {{ authStore.loading ? "Signing in..." : "SIGN IN" }}
             </button>
+
+            <RouterLink
+              class="block text-center text-sm text-brand-aqua transition hover:brightness-110"
+              :to="{ name: 'register' }"
+            >
+              First time here? Register with phone number
+            </RouterLink>
           </form>
         </div>
       </section>

@@ -6,7 +6,7 @@ import '../models/auth_models.dart';
 import '../state/session_controller.dart';
 import '../widgets/pin_pad.dart';
 
-const _minPinDigits = 4;
+const _minPinDigits = 6;
 const _maxPinDigits = 6;
 const _tabletAspectRatio = 16 / 10;
 
@@ -297,7 +297,7 @@ class _LoginPanel extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Sign in with your store PIN. Role and device identity are resolved automatically.',
+              'Sign in with your 6-digit store PIN. Role and device identity are resolved automatically.',
               style: theme.textTheme.titleMedium?.copyWith(
                 color: Colors.white70,
               ),
@@ -443,7 +443,7 @@ class _LoginPanel extends StatelessWidget {
                   ),
                   SizedBox(height: 10),
                   Text('1. Select the store assigned to this tablet.'),
-                  Text('2. Enter a 4-6 digit PIN on the keypad.'),
+                  Text('2. Enter a 6-digit PIN on the keypad.'),
                   Text('3. Staff role and device profile are detected automatically.'),
                 ],
               ),

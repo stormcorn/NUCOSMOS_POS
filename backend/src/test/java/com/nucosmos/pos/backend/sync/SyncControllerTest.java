@@ -24,7 +24,7 @@ class SyncControllerTest {
                 {
                   "storeCode": "TW001",
                   "roleCode": "CASHIER",
-                  "pin": "1234",
+                  "pin": "123456",
                   "deviceCode": "POS-TABLET-001"
                 }
                 """);
@@ -45,7 +45,7 @@ class SyncControllerTest {
                 {
                   "storeCode": "TW001",
                   "roleCode": "CASHIER",
-                  "pin": "1234",
+                  "pin": "123456",
                   "deviceCode": "POS-TABLET-001"
                 }
                 """);

@@ -320,8 +320,8 @@ public class AccessAdminService {
         }
 
         String normalizedPin = pin.trim();
-        if (normalizedPin.length() < 4 || normalizedPin.length() > 12) {
-            throw new BadRequestException("PIN must be between 4 and 12 digits");
+        if (!normalizedPin.matches("\\d{6}")) {
+            throw new BadRequestException("PIN must contain exactly 6 digits");
         }
         return normalizedPin;
     }

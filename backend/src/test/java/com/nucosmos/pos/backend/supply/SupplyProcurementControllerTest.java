@@ -50,7 +50,7 @@ class SupplyProcurementControllerTest {
                 {
                   "storeCode": "TW001",
                   "roleCode": "MANAGER",
-                  "pin": "9999",
+                  "pin": "999999",
                   "deviceCode": "POS-TABLET-001"
                 }
                 """);

@@ -22,15 +22,18 @@ import java.util.List;
 public class AuthController {
 
     private final PinAuthService pinAuthService;
+    private final PhoneRegistrationService phoneRegistrationService;
     private final PinLoginAttemptService pinLoginAttemptService;
     private final UserPreferenceService userPreferenceService;
 
     public AuthController(
             PinAuthService pinAuthService,
+            PhoneRegistrationService phoneRegistrationService,
             PinLoginAttemptService pinLoginAttemptService,
             UserPreferenceService userPreferenceService
     ) {
         this.pinAuthService = pinAuthService;
+        this.phoneRegistrationService = phoneRegistrationService;
         this.pinLoginAttemptService = pinLoginAttemptService;
         this.userPreferenceService = userPreferenceService;
     }
@@ -56,6 +59,20 @@ public class AuthController {
     @GetMapping("/stores")
     public ApiResponse<List<StoreSummaryResponse>> availableStores() {
         return ApiResponse.ok(pinAuthService.listAvailableStores());
+    }
+
+    @PostMapping("/register/start")
+    public ApiResponse<RegistrationStartResponse> startRegistration(
+            @Valid @RequestBody RegistrationStartRequest request
+    ) {
+        return ApiResponse.ok(phoneRegistrationService.startRegistration(request));
+    }
+
+    @PostMapping("/register/complete")
+    public ApiResponse<RegistrationCompleteResponse> completeRegistration(
+            @Valid @RequestBody RegistrationCompleteRequest request
+    ) {
+        return ApiResponse.ok(phoneRegistrationService.completeRegistration(request));
     }
 
     @PreAuthorize("isAuthenticated()")

@@ -56,7 +56,7 @@ class PinPad extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Enter a $minPinLength-$maxPinLength digit PIN and tap check to continue.',
+            'Enter your $maxPinLength-digit PIN and tap check to continue.',
             style: const TextStyle(color: Colors.white70),
           ),
           const SizedBox(height: 16),

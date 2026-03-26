@@ -7,6 +7,37 @@ export type LoginRequest = {
   deviceCode?: string;
 };
 
+export type RegistrationStartRequest = {
+  storeCode: string;
+  phoneNumber: string;
+  pin: string;
+};
+
+export type RegistrationStartResponse = {
+  registrationId: string;
+  storeCode: string;
+  phoneNumber: string;
+  provider: string;
+  status: string;
+  expiresAt: string;
+};
+
+export type RegistrationCompleteRequest = {
+  registrationId: string;
+  verificationCode: string;
+  firebaseIdToken?: string;
+};
+
+export type RegistrationCompleteResponse = {
+  userId: string;
+  employeeCode: string;
+  displayName: string;
+  storeCode: string;
+  phoneNumber: string;
+  status: string;
+  activatedAt: string;
+};
+
 export type AuthStore = {
   code: string;
   name: string;

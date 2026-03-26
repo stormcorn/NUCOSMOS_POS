@@ -38,6 +38,8 @@ app:
   cors:
     allowed-origins:
       - ${FRONTEND_ORIGIN:http://localhost:5173}
+  firebase:
+    admin-credentials-path: ${FIREBASE_ADMIN_CREDENTIALS_PATH:}
   security:
     jwt:
       secret-base64: ${JWT_SECRET_BASE64:bmV2ZXItc2hpcC10aGlzLWRlZmF1bHQtc2VjcmV0LWluLXByb2QtdXNlLWFuLWVudi12YXI=}

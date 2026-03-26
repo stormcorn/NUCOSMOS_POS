@@ -6,6 +6,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -15,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Transactional
 class AuthControllerTest {
 
     @Autowired
@@ -28,7 +30,7 @@ class AuthControllerTest {
                                 {
                                   "storeCode": "TW001",
                                   "roleCode": "CASHIER",
-                                  "pin": "1234",
+                                  "pin": "123456",
                                   "deviceCode": "POS-TABLET-001"
                                 }
                                 """))
@@ -48,7 +50,7 @@ class AuthControllerTest {
                         .content("""
                                 {
                                   "storeCode": "TW001",
-                                  "pin": "5678",
+                                  "pin": "567890",
                                   "deviceCode": "AUTO-TABLET-001",
                                   "deviceName": "Galaxy Tab Demo",
                                   "devicePlatform": "ANDROID"
@@ -71,6 +73,41 @@ class AuthControllerTest {
     }
 
     @Test
+    void shouldStartPhoneRegistrationWithSixDigitPin() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/register/start")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "storeCode": "TW001",
+                                  "phoneNumber": "+886912345679",
+                                  "pin": "654321"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.registrationId").isString())
+                .andExpect(jsonPath("$.data.storeCode").value("TW001"))
+                .andExpect(jsonPath("$.data.phoneNumber").value("+886912345679"))
+                .andExpect(jsonPath("$.data.provider").value("FIREBASE_SMS"))
+                .andExpect(jsonPath("$.data.status").value("PENDING_VERIFICATION"));
+    }
+
+    @Test
+    void shouldRejectShortRegistrationPin() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/register/start")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "storeCode": "TW001",
+                                  "phoneNumber": "+886912345680",
+                                  "pin": "1234"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
     void shouldRejectInvalidPin() throws Exception {
         mockMvc.perform(post("/api/v1/auth/pin-login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -78,7 +115,7 @@ class AuthControllerTest {
                                 {
                                   "storeCode": "TW001",
                                   "roleCode": "CASHIER",
-                                  "pin": "0000",
+                                  "pin": "000000",
                                   "deviceCode": "POS-TABLET-001"
                                 }
                                 """))
@@ -91,7 +128,7 @@ class AuthControllerTest {
         String payload = """
                 {
                   "storeCode": "TW001",
-                  "pin": "0000",
+                  "pin": "000000",
                   "deviceCode": "POS-TABLET-SECURITY"
                 }
                 """;
@@ -111,7 +148,7 @@ class AuthControllerTest {
                         .content("""
                                 {
                                   "storeCode": "TW001",
-                                  "pin": "9999",
+                                  "pin": "999999",
                                   "deviceCode": "POS-TABLET-SECURITY"
                                 }
                                 """))
@@ -126,7 +163,7 @@ class AuthControllerTest {
                 {
                   "storeCode": "TW001",
                   "roleCode": "MANAGER",
-                  "pin": "9999",
+                  "pin": "999999",
                   "deviceCode": "POS-TABLET-001"
                 }
                 """);
@@ -146,7 +183,7 @@ class AuthControllerTest {
                 {
                   "storeCode": "TW001",
                   "roleCode": "CASHIER",
-                  "pin": "1234",
+                  "pin": "123456",
                   "deviceCode": "POS-TABLET-001"
                 }
                 """);
@@ -165,7 +202,7 @@ class AuthControllerTest {
                 {
                   "storeCode": "TW001",
                   "roleCode": "MANAGER",
-                  "pin": "9999",
+                  "pin": "999999",
                   "deviceCode": "POS-TABLET-001"
                 }
                 """);

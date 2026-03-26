@@ -16,6 +16,7 @@ import PackagingInventoryView from "@/views/PackagingInventoryView.vue";
 import ProcurementView from "@/views/ProcurementView.vue";
 import ProductCategoriesView from "@/views/ProductCategoriesView.vue";
 import ProductsView from "@/views/ProductsView.vue";
+import RegisterView from "@/views/RegisterView.vue";
 import ReportsView from "@/views/ReportsView.vue";
 import ReplenishmentView from "@/views/ReplenishmentView.vue";
 import RolePermissionsView from "@/views/RolePermissionsView.vue";
@@ -30,14 +31,20 @@ const router = createRouter({
       path: "/login",
       name: "login",
       component: LoginView,
-      meta: { title: "登入", layout: "auth", requiresAuth: false },
+      meta: { title: "Login", layout: "auth", requiresAuth: false },
+    },
+    {
+      path: "/register",
+      name: "register",
+      component: RegisterView,
+      meta: { title: "Register", layout: "auth", requiresAuth: false },
     },
     {
       path: "/",
       name: "dashboard",
       component: ReportsView,
       meta: {
-        title: "營運總覽",
+        title: "Dashboard",
         requiresAuth: true,
         permissionKeys: [PERMISSIONS.DASHBOARD_VIEW, PERMISSIONS.REPORTS_VIEW],
       },
@@ -53,7 +60,7 @@ const router = createRouter({
       name: "products",
       component: ProductsView,
       meta: {
-        title: "商品管理",
+        title: "Products",
         requiresAuth: true,
         permissionKeys: [PERMISSIONS.PRODUCTS_VIEW],
       },
@@ -63,7 +70,7 @@ const router = createRouter({
       name: "product-categories",
       component: ProductCategoriesView,
       meta: {
-        title: "商品分類",
+        title: "Product Categories",
         requiresAuth: true,
         permissionKeys: [PERMISSIONS.PRODUCTS_VIEW],
       },
@@ -73,7 +80,7 @@ const router = createRouter({
       name: "inventory",
       component: InventoryView,
       meta: {
-        title: "庫存總覽",
+        title: "Inventory",
         requiresAuth: true,
         permissionKeys: [PERMISSIONS.INVENTORY_VIEW],
       },
@@ -83,7 +90,7 @@ const router = createRouter({
       name: "inventory-stocktakes",
       component: InventoryStocktakesView,
       meta: {
-        title: "盤點作業",
+        title: "Stocktakes",
         requiresAuth: true,
         permissionKeys: [PERMISSIONS.INVENTORY_VIEW],
       },
@@ -93,7 +100,7 @@ const router = createRouter({
       name: "inventory-defective",
       component: DefectiveInventoryView,
       meta: {
-        title: "報廢與瑕疵",
+        title: "Defective Inventory",
         requiresAuth: true,
         permissionKeys: [PERMISSIONS.INVENTORY_VIEW],
       },
@@ -103,7 +110,7 @@ const router = createRouter({
       name: "inventory-materials",
       component: MaterialsInventoryView,
       meta: {
-        title: "原料管理",
+        title: "Materials",
         requiresAuth: true,
         permissionKeys: [PERMISSIONS.INVENTORY_VIEW],
       },
@@ -113,7 +120,7 @@ const router = createRouter({
       name: "inventory-manufactured",
       component: ManufacturedInventoryView,
       meta: {
-        title: "製成品管理",
+        title: "Manufactured Items",
         requiresAuth: true,
         permissionKeys: [PERMISSIONS.INVENTORY_VIEW],
       },
@@ -123,7 +130,7 @@ const router = createRouter({
       name: "inventory-packaging",
       component: PackagingInventoryView,
       meta: {
-        title: "包裝管理",
+        title: "Packaging",
         requiresAuth: true,
         permissionKeys: [PERMISSIONS.INVENTORY_VIEW],
       },
@@ -133,7 +140,7 @@ const router = createRouter({
       name: "inventory-replenishment",
       component: ReplenishmentView,
       meta: {
-        title: "補貨建議",
+        title: "Replenishment",
         requiresAuth: true,
         permissionKeys: [PERMISSIONS.INVENTORY_VIEW],
       },
@@ -143,7 +150,7 @@ const router = createRouter({
       name: "suppliers",
       component: SuppliersView,
       meta: {
-        title: "供應商管理",
+        title: "Suppliers",
         requiresAuth: true,
         permissionKeys: [PERMISSIONS.SUPPLIERS_VIEW],
       },
@@ -153,7 +160,7 @@ const router = createRouter({
       name: "procurement",
       component: ProcurementView,
       meta: {
-        title: "採購進貨",
+        title: "Procurement",
         requiresAuth: true,
         permissionKeys: [PERMISSIONS.PROCUREMENT_VIEW],
       },
@@ -163,7 +170,7 @@ const router = createRouter({
       name: "devices",
       component: DevicesView,
       meta: {
-        title: "裝置管理",
+        title: "Devices",
         requiresAuth: true,
         permissionKeys: [PERMISSIONS.DEVICES_VIEW],
       },
@@ -173,7 +180,7 @@ const router = createRouter({
       name: "orders",
       component: OrdersView,
       meta: {
-        title: "訂單管理",
+        title: "Orders",
         requiresAuth: true,
         permissionKeys: [PERMISSIONS.ORDERS_VIEW],
       },
@@ -183,7 +190,7 @@ const router = createRouter({
       name: "shifts",
       component: ShiftsView,
       meta: {
-        title: "班次管理",
+        title: "Shifts",
         requiresAuth: true,
         permissionKeys: [PERMISSIONS.SHIFTS_VIEW],
       },
@@ -193,7 +200,7 @@ const router = createRouter({
       name: "access-users",
       component: UsersAccessView,
       meta: {
-        title: "帳號管理",
+        title: "Users",
         requiresAuth: true,
         permissionKeys: [PERMISSIONS.USERS_VIEW],
       },
@@ -203,7 +210,7 @@ const router = createRouter({
       name: "access-roles",
       component: RolePermissionsView,
       meta: {
-        title: "角色權限",
+        title: "Roles",
         requiresAuth: true,
         permissionKeys: [PERMISSIONS.ROLES_VIEW],
       },
@@ -219,13 +226,14 @@ router.beforeEach(async (to) => {
     return { name: "login", query: { redirect: to.fullPath } };
   }
 
-  if (to.name === "login" && authStore.isAuthenticated) {
+  if ((to.name === "login" || to.name === "register") && authStore.isAuthenticated) {
     return findFirstAccessiblePath(authStore.permissionKeys);
   }
 
   const requiredPermissionKeys = Array.isArray(to.meta.permissionKeys)
     ? to.meta.permissionKeys
     : [];
+
   if (
     requiredPermissionKeys.length > 0 &&
     !authStore.hasAnyPermission(requiredPermissionKeys)
@@ -237,7 +245,7 @@ router.beforeEach(async (to) => {
 });
 
 router.afterEach((to) => {
-  const title = typeof to.meta.title === "string" ? to.meta.title : "管理後台";
+  const title = typeof to.meta.title === "string" ? to.meta.title : "Admin";
   document.title = `NUCOSMOS Admin | ${title}`;
 });
 

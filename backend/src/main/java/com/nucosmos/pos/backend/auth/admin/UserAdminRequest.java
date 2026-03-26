@@ -10,7 +10,7 @@ import java.util.List;
 public record UserAdminRequest(
         @NotBlank @Size(max = 50) String employeeCode,
         @NotBlank @Size(max = 120) String displayName,
-        @Size(max = 12) @Pattern(regexp = "^$|\\d+$", message = "PIN must contain digits only") String pin,
+        @Pattern(regexp = "^$|\\d{6}$", message = "PIN must contain exactly 6 digits") String pin,
         @NotBlank @Size(max = 20) String status,
         @NotEmpty List<String> roleCodes,
         @NotEmpty List<String> storeCodes

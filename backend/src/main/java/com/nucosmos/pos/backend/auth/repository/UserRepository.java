@@ -16,7 +16,11 @@ public interface UserRepository extends JpaRepository<UserEntity, UUID> {
 
     boolean existsByEmployeeCodeAndIdNot(String employeeCode, UUID id);
 
+    boolean existsByPhoneNumber(String phoneNumber);
+
     Optional<UserEntity> findByEmployeeCode(String employeeCode);
+
+    Optional<UserEntity> findByPhoneNumber(String phoneNumber);
 
     @Query("""
             select distinct u

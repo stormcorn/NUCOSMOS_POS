@@ -25,11 +25,11 @@ const form = reactive({
 });
 
 const canEditUsers = computed(() => authStore.hasPermission(PERMISSIONS.USERS_EDIT));
-const titleText = computed(() => (editingUserId.value ? "編輯使用者" : "新增使用者"));
+const titleText = computed(() => (editingUserId.value ? "Edit user" : "Create user"));
 
 function formatDateTime(value: string | null) {
   if (!value) {
-    return "尚未登入";
+    return "Never";
   }
 
   return new Intl.DateTimeFormat("zh-TW", {
@@ -86,22 +86,27 @@ async function saveUser() {
   formError.value = "";
 
   if (!form.employeeCode || !form.displayName) {
-    formError.value = "請輸入員工代碼與顯示名稱。";
+    formError.value = "Employee code and display name are required.";
     return;
   }
 
   if (!editingUserId.value && !form.pin) {
-    formError.value = "新增使用者時必須設定 PIN。";
+    formError.value = "A new user must have a 6-digit PIN.";
+    return;
+  }
+
+  if (form.pin && !/^\d{6}$/.test(form.pin.trim())) {
+    formError.value = "PIN must contain exactly 6 digits.";
     return;
   }
 
   if (form.roleCodes.length === 0) {
-    formError.value = "請至少選擇一個角色。";
+    formError.value = "Select at least one role.";
     return;
   }
 
   if (form.storeCodes.length === 0) {
-    formError.value = "請至少選擇一間門市。";
+    formError.value = "Select at least one store.";
     return;
   }
 
@@ -148,8 +153,10 @@ onMounted(() => {
       <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p class="text-xs uppercase tracking-[0.28em] text-brand-aqua/70">User Access</p>
-          <h3 class="mt-2 text-2xl font-semibold text-white">使用者管理</h3>
-          <p class="mt-2 text-sm text-slate-400">管理後台使用者、角色指派與可登入門市。</p>
+          <h3 class="mt-2 text-2xl font-semibold text-white">User directory</h3>
+          <p class="mt-2 text-sm text-slate-400">
+            Review staff access, assigned roles, store coverage, and the latest login activity.
+          </p>
         </div>
 
         <div class="flex flex-wrap gap-3">
@@ -158,9 +165,9 @@ onMounted(() => {
             class="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none"
             @change="accessStore.loadUsers(accessStore.userStatusFilter, accessStore.userStoreFilter)"
           >
-            <option value="">全部狀態</option>
-            <option value="ACTIVE">啟用</option>
-            <option value="INACTIVE">停用</option>
+            <option value="">All statuses</option>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
           </select>
 
           <select
@@ -168,7 +175,7 @@ onMounted(() => {
             class="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none"
             @change="accessStore.loadUsers(accessStore.userStatusFilter, accessStore.userStoreFilter)"
           >
-            <option value="">全部門市</option>
+            <option value="">All stores</option>
             <option v-for="store in storeContextStore.stores" :key="store.code" :value="store.code">
               {{ store.name }}
             </option>
@@ -179,24 +186,26 @@ onMounted(() => {
             class="rounded-2xl bg-brand-aqua px-5 py-3 text-sm font-semibold text-slate-950 transition hover:brightness-110"
             @click="openCreateForm"
           >
-            新增使用者
+            New user
           </button>
         </div>
       </div>
 
-      <p v-if="accessStore.errorMessage" class="mt-4 text-sm text-brand-coral">{{ accessStore.errorMessage }}</p>
+      <p v-if="accessStore.errorMessage" class="mt-4 text-sm text-brand-coral">
+        {{ accessStore.errorMessage }}
+      </p>
 
       <div class="mt-6 overflow-hidden rounded-[1.5rem] border border-white/8">
         <table class="min-w-full divide-y divide-white/8 text-sm">
           <thead class="bg-white/4 text-left text-slate-400">
             <tr>
-              <th class="px-4 py-3">員工代碼</th>
-              <th class="px-4 py-3">名稱</th>
-              <th class="px-4 py-3">角色</th>
-              <th class="px-4 py-3">門市</th>
-              <th class="px-4 py-3">狀態</th>
-              <th class="px-4 py-3">最後登入</th>
-              <th class="px-4 py-3 text-right">操作</th>
+              <th class="px-4 py-3">Employee Code</th>
+              <th class="px-4 py-3">Display Name</th>
+              <th class="px-4 py-3">Roles</th>
+              <th class="px-4 py-3">Stores</th>
+              <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3">Last Login</th>
+              <th class="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-white/6 bg-slate-950/35">
@@ -210,7 +219,7 @@ onMounted(() => {
                   class="rounded-full px-2.5 py-1 text-xs font-semibold"
                   :class="user.status === 'ACTIVE' ? 'bg-emerald-400/15 text-emerald-300' : 'bg-slate-400/15 text-slate-300'"
                 >
-                  {{ user.status === "ACTIVE" ? "啟用" : "停用" }}
+                  {{ user.status === "ACTIVE" ? "Active" : "Inactive" }}
                 </span>
               </td>
               <td class="px-4 py-3 text-slate-400">{{ formatDateTime(user.lastLoginAt) }}</td>
@@ -220,13 +229,13 @@ onMounted(() => {
                   class="rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-200 transition hover:border-brand-aqua/30 hover:text-white"
                   @click="openEditForm(user)"
                 >
-                  編輯
+                  Edit
                 </button>
               </td>
             </tr>
             <tr v-if="accessStore.users.length === 0">
               <td colspan="7" class="px-4 py-10 text-center text-slate-400">
-                {{ accessStore.loadingUsers ? "載入使用者中..." : "目前沒有符合條件的使用者。" }}
+                {{ accessStore.loadingUsers ? "Loading users..." : "No users match the current filters." }}
               </td>
             </tr>
           </tbody>
@@ -240,44 +249,76 @@ onMounted(() => {
           <p class="text-xs uppercase tracking-[0.28em] text-brand-aqua/70">Editor</p>
           <h3 class="mt-2 text-xl font-semibold text-white">{{ titleText }}</h3>
         </div>
-        <button v-if="isFormOpen && canEditUsers" class="text-sm text-slate-400 transition hover:text-white" @click="isFormOpen = false">關閉</button>
+        <button
+          v-if="isFormOpen && canEditUsers"
+          class="text-sm text-slate-400 transition hover:text-white"
+          @click="isFormOpen = false"
+        >
+          Close
+        </button>
       </div>
 
-      <div v-if="!canEditUsers" class="mt-8 rounded-[1.5rem] border border-dashed border-white/10 px-4 py-10 text-center text-sm text-slate-400">
-        你目前只有查看使用者清單的權限，不能新增或編輯使用者。
+      <div
+        v-if="!canEditUsers"
+        class="mt-8 rounded-[1.5rem] border border-dashed border-white/10 px-4 py-10 text-center text-sm text-slate-400"
+      >
+        You do not have permission to create or edit staff accounts.
       </div>
 
-      <div v-else-if="!isFormOpen" class="mt-8 rounded-[1.5rem] border border-dashed border-white/10 px-4 py-10 text-center text-sm text-slate-400">
-        點選左側的「新增使用者」或選擇一筆使用者開始編輯。
+      <div
+        v-else-if="!isFormOpen"
+        class="mt-8 rounded-[1.5rem] border border-dashed border-white/10 px-4 py-10 text-center text-sm text-slate-400"
+      >
+        Pick an existing user to edit, or create a new account for staff onboarding.
       </div>
 
       <div v-else class="mt-6 space-y-5">
         <label class="block">
-          <span class="mb-2 block text-sm text-slate-300">員工代碼</span>
-          <input v-model="form.employeeCode" type="text" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" />
+          <span class="mb-2 block text-sm text-slate-300">Employee Code</span>
+          <input
+            v-model="form.employeeCode"
+            type="text"
+            class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none"
+          />
         </label>
 
         <label class="block">
-          <span class="mb-2 block text-sm text-slate-300">顯示名稱</span>
-          <input v-model="form.displayName" type="text" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" />
+          <span class="mb-2 block text-sm text-slate-300">Display Name</span>
+          <input
+            v-model="form.displayName"
+            type="text"
+            class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none"
+          />
         </label>
 
         <label class="block">
           <span class="mb-2 block text-sm text-slate-300">PIN</span>
-          <input v-model="form.pin" type="password" inputmode="numeric" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" />
-          <span class="mt-2 block text-xs text-slate-500">{{ editingUserId ? "留空表示不更改 PIN" : "新增使用者時必填" }}</span>
+          <input
+            v-model="form.pin"
+            type="password"
+            inputmode="numeric"
+            maxlength="6"
+            placeholder="123456"
+            class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none"
+          />
+          <span class="mt-2 block text-xs text-slate-500">
+            {{ editingUserId ? "Leave blank to keep the existing 6-digit PIN." : "Set a 6-digit PIN for the new user." }}
+          </span>
         </label>
 
         <label class="block">
-          <span class="mb-2 block text-sm text-slate-300">狀態</span>
-          <select v-model="form.status" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none">
-            <option value="ACTIVE">啟用</option>
-            <option value="INACTIVE">停用</option>
+          <span class="mb-2 block text-sm text-slate-300">Status</span>
+          <select
+            v-model="form.status"
+            class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none"
+          >
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
           </select>
         </label>
 
         <div>
-          <p class="mb-2 text-sm text-slate-300">角色指派</p>
+          <p class="mb-2 text-sm text-slate-300">Roles</p>
           <div class="grid gap-2">
             <label
               v-for="role in accessStore.roles"
@@ -292,14 +333,16 @@ onMounted(() => {
               />
               <span>
                 <span class="block font-medium text-white">{{ role.name }}</span>
-                <span class="mt-1 block text-xs text-slate-400">{{ role.code }} · {{ role.description || "未填寫角色說明" }}</span>
+                <span class="mt-1 block text-xs text-slate-400">
+                  {{ role.code }} | {{ role.description || "No description" }}
+                </span>
               </span>
             </label>
           </div>
         </div>
 
         <div>
-          <p class="mb-2 text-sm text-slate-300">可登入門市</p>
+          <p class="mb-2 text-sm text-slate-300">Stores</p>
           <div class="grid gap-2">
             <label
               v-for="store in storeContextStore.stores"
@@ -323,7 +366,7 @@ onMounted(() => {
           :disabled="accessStore.saving"
           @click="saveUser"
         >
-          {{ accessStore.saving ? "儲存中..." : editingUserId ? "更新使用者" : "建立使用者" }}
+          {{ accessStore.saving ? "Saving..." : editingUserId ? "Update user" : "Create user" }}
         </button>
       </div>
     </aside>

@@ -4,14 +4,14 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-public record PinLoginRequest(
+public record RegistrationStartRequest(
         @NotBlank String storeCode,
-        @Size(max = 50) String roleCode,
+        @NotBlank
+        @Size(max = 30)
+        @Pattern(regexp = "^\\+?[0-9\\-\\s]{10,20}$", message = "Phone number format is invalid")
+        String phoneNumber,
         @NotBlank
         @Pattern(regexp = "\\d{6}", message = "PIN must contain exactly 6 digits")
-        String pin,
-        @Size(max = 50) String deviceCode,
-        @Size(max = 120) String deviceName,
-        @Size(max = 30) String devicePlatform
+        String pin
 ) {
 }

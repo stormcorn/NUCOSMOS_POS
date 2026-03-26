@@ -33,7 +33,7 @@ class ProductControllerTest {
                 {
                   "storeCode": "TW001",
                   "roleCode": "CASHIER",
-                  "pin": "1234",
+                  "pin": "123456",
                   "deviceCode": "POS-TABLET-001"
                 }
                 """);
@@ -56,7 +56,7 @@ class ProductControllerTest {
                 {
                   "storeCode": "TW001",
                   "roleCode": "MANAGER",
-                  "pin": "9999",
+                  "pin": "999999",
                   "deviceCode": "POS-TABLET-001"
                 }
                 """);
@@ -78,7 +78,7 @@ class ProductControllerTest {
                                   "imageUrl": "https://example.com/seasonal-jasmine-tea.jpg",
                                   "price": 9.50,
                                   "campaignEnabled": true,
-                                  "campaignLabel": "春季限定",
+                                  "campaignLabel": "?亙迤??",
                                   "campaignPrice": 8.80,
                                   "campaignStartsAt": "2026-03-23T00:00:00+08:00",
                                   "campaignEndsAt": "2026-04-01T23:59:59+08:00",
@@ -101,7 +101,7 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$.data.imageUrl").value("https://example.com/seasonal-jasmine-tea.jpg"))
                 .andExpect(jsonPath("$.data.campaignEnabled").value(true))
                 .andExpect(jsonPath("$.data.campaignActive").value(true))
-                .andExpect(jsonPath("$.data.campaignLabel").value("春季限定"))
+                .andExpect(jsonPath("$.data.campaignLabel").value("?亙迤??"))
                 .andExpect(jsonPath("$.data.campaignPrice").value(8.8))
                 .andExpect(jsonPath("$.data.displayPrice").value(8.8))
                 .andExpect(jsonPath("$.data.active").value(true))
@@ -128,7 +128,7 @@ class ProductControllerTest {
                                   "imageUrl": "https://example.com/workshop-pass.jpg",
                                   "price": 29.00,
                                   "campaignEnabled": true,
-                                  "campaignLabel": "活動票券",
+                                  "campaignLabel": "瘣餃?蟡典",
                                   "campaignPrice": 24.00,
                                   "campaignStartsAt": "2026-03-23T00:00:00+08:00",
                                   "campaignEndsAt": "2026-03-31T23:59:59+08:00",
@@ -153,7 +153,7 @@ class ProductControllerTest {
                 .andExpect(jsonPath("$.data.imageUrl").value("https://example.com/workshop-pass.jpg"))
                 .andExpect(jsonPath("$.data.price").value(29.0))
                 .andExpect(jsonPath("$.data.campaignEnabled").value(true))
-                .andExpect(jsonPath("$.data.campaignLabel").value("活動票券"))
+                .andExpect(jsonPath("$.data.campaignLabel").value("瘣餃?蟡典"))
                 .andExpect(jsonPath("$.data.campaignPrice").value(24.0))
                 .andExpect(jsonPath("$.data.displayPrice").value(24.0))
                 .andExpect(jsonPath("$.data.materialComponents[0].materialItemId").value("91500000-0000-0000-0000-000000000002"))
@@ -183,7 +183,7 @@ class ProductControllerTest {
                 {
                   "storeCode": "TW001",
                   "roleCode": "MANAGER",
-                  "pin": "9999",
+                  "pin": "999999",
                   "deviceCode": "POS-TABLET-001"
                 }
                 """);
@@ -211,7 +211,7 @@ class ProductControllerTest {
                 {
                   "storeCode": "TW001",
                   "roleCode": "MANAGER",
-                  "pin": "9999",
+                  "pin": "999999",
                   "deviceCode": "POS-TABLET-001"
                 }
                 """);
@@ -241,7 +241,7 @@ class ProductControllerTest {
                 {
                   "storeCode": "TW001",
                   "roleCode": "MANAGER",
-                  "pin": "9999",
+                  "pin": "999999",
                   "deviceCode": "POS-TABLET-001"
                 }
                 """);
@@ -291,7 +291,7 @@ class ProductControllerTest {
                 {
                   "storeCode": "TW001",
                   "roleCode": "MANAGER",
-                  "pin": "9999",
+                  "pin": "999999",
                   "deviceCode": "POS-TABLET-001"
                 }
                 """);
@@ -308,7 +308,7 @@ class ProductControllerTest {
                 {
                   "storeCode": "TW001",
                   "roleCode": "CASHIER",
-                  "pin": "1234",
+                  "pin": "123456",
                   "deviceCode": "POS-TABLET-001"
                 }
                 """);
@@ -335,7 +335,7 @@ class ProductControllerTest {
                 {
                   "storeCode": "TW001",
                   "roleCode": "MANAGER",
-                  "pin": "9999",
+                  "pin": "999999",
                   "deviceCode": "POS-TABLET-001"
                 }
                 """);
