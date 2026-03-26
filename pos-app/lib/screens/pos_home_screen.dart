@@ -1179,11 +1179,11 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
         spacing: 10,
         runSpacing: 10,
         children: [
-          _InfoPill(label: '??', value: item.type.label),
+          _InfoPill(label: '類型', value: item.type.label),
           _InfoPill(label: 'SKU', value: item.sku),
-          _InfoPill(label: '????', value: '${item.quantityOnHand} ${item.unit}'),
+          _InfoPill(label: '現有庫存', value: '${item.quantityOnHand} ${item.unit}'),
           _InfoPill(
-            label: '??',
+            label: '換算',
             value: '1 ${item.purchaseUnit} = ${item.purchaseToStockRatio} ${item.unit}',
           ),
         ],
@@ -1227,7 +1227,7 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
                 )
               : const Icon(Icons.move_to_inbox_rounded),
           label: Text(
-            widget.controller.quickReceiveSaving ? '???...' : '????',
+            widget.controller.quickReceiveSaving ? '處理中...' : '確認收貨',
             style: const TextStyle(fontWeight: FontWeight.w800),
           ),
         ),
@@ -1238,7 +1238,7 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
   Widget _buildEmptyState(bool useEmbeddedLayout) {
     const emptyHint = Center(
       child: Text(
-        '???????????????????????',
+        '請先從左側選擇品項，或直接建立新品項後再收貨。',
         style: TextStyle(color: Colors.white54),
         textAlign: TextAlign.center,
       ),
@@ -1274,33 +1274,33 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
   List<Widget> _buildReceiveFormFields(QuickReceiveItem item) {
     return [
       _ReceiveField(
-        label: '????',
+        label: '收貨數量',
         child: TextField(
           controller: _quantityController,
           keyboardType: TextInputType.number,
           style: const TextStyle(color: Colors.white),
-          decoration: _inputDecoration('?? ${item.purchaseUnit} ??'),
+          decoration: _inputDecoration('輸入 ${item.purchaseUnit} 數量'),
         ),
       ),
       const SizedBox(height: 14),
       _ReceiveField(
-        label: '??????',
-        helper: '???????????? ${item.unit} ????',
+        label: '最近採購成本',
+        helper: '若有需要，可更新這次的每 ${item.unit} 採購成本',
         child: TextField(
           controller: _costController,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           style: const TextStyle(color: Colors.white),
-          decoration: _inputDecoration('?? 320.00'),
+          decoration: _inputDecoration('例如 320.00'),
         ),
       ),
       const SizedBox(height: 14),
       _ReceiveField(
-        label: '??',
+        label: '備註',
         child: TextField(
           controller: _noteController,
           maxLines: 3,
           style: const TextStyle(color: Colors.white),
-          decoration: _inputDecoration('?? ???????????'),
+          decoration: _inputDecoration('例如 供應商到貨、臨時補貨等'),
         ),
       ),
       const SizedBox(height: 18),
@@ -1315,7 +1315,7 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              '????',
+              '入庫預覽',
               style: TextStyle(
                 color: Color(0xFF14F1FF),
                 fontWeight: FontWeight.w800,
@@ -1323,7 +1323,7 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
             ),
             const SizedBox(height: 10),
             Text(
-              '???? PURCHASE_IN ???? ${_previewStockQuantity(item)} ${item.unit}?',
+              '本次將以 PURCHASE_IN 增加入庫 ${_previewStockQuantity(item)} ${item.unit}。',
               style: const TextStyle(color: Colors.white70),
             ),
           ],
@@ -1349,7 +1349,7 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '??${widget.itemType.label}',
+            '建立${widget.itemType.label}',
             style: const TextStyle(
               color: Color(0xFF14F1FF),
               fontWeight: FontWeight.w800,
@@ -1358,7 +1358,7 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
           ),
           const SizedBox(height: 6),
           const Text(
-            '????????????????????????????',
+            '現場若沒有既有品項，可以先建立基本資料，再直接完成收貨。',
             style: TextStyle(color: Colors.white60, fontSize: 12),
           ),
           const SizedBox(height: 12),
@@ -1376,7 +1376,7 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
                 child: TextField(
                   controller: _createNameController,
                   style: const TextStyle(color: Colors.white),
-                  decoration: _inputDecoration('??'),
+                  decoration: _inputDecoration('名稱'),
                 ),
               ),
             ],
@@ -1388,7 +1388,7 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
                 child: TextField(
                   controller: _createUnitController,
                   style: const TextStyle(color: Colors.white),
-                  decoration: _inputDecoration('????'),
+                  decoration: _inputDecoration('庫存單位'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1396,7 +1396,7 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
                 child: TextField(
                   controller: _createPurchaseUnitController,
                   style: const TextStyle(color: Colors.white),
-                  decoration: _inputDecoration('????'),
+                  decoration: _inputDecoration('採購單位'),
                 ),
               ),
             ],
@@ -1409,7 +1409,7 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
                   controller: _createRatioController,
                   keyboardType: TextInputType.number,
                   style: const TextStyle(color: Colors.white),
-                  decoration: _inputDecoration('????'),
+                  decoration: _inputDecoration('換算比例'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1418,7 +1418,7 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
                   controller: _createReorderLevelController,
                   keyboardType: TextInputType.number,
                   style: const TextStyle(color: Colors.white),
-                  decoration: _inputDecoration('???'),
+                  decoration: _inputDecoration('補貨線'),
                 ),
               ),
             ],
@@ -1428,14 +1428,14 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
             controller: _createCostController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             style: const TextStyle(color: Colors.white),
-            decoration: _inputDecoration('??????????'),
+            decoration: _inputDecoration('最近採購成本，可留空'),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _createDescriptionController,
             maxLines: 2,
             style: const TextStyle(color: Colors.white),
-            decoration: _inputDecoration('?????'),
+            decoration: _inputDecoration('描述或備註'),
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -1445,7 +1445,7 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
                   ? null
                   : _handleCreateItem,
               icon: const Icon(Icons.add_box_rounded),
-              label: Text('??${widget.itemType.label}'),
+              label: Text('建立${widget.itemType.label}'),
             ),
           ),
         ],
@@ -1461,7 +1461,7 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
 
     if (purchaseQuantity == null || purchaseQuantity <= 0) {
       setState(() {
-        _localError = '????? 0 ??????';
+        _localError = '請輸入大於 0 的收貨數量。';
       });
       return;
     }
@@ -1469,7 +1469,7 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
     if (_costController.text.trim().isNotEmpty &&
         (purchaseUnitCost == null || purchaseUnitCost < 0)) {
       setState(() {
-        _localError = '???????????';
+        _localError = '請輸入有效的採購成本。';
       });
       return;
     }
@@ -1499,21 +1499,21 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
         _createUnitController.text.trim().isEmpty ||
         _createPurchaseUnitController.text.trim().isEmpty) {
       setState(() {
-        _localError = '????? SKU??????????????';
+        _localError = '請完整填寫 SKU、名稱、庫存單位與採購單位。';
       });
       return;
     }
 
     if (ratio == null || ratio <= 0) {
       setState(() {
-        _localError = '???????? 0?';
+        _localError = '換算比例必須大於 0。';
       });
       return;
     }
 
     if (reorderLevel == null || reorderLevel < 0) {
       setState(() {
-        _localError = '??????? 0?';
+        _localError = '補貨線不可小於 0。';
       });
       return;
     }
@@ -1521,7 +1521,7 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
     if (_createCostController.text.trim().isNotEmpty &&
         (latestCost == null || latestCost < 0)) {
       setState(() {
-        _localError = '????????????';
+        _localError = '最近採購成本格式不正確。';
       });
       return;
     }
