@@ -7,12 +7,14 @@ class ProductGrid extends StatelessWidget {
     required this.products,
     required this.onAddProduct,
     this.embedInParentScroll = false,
+    this.compactTabletMode = false,
     super.key,
   });
 
   final List<ProductSummary> products;
   final ValueChanged<ProductSummary> onAddProduct;
   final bool embedInParentScroll;
+  final bool compactTabletMode;
 
   @override
   Widget build(BuildContext context) {
@@ -36,14 +38,16 @@ class ProductGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final crossAxisCount = width >= 1180
-            ? 5
-            : width >= 760
-                ? 4
-                : width >= 560
-                    ? 3
-                    : 2;
-        final compactCard = width < 920;
+        final crossAxisCount = compactTabletMode
+            ? 3
+            : width >= 1180
+                ? 5
+                : width >= 760
+                    ? 4
+                    : width >= 560
+                        ? 3
+                        : 2;
+        final compactCard = compactTabletMode || width < 920;
 
         return GridView.builder(
           shrinkWrap: embedInParentScroll,

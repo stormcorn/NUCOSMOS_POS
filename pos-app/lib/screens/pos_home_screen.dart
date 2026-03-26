@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_thermal_printer/utils/printer.dart';
 
 import '../models/product_summary.dart';
+import '../models/pos_layout_profile.dart';
 import '../models/quick_receive_models.dart';
 import '../state/printer_controller.dart';
 import '../state/session_controller.dart';
@@ -206,12 +207,7 @@ class _PosHomeScreenState extends State<PosHomeScreen> {
       builder: (context, _) {
         final controller = widget.controller;
         final selectedCategoryName = _selectedCategoryName(controller);
-        final screenWidth = MediaQuery.of(context).size.width;
-        final wideLayout = screenWidth >= 940;
-        final desktopLayout = screenWidth >= 1220;
-        final contentPadding = desktopLayout ? 20.0 : 14.0;
-        final cartWidth = desktopLayout ? 310.0 : 272.0;
-        final categoryWidth = desktopLayout ? 148.0 : 126.0;
+        final layout = PosLayoutProfile.fromSize(MediaQuery.of(context).size);
         final receiveItems =
             controller.itemsForReceiveType(_quickReceiveType).where((item) {
           final keyword = _quickReceiveSearch.trim().toLowerCase();
@@ -251,9 +247,10 @@ class _PosHomeScreenState extends State<PosHomeScreen> {
                             items: receiveItems,
                             selectedItem: selectedReceiveItem,
                             receiveType: _quickReceiveType,
-                            wideLayout: wideLayout,
-                            desktopLayout: desktopLayout,
-                            contentPadding: contentPadding,
+                            wideLayout: layout.wideLayout,
+                            desktopLayout: layout.desktopLayout,
+                            contentPadding: layout.contentPadding,
+                            listPaneHeight: layout.quickReceiveListHeight,
                             searchValue: _quickReceiveSearch,
                             onSearchChanged: (value) {
                               setState(() {
@@ -269,20 +266,20 @@ class _PosHomeScreenState extends State<PosHomeScreen> {
                             onCreateItem: _createQuickReceiveItem,
                             onSubmit: _submitQuickReceive,
                           )
-                        : wideLayout
+                        : layout.wideLayout
                             ? Row(
                                 children: [
                                   SizedBox(
-                                    width: categoryWidth,
+                                    width: layout.categoryWidth,
                                     child: _CategorySidebar(
                                         controller: controller),
                                   ),
                                   Expanded(
                                     child: Padding(
                                       padding: EdgeInsets.fromLTRB(
-                                        contentPadding,
+                                        layout.contentPadding,
                                         16,
-                                        contentPadding,
+                                        layout.contentPadding,
                                         16,
                                       ),
                                       child: Column(
@@ -294,16 +291,19 @@ class _PosHomeScreenState extends State<PosHomeScreen> {
                                             subtitle:
                                                 'Select your favorite beverages',
                                             sessionController: controller,
-                                            compact: !desktopLayout,
+                                            compact: !layout.desktopLayout,
                                           ),
                                           SizedBox(
-                                            height: desktopLayout ? 16 : 12,
+                                            height:
+                                                layout.desktopLayout ? 16 : 12,
                                           ),
                                           Expanded(
                                             child: ProductGrid(
                                               products:
                                                   controller.filteredProducts,
                                               onAddProduct: _handleAddProduct,
+                                              compactTabletMode: layout
+                                                  .isCompactLandscapeTablet,
                                             ),
                                           ),
                                         ],
@@ -311,11 +311,11 @@ class _PosHomeScreenState extends State<PosHomeScreen> {
                                     ),
                                   ),
                                   SizedBox(
-                                    width: cartWidth,
+                                    width: layout.cartWidth,
                                     child: _CurrentOrderPanel(
                                       controller: controller,
                                       onCheckout: _checkoutCash,
-                                      compact: !desktopLayout,
+                                      compact: !layout.desktopLayout,
                                     ),
                                   ),
                                 ],
@@ -345,6 +345,8 @@ class _PosHomeScreenState extends State<PosHomeScreen> {
                                           products: controller.filteredProducts,
                                           onAddProduct: _handleAddProduct,
                                           embedInParentScroll: true,
+                                          compactTabletMode:
+                                              layout.isCompactLandscapeTablet,
                                         ),
                                         const SizedBox(height: 18),
                                         _CurrentOrderPanel(
@@ -749,6 +751,7 @@ class _QuickReceiveWorkspace extends StatelessWidget {
     required this.wideLayout,
     required this.desktopLayout,
     required this.contentPadding,
+    required this.listPaneHeight,
     required this.searchValue,
     required this.onSearchChanged,
     required this.onTypeChanged,
@@ -764,6 +767,7 @@ class _QuickReceiveWorkspace extends StatelessWidget {
   final bool wideLayout;
   final bool desktopLayout;
   final double contentPadding;
+  final double listPaneHeight;
   final String searchValue;
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<QuickReceiveItemType> onTypeChanged;
@@ -845,7 +849,7 @@ class _QuickReceiveWorkspace extends StatelessWidget {
       children: [
         header,
         const SizedBox(height: 18),
-        SizedBox(height: 420, child: listPane),
+        SizedBox(height: listPaneHeight, child: listPane),
         const SizedBox(height: 18),
         formPane,
       ],
@@ -953,89 +957,94 @@ class _QuickReceiveListPane extends StatelessWidget {
                             style: TextStyle(color: Colors.white54),
                           ),
                         )
-                      : ListView.separated(
-                          itemCount: items.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 10),
-                          itemBuilder: (context, index) {
-                            final item = items[index];
-                            final active = item.id == selectedItem?.id;
-                            return InkWell(
-                              onTap: () => onItemSelected(item),
-                              borderRadius: BorderRadius.circular(18),
-                              child: Ink(
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(18),
-                                  color: active
-                                      ? const Color(0xFF223047)
-                                      : const Color(0xFF172132),
-                                  border: Border.all(
+                      : Scrollbar(
+                          thumbVisibility: true,
+                          child: ListView.separated(
+                            itemCount: items.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 10),
+                            itemBuilder: (context, index) {
+                              final item = items[index];
+                              final active = item.id == selectedItem?.id;
+                              return InkWell(
+                                onTap: () => onItemSelected(item),
+                                borderRadius: BorderRadius.circular(18),
+                                child: Ink(
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(18),
                                     color: active
-                                        ? const Color(0xFF14F1FF)
-                                        : const Color(0xFF253043),
+                                        ? const Color(0xFF223047)
+                                        : const Color(0xFF172132),
+                                    border: Border.all(
+                                      color: active
+                                          ? const Color(0xFF14F1FF)
+                                          : const Color(0xFF253043),
+                                    ),
                                   ),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            item.name,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ),
-                                        if (item.lowStock)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 4,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFF35161B),
-                                              borderRadius:
-                                                  BorderRadius.circular(999),
-                                            ),
-                                            child: const Text(
-                                              '低庫存',
-                                              style: TextStyle(
-                                                color: Color(0xFFFF8A93),
-                                                fontSize: 11,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              item.name,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 15,
                                                 fontWeight: FontWeight.w700,
                                               ),
                                             ),
                                           ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      '${item.sku} · 現有 ${item.quantityOnHand} ${item.unit}',
-                                      style: const TextStyle(
-                                        color: Color(0xFF8DA2BD),
-                                        fontSize: 12,
+                                          if (item.lowStock)
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                                vertical: 4,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF35161B),
+                                                borderRadius:
+                                                    BorderRadius.circular(999),
+                                              ),
+                                              child: const Text(
+                                                '低庫存',
+                                                style: TextStyle(
+                                                  color: Color(0xFFFF8A93),
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
                                       ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      item.subtitle,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: Colors.white60,
-                                        fontSize: 12,
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        '${item.sku} ? ?? ${item.quantityOnHand} ${item.unit}',
+                                        style: const TextStyle(
+                                          color: Color(0xFF8DA2BD),
+                                          fontSize: 12,
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        item.subtitle,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Colors.white60,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
             ),
           ],
