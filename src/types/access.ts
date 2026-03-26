@@ -9,6 +9,7 @@ export type UserAdminItem = {
   id: string;
   employeeCode: string;
   displayName: string;
+  phoneNumber: string | null;
   status: string;
   lastLoginAt: string | null;
   roleCodes: string[];

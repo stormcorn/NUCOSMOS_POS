@@ -28,7 +28,7 @@ const form = reactive({
 
 const canEditUsers = computed(() => authStore.hasPermission(PERMISSIONS.USERS_EDIT));
 const canAssignManagers = computed(() => canEditUsers.value && authStore.activeRole === "ADMIN");
-const titleText = computed(() => (editingUserId.value ? "Edit user" : "Create user"));
+const titleText = computed(() => (editingUserId.value ? "編輯帳號" : "建立帳號"));
 
 function normalizePhoneNumber(rawValue: string) {
   const compact = rawValue.replace(/[\s\-()]/g, "").trim();
@@ -46,13 +46,17 @@ function normalizePhoneNumber(rawValue: string) {
 
 function formatDateTime(value: string | null) {
   if (!value) {
-    return "Never";
+    return "從未登入";
   }
 
   return new Intl.DateTimeFormat("zh-TW", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function formatPhoneNumber(value: string | null) {
+  return value && value.trim().length > 0 ? value : "未綁定";
 }
 
 function resetForm() {
@@ -128,30 +132,30 @@ async function saveUser() {
     return;
   }
 
-  formError.value = "";
+    formError.value = "";
 
   if (!form.employeeCode || !form.displayName) {
-    formError.value = "Employee code and display name are required.";
+    formError.value = "請輸入員工代碼與顯示名稱。";
     return;
   }
 
   if (!editingUserId.value && !form.pin) {
-    formError.value = "A new user must have a 6-digit PIN.";
+    formError.value = "新帳號必須設定 6 位數 PIN。";
     return;
   }
 
   if (form.pin && !/^\d{6}$/.test(form.pin.trim())) {
-    formError.value = "PIN must contain exactly 6 digits.";
+    formError.value = "PIN 必須為 6 位數字。";
     return;
   }
 
   if (form.roleCodes.length === 0) {
-    formError.value = "Select at least one role.";
+    formError.value = "請至少選擇一個角色。";
     return;
   }
 
   if (form.storeCodes.length === 0) {
-    formError.value = "Select at least one store.";
+    formError.value = "請至少選擇一間門市。";
     return;
   }
 
@@ -184,7 +188,7 @@ async function clearPendingRegistration() {
 
   const normalizedPhoneNumber = normalizePhoneNumber(phoneRegistrationPhoneNumber.value);
   if (!/^\+\d{10,15}$/.test(normalizedPhoneNumber)) {
-    phoneRegistrationFormError.value = "Enter a valid phone number, for example 0912345678 or +886912345678.";
+    phoneRegistrationFormError.value = "請輸入正確的手機號碼，例如 0912345678 或 +886912345678。";
     return;
   }
 
@@ -218,9 +222,9 @@ onMounted(() => {
       <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p class="text-xs uppercase tracking-[0.28em] text-brand-aqua/70">User Access</p>
-          <h3 class="mt-2 text-2xl font-semibold text-white">User directory</h3>
+          <h3 class="mt-2 text-2xl font-semibold text-white">帳號管理</h3>
           <p class="mt-2 text-sm text-slate-400">
-            Review staff access, assigned roles, store coverage, and the latest login activity.
+            查看員工帳號、手機號碼、角色指派、門市範圍與最近登入時間。
           </p>
         </div>
 
@@ -230,9 +234,9 @@ onMounted(() => {
             class="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none"
             @change="accessStore.loadUsers(accessStore.userStatusFilter, accessStore.userStoreFilter)"
           >
-            <option value="">All statuses</option>
-            <option value="ACTIVE">Active</option>
-            <option value="INACTIVE">Inactive</option>
+            <option value="">全部狀態</option>
+            <option value="ACTIVE">啟用中</option>
+            <option value="INACTIVE">停用</option>
           </select>
 
           <select
@@ -240,7 +244,7 @@ onMounted(() => {
             class="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none"
             @change="accessStore.loadUsers(accessStore.userStatusFilter, accessStore.userStoreFilter)"
           >
-            <option value="">All stores</option>
+            <option value="">全部門市</option>
             <option v-for="store in storeContextStore.stores" :key="store.code" :value="store.code">
               {{ store.name }}
             </option>
@@ -251,7 +255,7 @@ onMounted(() => {
             class="rounded-2xl bg-brand-aqua px-5 py-3 text-sm font-semibold text-slate-950 transition hover:brightness-110"
             @click="openCreateForm"
           >
-            New user
+            新增帳號
           </button>
         </div>
       </div>
@@ -264,19 +268,21 @@ onMounted(() => {
         <table class="min-w-full divide-y divide-white/8 text-sm">
           <thead class="bg-white/4 text-left text-slate-400">
             <tr>
-              <th class="px-4 py-3">Employee Code</th>
-              <th class="px-4 py-3">Display Name</th>
-              <th class="px-4 py-3">Roles</th>
-              <th class="px-4 py-3">Stores</th>
-              <th class="px-4 py-3">Status</th>
-              <th class="px-4 py-3">Last Login</th>
-              <th class="px-4 py-3 text-right">Actions</th>
+              <th class="px-4 py-3">員工代碼</th>
+              <th class="px-4 py-3">顯示名稱</th>
+              <th class="px-4 py-3">手機號碼</th>
+              <th class="px-4 py-3">角色</th>
+              <th class="px-4 py-3">門市</th>
+              <th class="px-4 py-3">狀態</th>
+              <th class="px-4 py-3">最近登入</th>
+              <th class="px-4 py-3 text-right">操作</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-white/6 bg-slate-950/35">
             <tr v-for="user in accessStore.users" :key="user.id" class="text-slate-200">
               <td class="px-4 py-3 font-medium">{{ user.employeeCode }}</td>
               <td class="px-4 py-3">{{ user.displayName }}</td>
+              <td class="px-4 py-3">{{ formatPhoneNumber(user.phoneNumber) }}</td>
               <td class="px-4 py-3">{{ user.roleCodes.join(", ") }}</td>
               <td class="px-4 py-3">{{ user.storeNames.join(", ") }}</td>
               <td class="px-4 py-3">
@@ -284,7 +290,7 @@ onMounted(() => {
                   class="rounded-full px-2.5 py-1 text-xs font-semibold"
                   :class="user.status === 'ACTIVE' ? 'bg-emerald-400/15 text-emerald-300' : 'bg-slate-400/15 text-slate-300'"
                 >
-                  {{ user.status === "ACTIVE" ? "Active" : "Inactive" }}
+                  {{ user.status === "ACTIVE" ? "啟用中" : "停用" }}
                 </span>
               </td>
               <td class="px-4 py-3 text-slate-400">{{ formatDateTime(user.lastLoginAt) }}</td>
@@ -298,21 +304,21 @@ onMounted(() => {
                       : 'border-brand-aqua/30 text-brand-aqua hover:border-brand-aqua/50'"
                     @click="toggleManagerAssignment(user)"
                   >
-                    {{ hasRole(user, "MANAGER") ? "Remove manager" : "Assign manager" }}
+                    {{ hasRole(user, "MANAGER") ? "移除店長" : "指派店長" }}
                   </button>
                   <button
                     v-if="canEditUsers"
                     class="rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-200 transition hover:border-brand-aqua/30 hover:text-white"
                     @click="openEditForm(user)"
                   >
-                    Edit
+                    編輯
                   </button>
                 </div>
               </td>
             </tr>
             <tr v-if="accessStore.users.length === 0">
-              <td colspan="7" class="px-4 py-10 text-center text-slate-400">
-                {{ accessStore.loadingUsers ? "Loading users..." : "No users match the current filters." }}
+              <td colspan="8" class="px-4 py-10 text-center text-slate-400">
+                {{ accessStore.loadingUsers ? "載入帳號中..." : "目前沒有符合條件的帳號。" }}
               </td>
             </tr>
           </tbody>
@@ -331,7 +337,7 @@ onMounted(() => {
           class="text-sm text-slate-400 transition hover:text-white"
           @click="isFormOpen = false"
         >
-          Close
+          關閉
         </button>
       </div>
 
@@ -339,19 +345,19 @@ onMounted(() => {
         v-if="!canEditUsers"
         class="mt-8 rounded-[1.5rem] border border-dashed border-white/10 px-4 py-10 text-center text-sm text-slate-400"
       >
-        You do not have permission to create or edit staff accounts.
+        你目前沒有建立或編輯員工帳號的權限。
       </div>
 
       <div
         v-else-if="!isFormOpen"
         class="mt-8 rounded-[1.5rem] border border-dashed border-white/10 px-4 py-10 text-center text-sm text-slate-400"
       >
-        Pick an existing user to edit, or create a new account for staff onboarding.
+        請從左側選擇既有帳號編輯，或建立新的員工帳號。
       </div>
 
       <div v-else class="mt-6 space-y-5">
         <label class="block">
-          <span class="mb-2 block text-sm text-slate-300">Employee Code</span>
+          <span class="mb-2 block text-sm text-slate-300">員工代碼</span>
           <input
             v-model="form.employeeCode"
             type="text"
@@ -360,7 +366,7 @@ onMounted(() => {
         </label>
 
         <label class="block">
-          <span class="mb-2 block text-sm text-slate-300">Display Name</span>
+          <span class="mb-2 block text-sm text-slate-300">顯示名稱</span>
           <input
             v-model="form.displayName"
             type="text"
@@ -379,23 +385,23 @@ onMounted(() => {
             class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none"
           />
           <span class="mt-2 block text-xs text-slate-500">
-            {{ editingUserId ? "Leave blank to keep the existing 6-digit PIN." : "Set a 6-digit PIN for the new user." }}
+            {{ editingUserId ? "留空可保留原本的 6 位數 PIN。" : "請為新帳號設定 6 位數 PIN。" }}
           </span>
         </label>
 
         <label class="block">
-          <span class="mb-2 block text-sm text-slate-300">Status</span>
+          <span class="mb-2 block text-sm text-slate-300">狀態</span>
           <select
             v-model="form.status"
             class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none"
           >
-            <option value="ACTIVE">Active</option>
-            <option value="INACTIVE">Inactive</option>
+            <option value="ACTIVE">啟用中</option>
+            <option value="INACTIVE">停用</option>
           </select>
         </label>
 
         <div>
-          <p class="mb-2 text-sm text-slate-300">Roles</p>
+          <p class="mb-2 text-sm text-slate-300">角色</p>
           <div class="grid gap-2">
             <label
               v-for="role in accessStore.roles"
@@ -411,7 +417,7 @@ onMounted(() => {
               <span>
                 <span class="block font-medium text-white">{{ role.name }}</span>
                 <span class="mt-1 block text-xs text-slate-400">
-                  {{ role.code }} | {{ role.description || "No description" }}
+                  {{ role.code }} | {{ role.description || "未填寫說明" }}
                 </span>
               </span>
             </label>
@@ -419,7 +425,7 @@ onMounted(() => {
         </div>
 
         <div>
-          <p class="mb-2 text-sm text-slate-300">Stores</p>
+          <p class="mb-2 text-sm text-slate-300">門市</p>
           <div class="grid gap-2">
             <label
               v-for="store in storeContextStore.stores"
@@ -443,19 +449,19 @@ onMounted(() => {
           :disabled="accessStore.saving"
           @click="saveUser"
         >
-          {{ accessStore.saving ? "Saving..." : editingUserId ? "Update user" : "Create user" }}
+          {{ accessStore.saving ? "儲存中..." : editingUserId ? "更新帳號" : "建立帳號" }}
         </button>
       </div>
 
       <div v-if="canEditUsers" class="mt-8 rounded-[1.5rem] border border-white/8 bg-white/4 p-5">
         <p class="text-xs uppercase tracking-[0.28em] text-brand-aqua/70">Registration Recovery</p>
-        <h4 class="mt-2 text-lg font-semibold text-white">Clear pending phone registration</h4>
+        <h4 class="mt-2 text-lg font-semibold text-white">清除待完成的手機註冊</h4>
         <p class="mt-2 text-sm leading-6 text-slate-400">
-          Use this when a staff member is stuck in SMS registration and needs the current pending request cleared before retrying.
+          當員工卡在簡訊註冊流程時，可先清除目前待完成的申請，再重新註冊。
         </p>
 
         <label class="mt-5 block">
-          <span class="mb-2 block text-sm text-slate-300">Phone Number</span>
+          <span class="mb-2 block text-sm text-slate-300">手機號碼</span>
           <input
             v-model="phoneRegistrationPhoneNumber"
             type="tel"
@@ -463,8 +469,8 @@ onMounted(() => {
             class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none"
           />
           <span class="mt-2 block text-xs text-slate-500">
-            Taiwan mobile numbers entered as <code class="font-mono">09xxxxxxxx</code> will be converted to
-            <code class="font-mono">+8869xxxxxxxx</code> automatically.
+            台灣手機若輸入 <code class="font-mono">09xxxxxxxx</code>，系統會自動轉成
+            <code class="font-mono">+8869xxxxxxxx</code>。
           </span>
         </label>
 
@@ -478,7 +484,7 @@ onMounted(() => {
           :disabled="accessStore.saving"
           @click="clearPendingRegistration"
         >
-          {{ accessStore.saving ? "Clearing..." : "Clear pending registration" }}
+          {{ accessStore.saving ? "清除中..." : "清除待完成註冊" }}
         </button>
       </div>
     </aside>

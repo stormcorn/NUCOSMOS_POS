@@ -131,11 +131,11 @@ export const useAccessControlStore = defineStore("accessControl", () => {
       const response: ClearPendingPhoneRegistrationResponse = await clearPendingPhoneRegistrations({ phoneNumber });
       phoneRegistrationActionMessage.value =
         response.clearedCount > 0
-          ? `Cleared ${response.clearedCount} pending request(s) for ${response.phoneNumber}.`
-          : `No pending registration was found for ${response.phoneNumber}.`;
+          ? `已清除 ${response.phoneNumber} 的 ${response.clearedCount} 筆待完成註冊申請。`
+          : `${response.phoneNumber} 目前沒有待完成的註冊申請。`;
       return response;
     } catch (error) {
-      errorMessage.value = error instanceof ApiError ? error.message : "Failed to clear pending registration.";
+      errorMessage.value = error instanceof ApiError ? error.message : "清除待完成註冊失敗。";
       return null;
     } finally {
       saving.value = false;

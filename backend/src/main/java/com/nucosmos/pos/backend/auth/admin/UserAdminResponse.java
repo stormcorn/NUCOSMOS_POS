@@ -8,6 +8,7 @@ public record UserAdminResponse(
         UUID id,
         String employeeCode,
         String displayName,
+        String phoneNumber,
         String status,
         OffsetDateTime lastLoginAt,
         List<String> roleCodes,

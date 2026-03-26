@@ -309,6 +309,7 @@ public class AccessAdminService {
                 user.getId(),
                 user.getEmployeeCode(),
                 user.getDisplayName(),
+                user.getPhoneNumber(),
                 user.getStatus(),
                 user.getLastLoginAt(),
                 roleCodes,
