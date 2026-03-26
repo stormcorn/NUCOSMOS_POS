@@ -45,7 +45,9 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
     if (widget.controller.canEditApiBaseUrl) {
-      await widget.controller.updateApiBaseUrl(_apiBaseUrlController.text.trim());
+      await widget.controller.updateApiBaseUrl(
+        _apiBaseUrlController.text.trim(),
+      );
     }
 
     final storeCode = widget.controller.selectedStoreCode;
@@ -53,9 +55,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a store code.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('請先選擇門市代碼。')));
       return;
     }
 
@@ -69,9 +71,9 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     if (!success && widget.controller.errorMessage.isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(widget.controller.errorMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(widget.controller.errorMessage)));
       return;
     }
 
@@ -89,7 +91,9 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     if (widget.controller.canEditApiBaseUrl) {
-      await widget.controller.updateApiBaseUrl(_apiBaseUrlController.text.trim());
+      await widget.controller.updateApiBaseUrl(
+        _apiBaseUrlController.text.trim(),
+      );
     }
     final success = await widget.controller.testConnection();
 
@@ -105,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
       SnackBar(
         content: Text(
           success
-              ? 'Connection successful: ${widget.controller.apiBaseUrl}'
+              ? '連線成功：${widget.controller.apiBaseUrl}'
               : widget.controller.errorMessage,
         ),
       ),
@@ -297,14 +301,14 @@ class _LoginPanel extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Sign in with your 6-digit store PIN. Role and device identity are resolved automatically.',
+              '請使用 6 位數門市 PIN 登入，系統會自動判定角色與裝置身分。',
               style: theme.textTheme.titleMedium?.copyWith(
                 color: Colors.white70,
               ),
             ),
             const SizedBox(height: 20),
             Text(
-              'API endpoint: $currentApiBaseUrl',
+              'API 端點：$currentApiBaseUrl',
               style: const TextStyle(color: Colors.white60),
             ),
             const SizedBox(height: 16),
@@ -312,7 +316,7 @@ class _LoginPanel extends StatelessWidget {
               TextField(
                 controller: apiBaseUrlController,
                 decoration: const InputDecoration(
-                  labelText: 'API Base URL',
+                  labelText: 'API 網址',
                   hintText: 'https://nucosmos.io',
                 ),
               ),
@@ -330,7 +334,7 @@ class _LoginPanel extends StatelessWidget {
                             )
                           : const Icon(Icons.wifi_tethering_rounded),
                       label: Text(
-                        testingConnection ? 'Testing...' : 'Test connection',
+                        testingConnection ? '測試中...' : '測試連線',
                       ),
                     ),
                   ),
@@ -346,7 +350,7 @@ class _LoginPanel extends StatelessWidget {
                   border: Border.all(color: const Color(0xFF22314B)),
                 ),
                 child: const Text(
-                  'Production API settings are locked on this device.',
+                  '這台裝置已鎖定正式環境 API 設定。',
                   style: TextStyle(color: Colors.white70),
                 ),
               ),
@@ -354,7 +358,7 @@ class _LoginPanel extends StatelessWidget {
             DropdownButtonFormField<String>(
               initialValue: selectedValue,
               decoration: const InputDecoration(
-                labelText: 'Store Code',
+                labelText: '門市代碼',
               ),
               items: stores
                   .map(
@@ -373,7 +377,7 @@ class _LoginPanel extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              'PIN',
+              'PIN 碼',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -413,7 +417,8 @@ class _LoginPanel extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: loading || pin.length < _minPinDigits ? null : onSubmit,
+                onPressed:
+                    loading || pin.length < _minPinDigits ? null : onSubmit,
                 icon: loading
                     ? const SizedBox(
                         width: 18,
@@ -422,7 +427,7 @@ class _LoginPanel extends StatelessWidget {
                       )
                     : const Icon(Icons.login_rounded),
                 label: Text(
-                  loading ? 'Signing in...' : 'Sign in with PIN',
+                  loading ? '登入中...' : '使用 PIN 登入',
                 ),
               ),
             ),
@@ -438,13 +443,13 @@ class _LoginPanel extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Sign-in notes',
+                    '登入說明',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   SizedBox(height: 10),
-                  Text('1. Select the store assigned to this tablet.'),
-                  Text('2. Enter a 6-digit PIN on the keypad.'),
-                  Text('3. Staff role and device profile are detected automatically.'),
+                  Text('1. 先選擇這台平板所屬的門市。'),
+                  Text('2. 在右側鍵盤輸入 6 位數 PIN。'),
+                  Text('3. 系統會自動判定員工角色與裝置資料。'),
                 ],
               ),
             ),
@@ -485,7 +490,7 @@ class _DeviceCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Device',
+            '裝置資訊',
             style: TextStyle(
               color: Colors.white70,
               fontWeight: FontWeight.w600,

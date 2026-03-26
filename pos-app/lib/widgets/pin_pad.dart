@@ -49,14 +49,14 @@ class PinPad extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'PIN keypad',
+            'PIN 數字鍵盤',
             style: Theme.of(
               context,
             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
           Text(
-            'Enter your $maxPinLength-digit PIN and tap check to continue.',
+            '請輸入 $maxPinLength 位數 PIN，完成後按下確認。',
             style: const TextStyle(color: Colors.white70),
           ),
           const SizedBox(height: 16),
@@ -101,8 +101,8 @@ class PinPad extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             pinLength >= minPinLength
-                ? 'PIN ready to submit.'
-                : 'PIN must be at least $minPinLength digits.',
+                ? 'PIN 已可送出。'
+                : 'PIN 至少需要 $minPinLength 位數。',
             style: const TextStyle(color: Colors.white70),
           ),
         ],
