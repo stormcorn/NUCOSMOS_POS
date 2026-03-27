@@ -20,6 +20,9 @@ class PrinterService {
   static const MethodChannel _classicBluetoothChannel = MethodChannel(
     'nucosmos_pos_app/classic_bluetooth',
   );
+  static const MethodChannel _androidPrintChannel = MethodChannel(
+    'nucosmos_pos_app/android_print',
+  );
 
   final FlutterThermalPrinter _plugin = FlutterThermalPrinter.instance;
 
@@ -96,6 +99,37 @@ class PrinterService {
       staffName: staffName,
     );
     await _printClassicBytes(device, bytes);
+  }
+
+  Future<void> printSystemTestDocument() async {
+    final now = DateTime.now();
+    await _androidPrintChannel.invokeMethod(
+      'printSystemDocument',
+      <String, dynamic>{
+        'title': 'NUCOSMOS POS Test Page',
+        'content': _buildSystemTestDocument(now),
+      },
+    );
+  }
+
+  Future<void> printSystemOrderDocument({
+    required OrderReceipt receipt,
+    required List<PosCartLine> lines,
+    String? storeCode,
+    String? staffName,
+  }) async {
+    await _androidPrintChannel.invokeMethod(
+      'printSystemDocument',
+      <String, dynamic>{
+        'title': 'NUCOSMOS Order ${receipt.orderNumber}',
+        'content': _buildSystemOrderDocument(
+          receipt: receipt,
+          lines: lines,
+          storeCode: storeCode,
+          staffName: staffName,
+        ),
+      },
+    );
   }
 
   Future<void> startDiscovery() async {
@@ -386,6 +420,82 @@ class PrinterService {
   }
 
   String _currency(double value) => '\$${value.toStringAsFixed(2)}';
+
+  String _buildSystemTestDocument(DateTime now) {
+    return [
+      'NUCOSMOS POS',
+      'Android System Print Test',
+      '',
+      'Printed: ${_formatDateTime(now)}',
+      'Mode: Android Print Framework',
+      '',
+      'This page is for standard printers such as HP, Brother, Canon, and Epson.',
+      'If this page prints correctly, the Android printer entry is working.',
+      '',
+      '---',
+      'NUCOSMOS',
+    ].join('\n');
+  }
+
+  String _buildSystemOrderDocument({
+    required OrderReceipt receipt,
+    required List<PosCartLine> lines,
+    String? storeCode,
+    String? staffName,
+  }) {
+    final buffer = StringBuffer()
+      ..writeln('NUCOSMOS POS')
+      ..writeln('Sales Receipt')
+      ..writeln();
+
+    if (storeCode != null && storeCode.trim().isNotEmpty) {
+      buffer.writeln('Store: $storeCode');
+    }
+    if (staffName != null && staffName.trim().isNotEmpty) {
+      buffer.writeln('Staff: $staffName');
+    }
+    buffer
+      ..writeln('Order: ${receipt.orderNumber}')
+      ..writeln('Payment: CASH')
+      ..writeln('Status: ${receipt.paymentStatus}')
+      ..writeln('Printed: ${_formatDateTime(DateTime.now())}')
+      ..writeln()
+      ..writeln('Items');
+
+    for (final line in lines) {
+      buffer.writeln(
+        '- ${line.product.name}  x${line.quantity}  ${_currency(line.lineTotal)}',
+      );
+      buffer.writeln('  ${_currency(line.unitPrice)} x ${line.quantity}');
+      for (final selection in line.selectedOptions) {
+        final deltaText = selection.priceDelta > 0
+            ? ' (+${_currency(selection.priceDelta)})'
+            : '';
+        buffer.writeln(
+          '  ${selection.groupName}: ${selection.optionName}$deltaText',
+        );
+      }
+    }
+
+    buffer
+      ..writeln()
+      ..writeln('Summary')
+      ..writeln('Items: ${receipt.itemCount}')
+      ..writeln('Subtotal: ${_currency(receipt.subtotalAmount)}')
+      ..writeln('Total: ${_currency(receipt.totalAmount)}')
+      ..writeln('Paid: ${_currency(receipt.paidAmount)}');
+
+    if (receipt.changeAmount > 0) {
+      buffer.writeln('Change: ${_currency(receipt.changeAmount)}');
+    }
+
+    buffer
+      ..writeln()
+      ..writeln('Thank you for your order')
+      ..writeln('NUCOSMOS POS');
+
+    return buffer.toString().trimRight();
+  }
 
   String _trimForPrinter(String value, int maxLength) {
     if (value.length <= maxLength) {

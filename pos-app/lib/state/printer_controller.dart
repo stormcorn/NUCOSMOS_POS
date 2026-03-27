@@ -341,6 +341,26 @@ class PrinterController extends ChangeNotifier {
     }
   }
 
+  Future<void> printSystemTestDocument() async {
+    printing = true;
+    errorMessage = '';
+    statusMessage =
+        '\u6b63\u5728\u958b\u555f Android \u7cfb\u7d71\u5217\u5370...';
+    notifyListeners();
+
+    try {
+      await _printerService.printSystemTestDocument();
+      statusMessage =
+          '\u5df2\u6253\u958b Android \u7cfb\u7d71\u5217\u5370\uff0c\u8acb\u9078\u64c7\u4e00\u822c\u5370\u8868\u6a5f\u5b8c\u6210\u6e2c\u8a66\u5217\u5370\u3002';
+    } catch (error) {
+      errorMessage =
+          '\u958b\u555f Android \u7cfb\u7d71\u5217\u5370\u5931\u6557\uff1a$error';
+    } finally {
+      printing = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> printReceiptForOrder({
     required OrderReceipt receipt,
     required List<PosCartLine> lines,
@@ -384,6 +404,36 @@ class PrinterController extends ChangeNotifier {
           '\u8a02\u55ae ${receipt.orderNumber} \u5df2\u5217\u5370\u3002';
     } catch (error) {
       errorMessage = '\u8a02\u55ae\u5217\u5370\u5931\u6557\uff1a$error';
+    } finally {
+      printing = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> printSystemReceiptForOrder({
+    required OrderReceipt receipt,
+    required List<PosCartLine> lines,
+    String? storeCode,
+    String? staffName,
+  }) async {
+    printing = true;
+    errorMessage = '';
+    statusMessage =
+        '\u6b63\u5728\u958b\u555f Android \u7cfb\u7d71\u5217\u5370\uff1a${receipt.orderNumber}';
+    notifyListeners();
+
+    try {
+      await _printerService.printSystemOrderDocument(
+        receipt: receipt,
+        lines: lines,
+        storeCode: storeCode,
+        staffName: staffName,
+      );
+      statusMessage =
+          '\u5df2\u6253\u958b Android \u7cfb\u7d71\u5217\u5370\uff0c\u8acb\u9078\u64c7\u4e00\u822c\u5370\u8868\u6a5f\u5217\u5370\u8a02\u55ae ${receipt.orderNumber}\u3002';
+    } catch (error) {
+      errorMessage =
+          '\u958b\u555f Android \u7cfb\u7d71\u8a02\u55ae\u5217\u5370\u5931\u6557\uff1a$error';
     } finally {
       printing = false;
       notifyListeners();

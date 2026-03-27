@@ -2093,6 +2093,13 @@ class _PrinterPanel extends StatelessWidget {
                 icon: const Icon(Icons.receipt_long_rounded),
                 label: const Text('\u5217\u5370\u6e2c\u8a66\u9801'),
               ),
+              OutlinedButton.icon(
+                onPressed: printerController.printing
+                    ? null
+                    : printerController.printSystemTestDocument,
+                icon: const Icon(Icons.print_outlined),
+                label: const Text('\u7cfb\u7d71\u5217\u5370\u6e2c\u8a66'),
+              ),
               if (selected != null || selectedClassic != null)
                 OutlinedButton.icon(
                   onPressed: printerController.connecting ||
@@ -2103,6 +2110,11 @@ class _PrinterPanel extends StatelessWidget {
                   label: const Text('\u4e2d\u65b7\u9023\u7dda'),
                 ),
             ],
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            '\u300c\u7cfb\u7d71\u5217\u5370\u6e2c\u8a66\u300d\u9069\u7528\u65bc HP\u3001Brother\u3001Canon \u7b49\u4e00\u822c\u5370\u8868\u6a5f\uff0c\u6703\u555f\u7528 Android \u5167\u5efa\u5217\u5370\u670d\u52d9\uff0c\u8207\u71b1\u611f\u5370\u8868\u6a5f\u6383\u63cf\u6d41\u7a0b\u5206\u958b\u3002',
+            style: TextStyle(color: Colors.white54),
           ),
           const SizedBox(height: 12),
           SwitchListTile(
