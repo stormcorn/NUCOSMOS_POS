@@ -422,18 +422,22 @@ class PrinterService {
   String _currency(double value) => '\$${value.toStringAsFixed(2)}';
 
   String _buildSystemTestDocument(DateTime now) {
+    const width = 40;
     return [
-      'NUCOSMOS POS',
-      'Android System Print Test',
+      _centerText('NUCOSMOS', width),
+      _centerText('系統列印測試頁', width),
+      '=' * width,
+      _twoColumn('列印時間', _formatDateTime(now), width),
+      _twoColumn('列印模式', 'Android 系統列印', width),
+      '-' * width,
+      '這是提供一般印表機的測試頁。',
+      '可用於 HP / Brother / Canon / Epson',
+      '等 Android 系統列印支援的裝置。',
       '',
-      'Printed: ${_formatDateTime(now)}',
-      'Mode: Android Print Framework',
-      '',
-      'This page is for standard printers such as HP, Brother, Canon, and Epson.',
-      'If this page prints correctly, the Android printer entry is working.',
-      '',
-      '---',
-      'NUCOSMOS',
+      '若此頁能正常印出，代表一般印表機',
+      '入口已可用。',
+      '-' * width,
+      _centerText('NUCOSMOS POS', width),
     ].join('\n');
   }
 
@@ -443,28 +447,41 @@ class PrinterService {
     String? storeCode,
     String? staffName,
   }) {
+    const width = 40;
+    final printedAt = _formatDateTime(DateTime.now());
     final buffer = StringBuffer()
-      ..writeln('NUCOSMOS POS')
-      ..writeln('Sales Receipt')
-      ..writeln();
+      ..writeln(_centerText('NUCOSMOS', width))
+      ..writeln(_centerText('門市消費單據', width));
 
     if (storeCode != null && storeCode.trim().isNotEmpty) {
-      buffer.writeln('Store: $storeCode');
+      buffer.writeln(_centerText('門市 $storeCode', width));
     }
-    if (staffName != null && staffName.trim().isNotEmpty) {
-      buffer.writeln('Staff: $staffName');
-    }
+
     buffer
-      ..writeln('Order: ${receipt.orderNumber}')
-      ..writeln('Payment: CASH')
-      ..writeln('Status: ${receipt.paymentStatus}')
-      ..writeln('Printed: ${_formatDateTime(DateTime.now())}')
-      ..writeln()
-      ..writeln('Items');
+      ..writeln('=' * width)
+      ..writeln(_twoColumn('訂單編號', receipt.orderNumber, width))
+      ..writeln(_twoColumn('列印時間', printedAt, width))
+      ..writeln(_twoColumn('付款方式', '現金', width))
+      ..writeln(
+        _twoColumn('付款狀態', _paymentStatusLabel(receipt.paymentStatus), width),
+      );
+
+    if (staffName != null && staffName.trim().isNotEmpty) {
+      buffer.writeln(_twoColumn('收銀人員', staffName.trim(), width));
+    }
+
+    buffer
+      ..writeln('-' * width)
+      ..writeln(_twoColumn('品項', '金額', width))
+      ..writeln('-' * width);
 
     for (final line in lines) {
       buffer.writeln(
-        '- ${line.product.name}  x${line.quantity}  ${_currency(line.lineTotal)}',
+        _twoColumn(
+          '${line.product.name} x${line.quantity}',
+          _currency(line.lineTotal),
+          width,
+        ),
       );
       buffer.writeln('  ${_currency(line.unitPrice)} x ${line.quantity}');
       for (final selection in line.selectedOptions) {
@@ -472,29 +489,64 @@ class PrinterService {
             ? ' (+${_currency(selection.priceDelta)})'
             : '';
         buffer.writeln(
-          '  ${selection.groupName}: ${selection.optionName}$deltaText',
+          '  + ${selection.groupName}：${selection.optionName}$deltaText',
         );
       }
     }
 
     buffer
-      ..writeln()
-      ..writeln('Summary')
-      ..writeln('Items: ${receipt.itemCount}')
-      ..writeln('Subtotal: ${_currency(receipt.subtotalAmount)}')
-      ..writeln('Total: ${_currency(receipt.totalAmount)}')
-      ..writeln('Paid: ${_currency(receipt.paidAmount)}');
+      ..writeln('-' * width)
+      ..writeln(_twoColumn('品項數量', '${receipt.itemCount}', width))
+      ..writeln(_twoColumn('小計', _currency(receipt.subtotalAmount), width))
+      ..writeln(_twoColumn('合計', _currency(receipt.totalAmount), width))
+      ..writeln(_twoColumn('實收', _currency(receipt.paidAmount), width));
 
     if (receipt.changeAmount > 0) {
-      buffer.writeln('Change: ${_currency(receipt.changeAmount)}');
+      buffer.writeln(_twoColumn('找零', _currency(receipt.changeAmount), width));
     }
 
     buffer
-      ..writeln()
-      ..writeln('Thank you for your order')
-      ..writeln('NUCOSMOS POS');
+      ..writeln('=' * width)
+      ..writeln(_centerText('感謝您的光臨', width))
+      ..writeln(_centerText('NUCOSMOS POS', width));
 
     return buffer.toString().trimRight();
+  }
+
+  String _centerText(String text, int width) {
+    if (text.length >= width) {
+      return text;
+    }
+
+    final leftPadding = ((width - text.length) / 2).floor();
+    return '${' ' * leftPadding}$text';
+  }
+
+  String _twoColumn(String left, String right, int width) {
+    final normalizedLeft = left.trim();
+    final normalizedRight = right.trim();
+    final spacing = width - normalizedLeft.length - normalizedRight.length;
+    if (spacing >= 1) {
+      return '$normalizedLeft${' ' * spacing}$normalizedRight';
+    }
+
+    final rightIndent = (width - normalizedRight.length).clamp(0, width);
+    return '$normalizedLeft\n${' ' * rightIndent}$normalizedRight';
+  }
+
+  String _paymentStatusLabel(String value) {
+    switch (value.trim().toUpperCase()) {
+      case 'PAID':
+        return '已付款';
+      case 'PENDING':
+        return '待付款';
+      case 'FAILED':
+        return '付款失敗';
+      case 'REFUNDED':
+        return '已退款';
+      default:
+        return value;
+    }
   }
 
   String _trimForPrinter(String value, int maxLength) {
