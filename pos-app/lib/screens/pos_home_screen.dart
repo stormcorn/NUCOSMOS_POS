@@ -2529,9 +2529,30 @@ class _CustomizationSheetState extends State<_CustomizationSheet> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Base price ${_currency(widget.product.price)}',
+                '商品原價 ${_currency(widget.product.price)}',
                 style: const TextStyle(color: Color(0xFF8DA2BD)),
               ),
+              if (widget.product.quantityOnHand > 0) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0x1F68F3C6),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: const Color(0x3368F3C6)),
+                  ),
+                  child: Text(
+                    '剩餘庫存 ${widget.product.quantityOnHand}',
+                    style: const TextStyle(
+                      color: Color(0xFF68F3C6),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
               if (_errorMessage.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Container(
@@ -2546,7 +2567,35 @@ class _CustomizationSheetState extends State<_CustomizationSheet> {
                 ),
               ],
               const SizedBox(height: 18),
-              ...widget.product.customizationGroups.map(_buildGroupCard),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF172132),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFF253043)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '客製化選項',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      '請先確認每個選項群組的必填條件，再加入訂單。',
+                      style: TextStyle(color: Color(0xFF8DA2BD), fontSize: 12),
+                    ),
+                    const SizedBox(height: 14),
+                    ...widget.product.customizationGroups.map(_buildGroupCard),
+                  ],
+                ),
+              ),
               const SizedBox(height: 16),
               Container(
                 width: double.infinity,
@@ -2560,7 +2609,7 @@ class _CustomizationSheetState extends State<_CustomizationSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Price Preview',
+                      '價格預覽',
                       style: TextStyle(
                         color: Color(0xFF8DA2BD),
                         fontSize: 12,
@@ -2585,7 +2634,7 @@ class _CustomizationSheetState extends State<_CustomizationSheet> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
+                      child: const Text('取消'),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -2597,7 +2646,7 @@ class _CustomizationSheetState extends State<_CustomizationSheet> {
                         }
                         Navigator.of(context).pop(_buildSelections());
                       },
-                      child: const Text('Add To Cart'),
+                      child: const Text('加入訂單'),
                     ),
                   ),
                 ],
@@ -2614,7 +2663,7 @@ class _CustomizationSheetState extends State<_CustomizationSheet> {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF172132),
+        color: const Color(0xFF111827),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0xFF253043)),
       ),
@@ -2632,8 +2681,8 @@ class _CustomizationSheetState extends State<_CustomizationSheet> {
           const SizedBox(height: 4),
           Text(
             group.isSingleSelect
-                ? 'Choose up to ${group.maxSelections}'
-                : 'Choose ${group.minSelections} - ${group.maxSelections}',
+                ? '單選，最多 ${group.maxSelections} 項'
+                : '多選，至少 ${group.minSelections} 項，最多 ${group.maxSelections} 項',
             style: const TextStyle(color: Color(0xFF8DA2BD), fontSize: 12),
           ),
           const SizedBox(height: 12),
@@ -2679,7 +2728,7 @@ class _CustomizationSheetState extends State<_CustomizationSheet> {
                       Text(
                         option.priceDelta > 0
                             ? '+${_currency(option.priceDelta)}'
-                            : 'No extra charge',
+                            : '不加價',
                         style: TextStyle(
                           color: active
                               ? const Color(0xFF07111C)
@@ -2722,8 +2771,7 @@ class _CustomizationSheetState extends State<_CustomizationSheet> {
         } else if (current.length < group.maxSelections) {
           current.add(option.id);
         } else {
-          _errorMessage =
-              'This group allows up to ${group.maxSelections} options.';
+          _errorMessage = '${group.name} 最多只能選 ${group.maxSelections} 項。';
         }
       }
       _selectedOptionIdsByGroup[group.id] = current;
@@ -2735,21 +2783,19 @@ class _CustomizationSheetState extends State<_CustomizationSheet> {
       final count = _selectedOptionIdsByGroup[group.id]?.length ?? 0;
       if (group.required && count == 0) {
         setState(() {
-          _errorMessage = '${group.name} is required.';
+          _errorMessage = '${group.name} 為必填選項。';
         });
         return false;
       }
       if (count < group.minSelections) {
         setState(() {
-          _errorMessage =
-              '${group.name} requires at least ${group.minSelections} selection(s).';
+          _errorMessage = '${group.name} 至少要選 ${group.minSelections} 項。';
         });
         return false;
       }
       if (count > group.maxSelections) {
         setState(() {
-          _errorMessage =
-              '${group.name} allows up to ${group.maxSelections} selection(s).';
+          _errorMessage = '${group.name} 最多只能選 ${group.maxSelections} 項。';
         });
         return false;
       }

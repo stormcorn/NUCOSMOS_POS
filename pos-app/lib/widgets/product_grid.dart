@@ -58,7 +58,7 @@ class ProductGrid extends StatelessWidget {
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: compactCard ? 12 : 16,
             mainAxisSpacing: compactCard ? 12 : 16,
-            childAspectRatio: compactCard ? 0.72 : 0.78,
+            childAspectRatio: compactCard ? 0.84 : 0.9,
           ),
           itemBuilder: (context, index) {
             final product = products[index];
@@ -87,6 +87,9 @@ class _ProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final soldOut = product.quantityOnHand <= 0;
+    final hasCustomization = product.customizationGroups.isNotEmpty;
+
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF253043),
@@ -104,128 +107,135 @@ class _ProductCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            flex: compact ? 5 : 6,
+            flex: 7,
             child: Stack(
               fit: StackFit.expand,
               children: [
                 _ProductImage(imageUrl: product.imageUrl),
-                if (product.campaignEnabled || product.campaignActive)
-                  Positioned(
-                    top: 12,
-                    left: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF14F1FF),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        product.campaignLabel?.trim().isNotEmpty == true
-                            ? product.campaignLabel!
-                            : '優惠中',
-                        style: const TextStyle(
-                          color: Color(0xFF07111C),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11,
-                        ),
-                      ),
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0x2207111C),
+                        Color(0x0007111C),
+                        Color(0xCC07111C),
+                      ],
                     ),
                   ),
+                ),
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (product.campaignEnabled || product.campaignActive)
+                        _InfoChip(
+                          label:
+                              product.campaignLabel?.trim().isNotEmpty == true
+                                  ? product.campaignLabel!
+                                  : '優惠中',
+                          backgroundColor: const Color(0xFF14F1FF),
+                          foregroundColor: const Color(0xFF07111C),
+                        ),
+                      if (hasCustomization)
+                        const _InfoChip(
+                          label: '可客製',
+                          backgroundColor: Color(0x332CF0C9),
+                          foregroundColor: Color(0xFF7BF7DE),
+                          borderColor: Color(0x664AF6D7),
+                        ),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  left: 12,
+                  right: 12,
+                  bottom: 12,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        product.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: compact ? 16 : 18,
+                          fontWeight: FontWeight.w800,
+                          height: 1.15,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _InfoChip(
+                        label:
+                            soldOut ? '目前缺貨' : '剩餘庫存 ${product.quantityOnHand}',
+                        backgroundColor: soldOut
+                            ? const Color(0x33FF6E79)
+                            : const Color(0x1F68F3C6),
+                        foregroundColor: soldOut
+                            ? const Color(0xFFFFA0A8)
+                            : const Color(0xFF68F3C6),
+                        borderColor: soldOut
+                            ? const Color(0x66FF6E79)
+                            : const Color(0x3368F3C6),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
           Expanded(
-            flex: compact ? 4 : 5,
+            flex: 3,
             child: Padding(
               padding: EdgeInsets.fromLTRB(
                 compact ? 12 : 16,
-                compact ? 10 : 14,
+                compact ? 10 : 12,
                 compact ? 12 : 16,
-                compact ? 10 : 14,
+                compact ? 10 : 12,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    product.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: compact ? 15 : 18,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(height: compact ? 6 : 8),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: compact ? 8 : 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: product.quantityOnHand > 0
-                          ? const Color(0x1F68F3C6)
-                          : const Color(0x33FF6E79),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(
-                        color: product.quantityOnHand > 0
-                            ? const Color(0x3368F3C6)
-                            : const Color(0x66FF6E79),
-                      ),
-                    ),
-                    child: Text(
-                      product.quantityOnHand > 0
-                          ? '剩餘庫存 ${product.quantityOnHand}'
-                          : '目前缺貨',
+                  if ((product.description ?? '').trim().isNotEmpty) ...[
+                    Text(
+                      product.description!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: product.quantityOnHand > 0
-                            ? const Color(0xFF68F3C6)
-                            : const Color(0xFFFFA0A8),
-                        fontSize: compact ? 10.5 : 11.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: compact ? 6 : 8),
-                  Expanded(
-                    child: Text(
-                      (product.description ?? '').trim().isEmpty
-                          ? '現點現做，適合門市快速出單。'
-                          : product.description!,
-                      maxLines: compact ? 2 : 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
                         color: const Color(0xFF9FB1C7),
-                        fontSize: compact ? 11.5 : 13,
-                        height: 1.45,
+                        fontSize: compact ? 11.5 : 12.5,
                       ),
                     ),
-                  ),
-                  SizedBox(height: compact ? 8 : 10),
+                    const Spacer(),
+                  ] else
+                    const Spacer(),
                   Row(
                     children: [
                       Expanded(
                         child: Text(
                           '\$${product.price.toStringAsFixed(2)}',
                           style: TextStyle(
-                            fontSize: compact ? 15 : 18,
+                            fontSize: compact ? 16 : 18,
                             fontWeight: FontWeight.w800,
                             color: const Color(0xFF14F1FF),
                           ),
                         ),
                       ),
                       SizedBox(
-                        height: compact ? 30 : 34,
+                        height: compact ? 34 : 38,
                         child: FilledButton(
-                          onPressed: product.quantityOnHand > 0 ? onAdd : null,
+                          onPressed: soldOut ? null : onAdd,
                           style: FilledButton.styleFrom(
                             backgroundColor: const Color(0xFF14F1FF),
                             foregroundColor: const Color(0xFF07111C),
+                            disabledBackgroundColor: const Color(0xFF324155),
+                            disabledForegroundColor: const Color(0xFF90A2B8),
                             padding: EdgeInsets.symmetric(
                               horizontal: compact ? 12 : 16,
                               vertical: 0,
@@ -237,7 +247,11 @@ class _ProductCard extends StatelessWidget {
                             ),
                           ),
                           child: Text(
-                            product.quantityOnHand > 0 ? '加入' : '缺貨',
+                            soldOut
+                                ? '缺貨'
+                                : hasCustomization
+                                    ? '選項後加入'
+                                    : '加入',
                             style: TextStyle(
                               fontSize: compact ? 12 : 14,
                               fontWeight: FontWeight.w700,
@@ -252,6 +266,42 @@ class _ProductCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({
+    required this.label,
+    required this.backgroundColor,
+    required this.foregroundColor,
+    this.borderColor,
+  });
+
+  final String label;
+  final Color backgroundColor;
+  final Color foregroundColor;
+  final Color? borderColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(999),
+        border: borderColor == null ? null : Border.all(color: borderColor!),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: foregroundColor,
+          fontWeight: FontWeight.w700,
+          fontSize: 11,
+        ),
       ),
     );
   }
