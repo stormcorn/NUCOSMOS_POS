@@ -1982,6 +1982,8 @@ class _PrinterPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selected = printerController.selectedPrinter;
+    final selectedClassic = printerController.selectedClassicDevice;
+    final classicStatus = printerController.classicStatus;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -2002,17 +2004,66 @@ class _PrinterPanel extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            selected == null
-                ? '\u5c1a\u672a\u9078\u64c7\u5370\u8868\u6a5f'
-                : '\u76ee\u524d\u88dd\u7f6e\uff1a${selected.name ?? selected.address ?? '\u672a\u547d\u540d\u5370\u8868\u6a5f'}',
+            '\u76ee\u524d\u88dd\u7f6e\uff1a${printerController.selectedPrinterSummary}',
             style: const TextStyle(color: Colors.white70),
           ),
           const SizedBox(height: 6),
           Text(
-            selected == null
-                ? '\u652f\u63f4\u85cd\u7259 BLE \u8207 USB \u71b1\u611f\u5370\u8868\u6a5f'
-                : '\u9023\u7dda\u72c0\u614b\uff1a${(selected.isConnected ?? false) ? '\u5df2\u9023\u7dda' : '\u672a\u9023\u7dda'} / ${selected.connectionTypeString}',
+            printerController.selectedPrinterStatusSummary,
             style: const TextStyle(color: Colors.white60),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF101827),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF243047)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '\u8a3a\u65b7',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '\u7cfb\u7d71\u85cd\u7259\uff1a${classicStatus.bluetoothEnabled ? '\u5df2\u958b\u555f' : '\u672a\u958b\u555f'}',
+                  style: const TextStyle(color: Colors.white70),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '\u5df2\u914d\u5c0d Classic \u88dd\u7f6e\uff1a${classicStatus.bondedDeviceCount} \u500b',
+                  style: const TextStyle(color: Colors.white70),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  classicStatus.hasAllPermissions
+                      ? '\u85cd\u7259\u6383\u63cf\u6b0a\u9650\uff1a\u5b8c\u6574'
+                      : '\u85cd\u7259\u6383\u63cf\u6b0a\u9650\uff1a${classicStatus.missingPermissions.join(', ')}',
+                  style: const TextStyle(color: Colors.white70),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed:
+                          printerController.requestClassicBluetoothPermissions,
+                      icon: const Icon(Icons.verified_user_outlined),
+                      label: const Text('\u6388\u6b0a\u85cd\u7259\u6b0a\u9650'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: printerController.openClassicBluetoothSettings,
+                      icon: const Icon(Icons.settings_bluetooth_rounded),
+                      label: const Text('\u6253\u958b\u85cd\u7259\u8a2d\u5b9a'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -2035,16 +2086,17 @@ class _PrinterPanel extends StatelessWidget {
                 label: const Text('\u505c\u6b62\u6383\u63cf'),
               ),
               OutlinedButton.icon(
-                onPressed: printerController.printing || selected == null
+                onPressed: printerController.printing ||
+                        (!printerController.hasSelectedPrinter)
                     ? null
                     : printerController.printTestReceipt,
                 icon: const Icon(Icons.receipt_long_rounded),
                 label: const Text('\u5217\u5370\u6e2c\u8a66\u9801'),
               ),
-              if (selected != null)
+              if (selected != null || selectedClassic != null)
                 OutlinedButton.icon(
                   onPressed: printerController.connecting ||
-                          !(selected.isConnected ?? false)
+                          !printerController.hasConnectedPrinter
                       ? null
                       : printerController.disconnectSelectedPrinter,
                   icon: const Icon(Icons.link_off_rounded),
@@ -2148,7 +2200,13 @@ class _PrinterPanel extends StatelessWidget {
                   .map(
                     (device) => Padding(
                       padding: const EdgeInsets.only(bottom: 10),
-                      child: _ClassicBluetoothDeviceTile(device: device),
+                      child: _ClassicBluetoothDeviceTile(
+                        device: device,
+                        selected: selectedClassic?.address == device.address,
+                        connecting: printerController.connecting,
+                        onTap: () => printerController
+                            .connectClassicBluetoothDevice(device),
+                      ),
                     ),
                   )
                   .toList(growable: false),
@@ -2262,18 +2320,28 @@ class _PrinterDeviceTile extends StatelessWidget {
 }
 
 class _ClassicBluetoothDeviceTile extends StatelessWidget {
-  const _ClassicBluetoothDeviceTile({required this.device});
+  const _ClassicBluetoothDeviceTile({
+    required this.device,
+    required this.selected,
+    required this.connecting,
+    required this.onTap,
+  });
 
   final ClassicBluetoothDevice device;
+  final bool selected;
+  final bool connecting;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF101827),
+        color: selected ? const Color(0xFF2C2333) : const Color(0xFF101827),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF3A335A)),
+        border: Border.all(
+          color: selected ? const Color(0xFFFFC46B) : const Color(0xFF3A335A),
+        ),
       ),
       child: Row(
         children: [
@@ -2295,19 +2363,17 @@ class _ClassicBluetoothDeviceTile extends StatelessWidget {
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFF3A2740),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: const Color(0xFF7A436B)),
+          FilledButton(
+            onPressed: connecting ? null : onTap,
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF7A436B),
             ),
-            child: const Text(
-              '\u50c5\u5075\u6e2c',
-              style: TextStyle(
-                color: Color(0xFFFFD1D1),
-                fontWeight: FontWeight.w700,
-              ),
+            child: Text(
+              selected
+                  ? (device.isConnected
+                      ? '\u5df2\u9023\u7dda'
+                      : '\u91cd\u65b0\u9023\u7dda')
+                  : '\u9078\u64c7\u4e26\u9023\u7dda',
             ),
           ),
         ],

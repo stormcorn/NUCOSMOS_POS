@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_thermal_printer/flutter_thermal_printer.dart';
 import 'package:flutter_thermal_printer/utils/printer.dart';
 import 'package:flutter/services.dart';
 
 import '../models/classic_bluetooth_device.dart';
+import '../models/classic_bluetooth_status.dart';
 import '../models/order_models.dart';
 import '../state/session_controller.dart';
 
@@ -36,6 +38,64 @@ class PrinterService {
         .whereType<Map>()
         .map(ClassicBluetoothDevice.fromMap)
         .toList(growable: false);
+  }
+
+  Future<ClassicBluetoothStatus> getClassicBluetoothStatus() async {
+    final result =
+        await _classicBluetoothChannel.invokeMapMethod<String, dynamic>(
+              'getClassicStatus',
+            ) ??
+            const <String, dynamic>{};
+    return ClassicBluetoothStatus.fromMap(result);
+  }
+
+  Future<ClassicBluetoothStatus> requestClassicBluetoothPermissions() async {
+    final result =
+        await _classicBluetoothChannel.invokeMapMethod<String, dynamic>(
+              'requestClassicPermissions',
+            ) ??
+            const <String, dynamic>{};
+    return ClassicBluetoothStatus.fromMap(result);
+  }
+
+  Future<void> openClassicBluetoothSettings() async {
+    await _classicBluetoothChannel.invokeMethod('openBluetoothSettings');
+  }
+
+  Future<void> connectClassicBluetoothDevice(
+    ClassicBluetoothDevice device,
+  ) async {
+    await _classicBluetoothChannel.invokeMethod(
+      'connectClassicDevice',
+      <String, dynamic>{'address': device.address},
+    );
+  }
+
+  Future<void> disconnectClassicBluetoothDevice() async {
+    await _classicBluetoothChannel.invokeMethod('disconnectClassicDevice');
+  }
+
+  Future<void> printClassicTestReceipt(
+    ClassicBluetoothDevice device,
+  ) async {
+    final bytes = await _buildTestReceiptBytes();
+    await _printClassicBytes(device, bytes);
+  }
+
+  Future<void> printClassicOrderReceipt({
+    required ClassicBluetoothDevice device,
+    required OrderReceipt receipt,
+    required List<PosCartLine> lines,
+    String? storeCode,
+    String? staffName,
+  }) async {
+    final bytes = await _buildOrderReceiptBytes(
+      receipt: receipt,
+      lines: lines,
+      storeCode: storeCode,
+      staffName: staffName,
+    );
+    await _printClassicBytes(device, bytes);
   }
 
   Future<void> startDiscovery() async {
@@ -75,6 +135,19 @@ class PrinterService {
       staffName: staffName,
     );
     await _plugin.printData(printer, bytes, longData: true);
+  }
+
+  Future<void> _printClassicBytes(
+    ClassicBluetoothDevice device,
+    List<int> bytes,
+  ) async {
+    await _classicBluetoothChannel.invokeMethod(
+      'printClassicBytes',
+      <String, dynamic>{
+        'address': device.address,
+        'bytes': Uint8List.fromList(bytes),
+      },
+    );
   }
 
   Future<List<int>> _buildTestReceiptBytes() async {
