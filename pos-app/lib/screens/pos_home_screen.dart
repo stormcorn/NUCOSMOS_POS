@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_thermal_printer/utils/printer.dart';
 
@@ -26,11 +28,58 @@ class PosHomeScreen extends StatefulWidget {
   State<PosHomeScreen> createState() => _PosHomeScreenState();
 }
 
-class _PosHomeScreenState extends State<PosHomeScreen> {
+class _PosHomeScreenState extends State<PosHomeScreen>
+    with WidgetsBindingObserver {
+  static const Duration _catalogRefreshInterval = Duration(seconds: 45);
+
   _PosWorkspace _workspace = _PosWorkspace.sales;
   QuickReceiveItemType _quickReceiveType = QuickReceiveItemType.material;
   String _quickReceiveSearch = '';
   QuickReceiveItem? _selectedReceiveItem;
+  Timer? _catalogRefreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _catalogRefreshTimer = Timer.periodic(
+      _catalogRefreshInterval,
+      (_) => _syncVisibleCatalog(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _catalogRefreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _syncVisibleCatalog();
+    }
+  }
+
+  Future<void> _syncVisibleCatalog() async {
+    if (!mounted || !widget.controller.isLoggedIn) {
+      return;
+    }
+
+    if (_workspace == _PosWorkspace.quickReceive) {
+      if (widget.controller.canUseQuickReceive &&
+          !widget.controller.quickReceiveLoading &&
+          !widget.controller.quickReceiveSaving) {
+        await widget.controller.loadQuickReceiveCatalog(showLoading: false);
+      }
+      return;
+    }
+
+    if (!widget.controller.catalogLoading) {
+      await widget.controller.loadProducts(showLoading: false);
+    }
+  }
 
   Future<void> _handleAddProduct(ProductSummary product) async {
     if (product.customizationGroups.isEmpty) {
