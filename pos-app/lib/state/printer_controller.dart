@@ -17,6 +17,7 @@ class PrinterController extends ChangeNotifier {
 
   static const _selectedPrinterKey = 'pos.selected_printer';
   static const _autoPrintEnabledKey = 'pos.auto_print_receipt';
+  static const _useAndroidSystemPrintKey = 'pos.use_android_system_print';
 
   final PrinterService _printerService;
 
@@ -32,6 +33,7 @@ class PrinterController extends ChangeNotifier {
   bool connecting = false;
   bool printing = false;
   bool autoPrintReceipt = true;
+  bool useAndroidSystemPrint = false;
 
   String statusMessage = '';
   String errorMessage = '';
@@ -49,6 +51,9 @@ class PrinterController extends ChangeNotifier {
       selectedPrinter != null || selectedClassicDevice != null;
 
   String get selectedPrinterSummary {
+    if (useAndroidSystemPrint) {
+      return '\u4f7f\u7528 Android \u7cfb\u7d71\u5217\u5370';
+    }
     if (selectedPrinter != null) {
       return selectedPrinter!.name?.trim().isNotEmpty == true
           ? selectedPrinter!.name!.trim()
@@ -61,6 +66,9 @@ class PrinterController extends ChangeNotifier {
   }
 
   String get selectedPrinterStatusSummary {
+    if (useAndroidSystemPrint) {
+      return '\u9023\u7dda\u72c0\u614b\uff1a\u7531 Android \u7cfb\u7d71\u5217\u5370\u670d\u52d9\u7ba1\u7406 / \u4e00\u822c\u5370\u8868\u6a5f';
+    }
     if (selectedPrinter != null) {
       return '\u9023\u7dda\u72c0\u614b\uff1a${(selectedPrinter!.isConnected ?? false) ? '\u5df2\u9023\u7dda' : '\u672a\u9023\u7dda'} / ${selectedPrinter!.connectionTypeString}';
     }
@@ -77,6 +85,7 @@ class PrinterController extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final storedPrinter = prefs.getString(_selectedPrinterKey);
     autoPrintReceipt = prefs.getBool(_autoPrintEnabledKey) ?? true;
+    useAndroidSystemPrint = prefs.getBool(_useAndroidSystemPrintKey) ?? false;
 
     if (storedPrinter != null && storedPrinter.isNotEmpty) {
       try {
@@ -378,7 +387,14 @@ class PrinterController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      if (selectedClassicDevice != null) {
+      if (useAndroidSystemPrint) {
+        await _printerService.printSystemOrderDocument(
+          receipt: receipt,
+          lines: lines,
+          storeCode: storeCode,
+          staffName: staffName,
+        );
+      } else if (selectedClassicDevice != null) {
         await _printerService.printClassicOrderReceipt(
           device: selectedClassicDevice!,
           receipt: receipt,
@@ -400,8 +416,9 @@ class PrinterController extends ChangeNotifier {
           staffName: staffName,
         );
       }
-      statusMessage =
-          '\u8a02\u55ae ${receipt.orderNumber} \u5df2\u5217\u5370\u3002';
+      statusMessage = useAndroidSystemPrint
+          ? '\u5df2\u6253\u958b Android \u7cfb\u7d71\u5217\u5370\uff0c\u8acb\u9078\u64c7\u5370\u8868\u6a5f\u5217\u5370\u8a02\u55ae ${receipt.orderNumber}\u3002'
+          : '\u8a02\u55ae ${receipt.orderNumber} \u5df2\u5217\u5370\u3002';
     } catch (error) {
       errorMessage = '\u8a02\u55ae\u5217\u5370\u5931\u6557\uff1a$error';
     } finally {
@@ -444,6 +461,16 @@ class PrinterController extends ChangeNotifier {
     autoPrintReceipt = value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_autoPrintEnabledKey, value);
+    notifyListeners();
+  }
+
+  Future<void> setUseAndroidSystemPrint(bool value) async {
+    useAndroidSystemPrint = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_useAndroidSystemPrintKey, value);
+    statusMessage = value
+        ? '\u5df2\u555f\u7528 Android \u7cfb\u7d71\u5217\u5370\uff0c\u4e00\u822c\u5370\u8868\u6a5f\u55ae\u64da\u6703\u900f\u904e\u7cfb\u7d71\u5217\u5370\u4ecb\u9762\u8655\u7406\u3002'
+        : '\u5df2\u5207\u56de POS \u71b1\u611f\u5370\u8868\u6a5f\u6a21\u5f0f\u3002';
     notifyListeners();
   }
 

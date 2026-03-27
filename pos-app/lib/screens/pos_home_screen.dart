@@ -2126,6 +2126,15 @@ class _PrinterPanel extends StatelessWidget {
             value: printerController.autoPrintReceipt,
             onChanged: printerController.setAutoPrintReceipt,
           ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('\u4f7f\u7528 Android \u7cfb\u7d71\u5217\u5370'),
+            subtitle: const Text(
+              '\u555f\u7528\u5f8c\uff0c\u8a02\u55ae\u55ae\u64da\u6703\u900f\u904e Android \u7cfb\u7d71\u5217\u5370\u4ecb\u9762\u9078\u64c7 HP / Brother / Canon \u7b49\u4e00\u822c\u5370\u8868\u6a5f\u3002',
+            ),
+            value: printerController.useAndroidSystemPrint,
+            onChanged: printerController.setUseAndroidSystemPrint,
+          ),
           if (printerController.statusMessage.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
