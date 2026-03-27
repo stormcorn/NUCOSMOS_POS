@@ -128,11 +128,13 @@ export const useAccessControlStore = defineStore("accessControl", () => {
     phoneRegistrationActionMessage.value = "";
 
     try {
-      const response: ClearPendingPhoneRegistrationResponse = await clearPendingPhoneRegistrations({ phoneNumber });
+      const response: ClearPendingPhoneRegistrationResponse = await clearPendingPhoneRegistrations({
+        phoneNumber,
+      });
       phoneRegistrationActionMessage.value =
         response.clearedCount > 0
-          ? `已清除 ${response.phoneNumber} 的 ${response.clearedCount} 筆待完成註冊申請。`
-          : `${response.phoneNumber} 目前沒有待完成的註冊申請。`;
+          ? `已清除 ${response.phoneNumber} 的 ${response.clearedCount} 筆待完成註冊。`
+          : `${response.phoneNumber} 目前沒有待完成的註冊紀錄。`;
       return response;
     } catch (error) {
       errorMessage.value = error instanceof ApiError ? error.message : "清除待完成註冊失敗。";
