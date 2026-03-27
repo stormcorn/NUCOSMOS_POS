@@ -124,8 +124,16 @@ class PrinterController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> refreshVisibleState() async {
+    await refreshClassicBluetoothStatus();
+    _updateStatusMessage();
+    notifyListeners();
+  }
+
   Future<void> requestClassicBluetoothPermissions() async {
     errorMessage = '';
+    statusMessage = '\u6b63\u5728\u66f4\u65b0\u85cd\u7259\u6b0a\u9650...';
+    notifyListeners();
     try {
       classicStatus =
           await _printerService.requestClassicBluetoothPermissions();
@@ -136,6 +144,7 @@ class PrinterController extends ChangeNotifier {
         statusMessage =
             '\u85cd\u7259\u6383\u63cf\u6b0a\u9650\u5df2\u66f4\u65b0\u3002';
       }
+      _updateStatusMessage();
     } catch (error) {
       errorMessage =
           '\u7533\u8acb\u85cd\u7259\u6b0a\u9650\u5931\u6557\uff1a$error';
@@ -147,7 +156,7 @@ class PrinterController extends ChangeNotifier {
     try {
       await _printerService.openClassicBluetoothSettings();
       statusMessage =
-          '\u5df2\u6253\u958b Android \u85cd\u7259\u8a2d\u5b9a\u3002';
+          '\u5df2\u6253\u958b Android \u85cd\u7259\u8a2d\u5b9a\uff0c\u8fd4\u56de APP \u5f8c\u6703\u81ea\u52d5\u91cd\u65b0\u6574\u7406\u72c0\u614b\u3002';
     } catch (error) {
       errorMessage =
           '\u7121\u6cd5\u6253\u958b Android \u85cd\u7259\u8a2d\u5b9a\uff1a$error';
@@ -459,6 +468,10 @@ class PrinterController extends ChangeNotifier {
 
   Future<void> setAutoPrintReceipt(bool value) async {
     autoPrintReceipt = value;
+    statusMessage = value
+        ? '\u5df2\u555f\u7528\u7d50\u5e33\u5f8c\u81ea\u52d5\u5217\u5370\u3002'
+        : '\u5df2\u95dc\u9589\u7d50\u5e33\u5f8c\u81ea\u52d5\u5217\u5370\u3002';
+    notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_autoPrintEnabledKey, value);
     notifyListeners();
@@ -466,11 +479,12 @@ class PrinterController extends ChangeNotifier {
 
   Future<void> setUseAndroidSystemPrint(bool value) async {
     useAndroidSystemPrint = value;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_useAndroidSystemPrintKey, value);
     statusMessage = value
         ? '\u5df2\u555f\u7528 Android \u7cfb\u7d71\u5217\u5370\uff0c\u4e00\u822c\u5370\u8868\u6a5f\u55ae\u64da\u6703\u900f\u904e\u7cfb\u7d71\u5217\u5370\u4ecb\u9762\u8655\u7406\u3002'
         : '\u5df2\u5207\u56de POS \u71b1\u611f\u5370\u8868\u6a5f\u6a21\u5f0f\u3002';
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_useAndroidSystemPrintKey, value);
     notifyListeners();
   }
 

@@ -1974,16 +1974,43 @@ class _CircleButton extends StatelessWidget {
   }
 }
 
-class _PrinterPanel extends StatelessWidget {
+class _PrinterPanel extends StatefulWidget {
   const _PrinterPanel({required this.printerController});
 
   final PrinterController printerController;
 
   @override
+  State<_PrinterPanel> createState() => _PrinterPanelState();
+}
+
+class _PrinterPanelState extends State<_PrinterPanel>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    Future.microtask(widget.printerController.refreshVisibleState);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      widget.printerController.refreshVisibleState();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: printerController,
+      animation: widget.printerController,
       builder: (context, _) {
+        final printerController = widget.printerController;
         final selected = printerController.selectedPrinter;
         final selectedClassic = printerController.selectedClassicDevice;
         final classicStatus = printerController.classicStatus;
@@ -2065,6 +2092,12 @@ class _PrinterPanel extends StatelessWidget {
                           icon: const Icon(Icons.settings_bluetooth_rounded),
                           label: const Text(
                               '\u6253\u958b\u85cd\u7259\u8a2d\u5b9a'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: printerController.refreshVisibleState,
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: const Text(
+                              '\u91cd\u65b0\u6574\u7406\u72c0\u614b'),
                         ),
                       ],
                     ),
