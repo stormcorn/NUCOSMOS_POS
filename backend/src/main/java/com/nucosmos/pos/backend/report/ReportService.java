@@ -658,21 +658,21 @@ public class ReportService {
         return quantity.multiply(unitCost).setScale(2, RoundingMode.HALF_UP);
     }
 
-    private BigDecimal recognizedGrossAmount(OrderEntity order) {
+    private static BigDecimal recognizedGrossAmount(OrderEntity order) {
         return isNonRevenueOtherOrder(order)
                 ? zeroMoney()
                 : order.getTotalAmount().setScale(2, RoundingMode.HALF_UP);
     }
 
-    private BigDecimal recognizedRefundedAmount(OrderEntity order) {
+    private static BigDecimal recognizedRefundedAmount(OrderEntity order) {
         return isNonRevenueOtherOrder(order)
                 ? zeroMoney()
                 : order.getRefundedAmount().setScale(2, RoundingMode.HALF_UP);
     }
 
-    private boolean isNonRevenueOtherOrder(OrderEntity order) {
+    private static boolean isNonRevenueOtherOrder(OrderEntity order) {
         List<PaymentEntity> settledPayments = order.getPayments().stream()
-                .filter(this::isSettledPayment)
+                .filter(ReportService::isSettledPayment)
                 .toList();
         return !settledPayments.isEmpty()
                 && settledPayments.stream().allMatch(payment -> "OTHER".equals(payment.getPaymentMethod()));
@@ -697,7 +697,7 @@ public class ReportService {
                 .divide(baseAmount, 2, RoundingMode.HALF_UP);
     }
 
-    private BigDecimal zeroMoney() {
+    private static BigDecimal zeroMoney() {
         return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
     }
 
@@ -764,7 +764,7 @@ public class ReportService {
                 .orElseThrow(() -> new BadRequestException("Authenticated store is not available"));
     }
 
-    private boolean isSettledPayment(PaymentEntity payment) {
+    private static boolean isSettledPayment(PaymentEntity payment) {
         return "CAPTURED".equals(payment.getStatus()) || "REFUNDED".equals(payment.getStatus());
     }
 
