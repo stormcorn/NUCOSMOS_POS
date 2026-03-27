@@ -2507,17 +2507,17 @@ class _CustomizationSheetState extends State<_CustomizationSheet> {
     final previewPrice = widget.product.price + extraTotal;
 
     return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          20,
-          20,
-          20,
-          20 + MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: SingleChildScrollView(
+      child: FractionallySizedBox(
+        heightFactor: 0.92,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            20,
+            20,
+            20 + MediaQuery.of(context).viewInsets.bottom,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 widget.product.name,
@@ -2563,69 +2563,86 @@ class _CustomizationSheetState extends State<_CustomizationSheet> {
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: const Color(0xFFB74B57)),
                   ),
-                  child: Text(_errorMessage),
+                  child: Text(
+                    _errorMessage,
+                    style: const TextStyle(color: Colors.white),
+                  ),
                 ),
               ],
               const SizedBox(height: 18),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF172132),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFF253043)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '客製化選項',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF172132),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0xFF253043)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              '客製化選項',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              '請先確認每個選項群組的必填條件，再加入訂單。',
+                              style: TextStyle(
+                                color: Color(0xFF8DA2BD),
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            ...widget.product.customizationGroups.map(
+                              _buildGroupCard,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      '請先確認每個選項群組的必填條件，再加入訂單。',
-                      style: TextStyle(color: Color(0xFF8DA2BD), fontSize: 12),
-                    ),
-                    const SizedBox(height: 14),
-                    ...widget.product.customizationGroups.map(_buildGroupCard),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF172132),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFF253043)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '價格預覽',
-                      style: TextStyle(
-                        color: Color(0xFF8DA2BD),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
+                      const SizedBox(height: 16),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF172132),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0xFF253043)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              '價格預覽',
+                              style: TextStyle(
+                                color: Color(0xFF8DA2BD),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _currency(previewPrice),
+                              style: const TextStyle(
+                                color: Color(0xFF14F1FF),
+                                fontSize: 28,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _currency(previewPrice),
-                      style: const TextStyle(
-                        color: Color(0xFF14F1FF),
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -2685,6 +2702,17 @@ class _CustomizationSheetState extends State<_CustomizationSheet> {
                 : '多選，至少 ${group.minSelections} 項，最多 ${group.maxSelections} 項',
             style: const TextStyle(color: Color(0xFF8DA2BD), fontSize: 12),
           ),
+          if (group.required) ...[
+            const SizedBox(height: 6),
+            const Text(
+              '此群組為必填',
+              style: TextStyle(
+                color: Color(0xFFFFA0A8),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           Wrap(
             spacing: 10,
