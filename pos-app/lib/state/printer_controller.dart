@@ -61,7 +61,8 @@ class PrinterController extends ChangeNotifier {
 
   Future<void> startScan() async {
     errorMessage = '';
-    statusMessage = '正在掃描附近的藍牙 BLE / USB 印表機...';
+    statusMessage =
+        '\u6b63\u5728\u6383\u63cf\u9644\u8fd1\u7684\u85cd\u7259 BLE / USB \u5370\u8868\u6a5f...';
     scanning = true;
     notifyListeners();
 
@@ -69,7 +70,7 @@ class PrinterController extends ChangeNotifier {
       await _printerService.startDiscovery();
     } catch (error) {
       scanning = false;
-      errorMessage = '掃描失敗：$error';
+      errorMessage = '\u6383\u63cf\u5931\u6557\uff1a$error';
       notifyListeners();
     }
   }
@@ -77,8 +78,9 @@ class PrinterController extends ChangeNotifier {
   Future<void> stopScan() async {
     _printerService.stopDiscovery();
     scanning = false;
-    if (statusMessage == '正在掃描附近的藍牙 BLE / USB 印表機...') {
-      statusMessage = '已停止掃描。';
+    if (statusMessage ==
+        '\u6b63\u5728\u6383\u63cf\u9644\u8fd1\u7684\u85cd\u7259 BLE / USB \u5370\u8868\u6a5f...') {
+      statusMessage = '\u5df2\u505c\u6b62\u6383\u63cf\u3002';
     }
     notifyListeners();
   }
@@ -86,7 +88,8 @@ class PrinterController extends ChangeNotifier {
   Future<void> connectPrinter(Printer printer) async {
     connecting = true;
     errorMessage = '';
-    statusMessage = '正在連線到 ${_printerLabel(printer)}...';
+    statusMessage =
+        '\u6b63\u5728\u9023\u7dda\u5230 ${_printerLabel(printer)}...';
     notifyListeners();
 
     try {
@@ -98,10 +101,11 @@ class PrinterController extends ChangeNotifier {
       await _printerService.connect(printer);
       selectedPrinter = _mergePrinter(printer, connected: true);
       rememberedPrinter = _toTarget(selectedPrinter!);
-      statusMessage = '已連線到 ${_printerLabel(selectedPrinter!)}';
+      statusMessage =
+          '\u5df2\u9023\u7dda\u5230 ${_printerLabel(selectedPrinter!)}';
       await _persistPrinterSelection();
     } catch (error) {
-      errorMessage = '連線失敗：$error';
+      errorMessage = '\u9023\u7dda\u5931\u6557\uff1a$error';
     } finally {
       connecting = false;
       notifyListeners();
@@ -120,9 +124,9 @@ class PrinterController extends ChangeNotifier {
     try {
       await _printerService.disconnect(printer);
       selectedPrinter = _mergePrinter(printer, connected: false);
-      statusMessage = '已中斷 ${_printerLabel(printer)}';
+      statusMessage = '\u5df2\u4e2d\u65b7 ${_printerLabel(printer)}';
     } catch (error) {
-      errorMessage = '中斷連線失敗：$error';
+      errorMessage = '\u4e2d\u65b7\u9023\u7dda\u5931\u6557\uff1a$error';
     } finally {
       connecting = false;
       notifyListeners();
@@ -137,14 +141,14 @@ class PrinterController extends ChangeNotifier {
 
     printing = true;
     errorMessage = '';
-    statusMessage = '正在列印測試單...';
+    statusMessage = '\u6b63\u5728\u5217\u5370\u6e2c\u8a66\u9801...';
     notifyListeners();
 
     try {
       await _printerService.printTestReceipt(printer);
-      statusMessage = '測試單列印完成。';
+      statusMessage = '\u6e2c\u8a66\u9801\u5217\u5370\u5b8c\u6210\u3002';
     } catch (error) {
-      errorMessage = '測試列印失敗：$error';
+      errorMessage = '\u6e2c\u8a66\u5217\u5370\u5931\u6557\uff1a$error';
     } finally {
       printing = false;
       notifyListeners();
@@ -168,7 +172,8 @@ class PrinterController extends ChangeNotifier {
 
     printing = true;
     errorMessage = '';
-    statusMessage = '正在列印訂單 ${receipt.orderNumber}...';
+    statusMessage =
+        '\u6b63\u5728\u5217\u5370\u8a02\u55ae ${receipt.orderNumber}...';
     notifyListeners();
 
     try {
@@ -179,9 +184,10 @@ class PrinterController extends ChangeNotifier {
         storeCode: storeCode,
         staffName: staffName,
       );
-      statusMessage = '訂單 ${receipt.orderNumber} 已列印。';
+      statusMessage =
+          '\u8a02\u55ae ${receipt.orderNumber} \u5df2\u5217\u5370\u3002';
     } catch (error) {
-      errorMessage = '訂單列印失敗：$error';
+      errorMessage = '\u8a02\u55ae\u5217\u5370\u5931\u6557\uff1a$error';
     } finally {
       printing = false;
       notifyListeners();
@@ -198,15 +204,22 @@ class PrinterController extends ChangeNotifier {
   void _handlePrinterUpdate(List<Printer> devices) {
     printers = devices.where((printer) {
       final name = (printer.name ?? '').trim();
-      return name.isNotEmpty;
+      final address = (printer.address ?? '').trim();
+      final vendorId = (printer.vendorId ?? '').trim();
+      final productId = (printer.productId ?? '').trim();
+      return name.isNotEmpty ||
+          address.isNotEmpty ||
+          (vendorId.isNotEmpty && productId.isNotEmpty);
     }).toList(growable: false);
 
     scanning = false;
     _refreshSelectedPrinterFromDevices();
     if (printers.isEmpty) {
-      statusMessage = '尚未找到可用的藍牙 / USB 印表機。';
+      statusMessage =
+          '\u5c1a\u672a\u627e\u5230\u53ef\u7528\u7684\u85cd\u7259 / USB \u5370\u8868\u6a5f\u3002';
     } else {
-      statusMessage = '已找到 ${printers.length} 台印表機。';
+      statusMessage =
+          '\u5df2\u627e\u5230 ${printers.length} \u53f0\u5370\u8868\u6a5f\uff0c\u8acb\u9078\u64c7\u8981\u9023\u7dda\u7684\u88dd\u7f6e\u3002';
     }
     notifyListeners();
   }
@@ -237,7 +250,8 @@ class PrinterController extends ChangeNotifier {
         );
     if (match != null) {
       selectedPrinter = match;
-      statusMessage = '已找到先前配對的印表機：${_printerLabel(match)}';
+      statusMessage =
+          '\u5df2\u627e\u5230\u5148\u524d\u914d\u5c0d\u7684\u5370\u8868\u6a5f\uff1a${_printerLabel(match)}';
     }
   }
 
@@ -258,7 +272,8 @@ class PrinterController extends ChangeNotifier {
   Future<Printer?> _ensureSelectedPrinterConnected() async {
     final printer = selectedPrinter;
     if (printer == null) {
-      errorMessage = '請先掃描並選擇一台印表機，再進行列印。';
+      errorMessage =
+          '\u8acb\u5148\u6383\u63cf\u4e26\u9078\u64c7\u4e00\u53f0\u5370\u8868\u6a5f\uff0c\u518d\u9032\u884c\u5217\u5370\u3002';
       notifyListeners();
       return null;
     }

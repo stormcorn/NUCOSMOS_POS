@@ -1993,7 +1993,7 @@ class _PrinterPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            '印表機設定',
+            '\u5370\u8868\u6a5f\u8a2d\u5b9a',
             style: TextStyle(
               fontWeight: FontWeight.w800,
               fontSize: 18,
@@ -2002,19 +2002,67 @@ class _PrinterPanel extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             selected == null
-                ? '尚未選擇印表機'
-                : '已選擇：${selected.name ?? selected.address ?? '未命名印表機'}',
+                ? '\u5c1a\u672a\u9078\u64c7\u5370\u8868\u6a5f'
+                : '\u76ee\u524d\u88dd\u7f6e\uff1a${selected.name ?? selected.address ?? '\u672a\u547d\u540d\u5370\u8868\u6a5f'}',
             style: const TextStyle(color: Colors.white70),
           ),
           const SizedBox(height: 6),
           Text(
             selected == null
-                ? '支援藍牙 BLE 與 USB 熱感印表機'
-                : '狀態：${(selected.isConnected ?? false) ? '已連線' : '未連線'} / ${selected.connectionTypeString}',
+                ? '\u652f\u63f4\u85cd\u7259 BLE \u8207 USB \u71b1\u611f\u5370\u8868\u6a5f'
+                : '\u9023\u7dda\u72c0\u614b\uff1a${(selected.isConnected ?? false) ? '\u5df2\u9023\u7dda' : '\u672a\u9023\u7dda'} / ${selected.connectionTypeString}',
             style: const TextStyle(color: Colors.white60),
           ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              FilledButton.icon(
+                onPressed: printerController.scanning
+                    ? null
+                    : printerController.startScan,
+                icon: const Icon(Icons.radar_rounded),
+                label: const Text('\u6383\u63cf\u88dd\u7f6e'),
+              ),
+              OutlinedButton.icon(
+                onPressed: printerController.scanning
+                    ? printerController.stopScan
+                    : null,
+                icon: const Icon(Icons.stop_circle_outlined),
+                label: const Text('\u505c\u6b62\u6383\u63cf'),
+              ),
+              OutlinedButton.icon(
+                onPressed: printerController.printing || selected == null
+                    ? null
+                    : printerController.printTestReceipt,
+                icon: const Icon(Icons.receipt_long_rounded),
+                label: const Text('\u5217\u5370\u6e2c\u8a66\u9801'),
+              ),
+              if (selected != null)
+                OutlinedButton.icon(
+                  onPressed: printerController.connecting ||
+                          !(selected.isConnected ?? false)
+                      ? null
+                      : printerController.disconnectSelectedPrinter,
+                  icon: const Icon(Icons.link_off_rounded),
+                  label: const Text('\u4e2d\u65b7\u9023\u7dda'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('\u7d50\u5e33\u5f8c\u81ea\u52d5\u5217\u5370'),
+            subtitle: const Text(
+              '\u9078\u64c7\u5370\u8868\u6a5f\u4e26\u9023\u7dda\u6210\u529f\u5f8c\uff0c\u7d50\u5e33\u6703\u81ea\u52d5\u5370\u51fa\u6536\u64da\u3002',
+            ),
+            value: printerController.autoPrintReceipt,
+            onChanged: printerController.setAutoPrintReceipt,
+          ),
           if (printerController.statusMessage.isNotEmpty) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Text(
               printerController.statusMessage,
               style: const TextStyle(color: Color(0xFF14F1FF)),
@@ -2027,45 +2075,39 @@ class _PrinterPanel extends StatelessWidget {
               style: const TextStyle(color: Colors.redAccent),
             ),
           ],
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
+          const SizedBox(height: 12),
+          Row(
             children: [
-              FilledButton.icon(
-                onPressed: printerController.scanning
-                    ? null
-                    : printerController.startScan,
-                icon: const Icon(Icons.radar_rounded),
-                label: const Text('掃描'),
+              const Text(
+                '\u53ef\u7528\u88dd\u7f6e',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
               ),
-              OutlinedButton.icon(
-                onPressed: printerController.scanning
-                    ? printerController.stopScan
-                    : null,
-                icon: const Icon(Icons.stop_circle_outlined),
-                label: const Text('停止'),
-              ),
-              OutlinedButton.icon(
-                onPressed: printerController.printing || selected == null
-                    ? null
-                    : printerController.printTestReceipt,
-                icon: const Icon(Icons.receipt_long_rounded),
-                label: const Text('測試列印'),
+              const SizedBox(width: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF223047),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: const Color(0xFF2D3C58)),
+                ),
+                child: Text(
+                  '${printerController.printers.length} \u53f0',
+                  style: const TextStyle(
+                    color: Color(0xFF9FD6FF),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('結帳後自動列印'),
-            value: printerController.autoPrintReceipt,
-            onChanged: printerController.setAutoPrintReceipt,
-          ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           if (printerController.printers.isEmpty)
             const Text(
-              '尚未找到印表機，請按「掃描」搜尋附近裝置。',
+              '\u5c1a\u672a\u627e\u5230\u5370\u8868\u6a5f\uff0c\u8acb\u6309\u300c\u6383\u63cf\u88dd\u7f6e\u300d\u641c\u5c0b\u9644\u8fd1\u7684\u85cd\u7259\u6216 USB \u88dd\u7f6e\u3002',
               style: TextStyle(color: Colors.white54),
             )
           else
@@ -2121,6 +2163,14 @@ class _PrinterDeviceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final title = printer.name?.trim().isNotEmpty == true
+        ? printer.name!
+        : (printer.address ?? '\u672a\u547d\u540d\u5370\u8868\u6a5f');
+    final detailParts = <String>[
+      printer.connectionTypeString,
+      if ((printer.address ?? '').trim().isNotEmpty) printer.address!.trim(),
+    ];
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -2144,22 +2194,39 @@ class _PrinterDeviceTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  printer.name?.trim().isNotEmpty == true
-                      ? printer.name!
-                      : (printer.address ?? 'Unnamed Printer'),
+                  title,
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  printer.connectionTypeString,
+                  detailParts.join(' / '),
                   style: const TextStyle(color: Colors.white60),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  (printer.isConnected ?? false)
+                      ? '\u88dd\u7f6e\u76ee\u524d\u5df2\u9023\u7dda'
+                      : '\u88dd\u7f6e\u5c1a\u672a\u9023\u7dda',
+                  style: TextStyle(
+                    color: (printer.isConnected ?? false)
+                        ? const Color(0xFF68F3C6)
+                        : Colors.white54,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 10),
           FilledButton(
             onPressed: connecting ? null : onTap,
-            child: Text(selected ? 'Selected' : 'Use'),
+            child: Text(
+              selected
+                  ? ((printer.isConnected ?? false)
+                      ? '\u5df2\u9078\u64c7'
+                      : '\u91cd\u65b0\u9023\u7dda')
+                  : '\u9078\u64c7\u4e26\u9023\u7dda',
+            ),
           ),
         ],
       ),
