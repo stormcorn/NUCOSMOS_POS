@@ -1981,260 +1981,271 @@ class _PrinterPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selected = printerController.selectedPrinter;
-    final selectedClassic = printerController.selectedClassicDevice;
-    final classicStatus = printerController.classicStatus;
+    return AnimatedBuilder(
+      animation: printerController,
+      builder: (context, _) {
+        final selected = printerController.selectedPrinter;
+        final selectedClassic = printerController.selectedClassicDevice;
+        final classicStatus = printerController.classicStatus;
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: const Color(0xFF172132),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFF243047)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '\u5370\u8868\u6a5f\u8a2d\u5b9a',
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 18,
-            ),
+        return Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: const Color(0xFF172132),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: const Color(0xFF243047)),
           ),
-          const SizedBox(height: 10),
-          Text(
-            '\u76ee\u524d\u88dd\u7f6e\uff1a${printerController.selectedPrinterSummary}',
-            style: const TextStyle(color: Colors.white70),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            printerController.selectedPrinterStatusSummary,
-            style: const TextStyle(color: Colors.white60),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF101827),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF243047)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '\u8a3a\u65b7',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '\u5370\u8868\u6a5f\u8a2d\u5b9a',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  '\u7cfb\u7d71\u85cd\u7259\uff1a${classicStatus.bluetoothEnabled ? '\u5df2\u958b\u555f' : '\u672a\u958b\u555f'}',
-                  style: const TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                '\u76ee\u524d\u88dd\u7f6e\uff1a${printerController.selectedPrinterSummary}',
+                style: const TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                printerController.selectedPrinterStatusSummary,
+                style: const TextStyle(color: Colors.white60),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF101827),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF243047)),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '\u5df2\u914d\u5c0d Classic \u88dd\u7f6e\uff1a${classicStatus.bondedDeviceCount} \u500b',
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  classicStatus.hasAllPermissions
-                      ? '\u85cd\u7259\u6383\u63cf\u6b0a\u9650\uff1a\u5b8c\u6574'
-                      : '\u85cd\u7259\u6383\u63cf\u6b0a\u9650\uff1a${classicStatus.missingPermissions.join(', ')}',
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    OutlinedButton.icon(
-                      onPressed:
-                          printerController.requestClassicBluetoothPermissions,
-                      icon: const Icon(Icons.verified_user_outlined),
-                      label: const Text('\u6388\u6b0a\u85cd\u7259\u6b0a\u9650'),
+                    const Text(
+                      '\u8a3a\u65b7',
+                      style: TextStyle(fontWeight: FontWeight.w700),
                     ),
-                    OutlinedButton.icon(
-                      onPressed: printerController.openClassicBluetoothSettings,
-                      icon: const Icon(Icons.settings_bluetooth_rounded),
-                      label: const Text('\u6253\u958b\u85cd\u7259\u8a2d\u5b9a'),
+                    const SizedBox(height: 8),
+                    Text(
+                      '\u7cfb\u7d71\u85cd\u7259\uff1a${classicStatus.bluetoothEnabled ? '\u5df2\u958b\u555f' : '\u672a\u958b\u555f'}',
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '\u5df2\u914d\u5c0d Classic \u88dd\u7f6e\uff1a${classicStatus.bondedDeviceCount} \u500b',
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      classicStatus.hasAllPermissions
+                          ? '\u85cd\u7259\u6383\u63cf\u6b0a\u9650\uff1a\u5b8c\u6574'
+                          : '\u85cd\u7259\u6383\u63cf\u6b0a\u9650\uff1a${classicStatus.missingPermissions.join(', ')}',
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: printerController
+                              .requestClassicBluetoothPermissions,
+                          icon: const Icon(Icons.verified_user_outlined),
+                          label: const Text(
+                              '\u6388\u6b0a\u85cd\u7259\u6b0a\u9650'),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed:
+                              printerController.openClassicBluetoothSettings,
+                          icon: const Icon(Icons.settings_bluetooth_rounded),
+                          label: const Text(
+                              '\u6253\u958b\u85cd\u7259\u8a2d\u5b9a'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              FilledButton.icon(
-                onPressed: printerController.scanning
-                    ? null
-                    : printerController.startScan,
-                icon: const Icon(Icons.radar_rounded),
-                label: const Text('\u6383\u63cf\u88dd\u7f6e'),
               ),
-              OutlinedButton.icon(
-                onPressed: printerController.scanning
-                    ? printerController.stopScan
-                    : null,
-                icon: const Icon(Icons.stop_circle_outlined),
-                label: const Text('\u505c\u6b62\u6383\u63cf'),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  FilledButton.icon(
+                    onPressed: printerController.scanning
+                        ? null
+                        : printerController.startScan,
+                    icon: const Icon(Icons.radar_rounded),
+                    label: const Text('\u6383\u63cf\u88dd\u7f6e'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: printerController.scanning
+                        ? printerController.stopScan
+                        : null,
+                    icon: const Icon(Icons.stop_circle_outlined),
+                    label: const Text('\u505c\u6b62\u6383\u63cf'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: printerController.printing ||
+                            (!printerController.hasSelectedPrinter)
+                        ? null
+                        : printerController.printTestReceipt,
+                    icon: const Icon(Icons.receipt_long_rounded),
+                    label: const Text('\u5217\u5370\u6e2c\u8a66\u9801'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: printerController.printing
+                        ? null
+                        : printerController.printSystemTestDocument,
+                    icon: const Icon(Icons.print_outlined),
+                    label: const Text('\u7cfb\u7d71\u5217\u5370\u6e2c\u8a66'),
+                  ),
+                  if (selected != null || selectedClassic != null)
+                    OutlinedButton.icon(
+                      onPressed: printerController.connecting ||
+                              !printerController.hasConnectedPrinter
+                          ? null
+                          : printerController.disconnectSelectedPrinter,
+                      icon: const Icon(Icons.link_off_rounded),
+                      label: const Text('\u4e2d\u65b7\u9023\u7dda'),
+                    ),
+                ],
               ),
-              OutlinedButton.icon(
-                onPressed: printerController.printing ||
-                        (!printerController.hasSelectedPrinter)
-                    ? null
-                    : printerController.printTestReceipt,
-                icon: const Icon(Icons.receipt_long_rounded),
-                label: const Text('\u5217\u5370\u6e2c\u8a66\u9801'),
-              ),
-              OutlinedButton.icon(
-                onPressed: printerController.printing
-                    ? null
-                    : printerController.printSystemTestDocument,
-                icon: const Icon(Icons.print_outlined),
-                label: const Text('\u7cfb\u7d71\u5217\u5370\u6e2c\u8a66'),
-              ),
-              if (selected != null || selectedClassic != null)
-                OutlinedButton.icon(
-                  onPressed: printerController.connecting ||
-                          !printerController.hasConnectedPrinter
-                      ? null
-                      : printerController.disconnectSelectedPrinter,
-                  icon: const Icon(Icons.link_off_rounded),
-                  label: const Text('\u4e2d\u65b7\u9023\u7dda'),
-                ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            '\u300c\u7cfb\u7d71\u5217\u5370\u6e2c\u8a66\u300d\u9069\u7528\u65bc HP\u3001Brother\u3001Canon \u7b49\u4e00\u822c\u5370\u8868\u6a5f\uff0c\u6703\u555f\u7528 Android \u5167\u5efa\u5217\u5370\u670d\u52d9\uff0c\u8207\u71b1\u611f\u5370\u8868\u6a5f\u6383\u63cf\u6d41\u7a0b\u5206\u958b\u3002',
-            style: TextStyle(color: Colors.white54),
-          ),
-          const SizedBox(height: 12),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('\u7d50\u5e33\u5f8c\u81ea\u52d5\u5217\u5370'),
-            subtitle: const Text(
-              '\u9078\u64c7\u5370\u8868\u6a5f\u4e26\u9023\u7dda\u6210\u529f\u5f8c\uff0c\u7d50\u5e33\u6703\u81ea\u52d5\u5370\u51fa\u6536\u64da\u3002',
-            ),
-            value: printerController.autoPrintReceipt,
-            onChanged: printerController.setAutoPrintReceipt,
-          ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('\u4f7f\u7528 Android \u7cfb\u7d71\u5217\u5370'),
-            subtitle: const Text(
-              '\u555f\u7528\u5f8c\uff0c\u8a02\u55ae\u55ae\u64da\u6703\u900f\u904e Android \u7cfb\u7d71\u5217\u5370\u4ecb\u9762\u9078\u64c7 HP / Brother / Canon \u7b49\u4e00\u822c\u5370\u8868\u6a5f\u3002',
-            ),
-            value: printerController.useAndroidSystemPrint,
-            onChanged: printerController.setUseAndroidSystemPrint,
-          ),
-          if (printerController.statusMessage.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              printerController.statusMessage,
-              style: const TextStyle(color: Color(0xFF14F1FF)),
-            ),
-          ],
-          if (printerController.errorMessage.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(
-              printerController.errorMessage,
-              style: const TextStyle(color: Colors.redAccent),
-            ),
-          ],
-          const SizedBox(height: 12),
-          Row(
-            children: [
+              const SizedBox(height: 10),
               const Text(
-                '\u53ef\u7528\u88dd\u7f6e',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
+                '\u300c\u7cfb\u7d71\u5217\u5370\u6e2c\u8a66\u300d\u9069\u7528\u65bc HP\u3001Brother\u3001Canon \u7b49\u4e00\u822c\u5370\u8868\u6a5f\uff0c\u6703\u555f\u7528 Android \u5167\u5efa\u5217\u5370\u670d\u52d9\uff0c\u8207\u71b1\u611f\u5370\u8868\u6a5f\u6383\u63cf\u6d41\u7a0b\u5206\u958b\u3002',
+                style: TextStyle(color: Colors.white54),
               ),
-              const SizedBox(width: 8),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF223047),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: const Color(0xFF2D3C58)),
+              const SizedBox(height: 12),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('\u7d50\u5e33\u5f8c\u81ea\u52d5\u5217\u5370'),
+                subtitle: const Text(
+                  '\u9078\u64c7\u5370\u8868\u6a5f\u4e26\u9023\u7dda\u6210\u529f\u5f8c\uff0c\u7d50\u5e33\u6703\u81ea\u52d5\u5370\u51fa\u6536\u64da\u3002',
                 ),
-                child: Text(
-                  '${printerController.printers.length} \u53f0',
-                  style: const TextStyle(
-                    color: Color(0xFF9FD6FF),
+                value: printerController.autoPrintReceipt,
+                onChanged: printerController.setAutoPrintReceipt,
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title:
+                    const Text('\u4f7f\u7528 Android \u7cfb\u7d71\u5217\u5370'),
+                subtitle: const Text(
+                  '\u555f\u7528\u5f8c\uff0c\u8a02\u55ae\u55ae\u64da\u6703\u900f\u904e Android \u7cfb\u7d71\u5217\u5370\u4ecb\u9762\u9078\u64c7 HP / Brother / Canon \u7b49\u4e00\u822c\u5370\u8868\u6a5f\u3002',
+                ),
+                value: printerController.useAndroidSystemPrint,
+                onChanged: printerController.setUseAndroidSystemPrint,
+              ),
+              if (printerController.statusMessage.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  printerController.statusMessage,
+                  style: const TextStyle(color: Color(0xFF14F1FF)),
+                ),
+              ],
+              if (printerController.errorMessage.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Text(
+                  printerController.errorMessage,
+                  style: const TextStyle(color: Colors.redAccent),
+                ),
+              ],
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const Text(
+                    '\u53ef\u7528\u88dd\u7f6e',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF223047),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: const Color(0xFF2D3C58)),
+                    ),
+                    child: Text(
+                      '${printerController.printers.length} \u53f0',
+                      style: const TextStyle(
+                        color: Color(0xFF9FD6FF),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              if (printerController.printers.isEmpty)
+                const Text(
+                  '\u5c1a\u672a\u627e\u5230\u5370\u8868\u6a5f\uff0c\u8acb\u6309\u300c\u6383\u63cf\u88dd\u7f6e\u300d\u641c\u5c0b\u9644\u8fd1\u7684\u85cd\u7259\u6216 USB \u88dd\u7f6e\u3002',
+                  style: TextStyle(color: Colors.white54),
+                )
+              else
+                Column(
+                  children: printerController.printers
+                      .map(
+                        (printer) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _PrinterDeviceTile(
+                            printer: printer,
+                            selected: selected != null &&
+                                _samePrinter(printer, selected),
+                            connecting: printerController.connecting,
+                            onTap: () =>
+                                printerController.connectPrinter(printer),
+                          ),
+                        ),
+                      )
+                      .toList(growable: false),
+                ),
+              if (printerController.classicBluetoothDevices.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const Text(
+                  '\u50b3\u7d71\u85cd\u7259\u88dd\u7f6e\uff08Classic\uff09',
+                  style: TextStyle(
                     fontWeight: FontWeight.w700,
+                    color: Colors.white,
                   ),
                 ),
-              ),
+                const SizedBox(height: 6),
+                const Text(
+                  '\u4ee5\u4e0b\u88dd\u7f6e\u5df2\u88ab Android \u5075\u6e2c\u5230\uff0c\u4f46\u76ee\u524d POS APP \u50c5\u80fd\u76f4\u63a5\u9023\u7dda BLE / USB \u71b1\u611f\u5370\u8868\u6a5f\u3002',
+                  style: TextStyle(color: Colors.white54),
+                ),
+                const SizedBox(height: 10),
+                Column(
+                  children: printerController.classicBluetoothDevices
+                      .map(
+                        (device) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _ClassicBluetoothDeviceTile(
+                            device: device,
+                            selected:
+                                selectedClassic?.address == device.address,
+                            connecting: printerController.connecting,
+                            onTap: () => printerController
+                                .connectClassicBluetoothDevice(device),
+                          ),
+                        ),
+                      )
+                      .toList(growable: false),
+                ),
+              ],
             ],
           ),
-          const SizedBox(height: 10),
-          if (printerController.printers.isEmpty)
-            const Text(
-              '\u5c1a\u672a\u627e\u5230\u5370\u8868\u6a5f\uff0c\u8acb\u6309\u300c\u6383\u63cf\u88dd\u7f6e\u300d\u641c\u5c0b\u9644\u8fd1\u7684\u85cd\u7259\u6216 USB \u88dd\u7f6e\u3002',
-              style: TextStyle(color: Colors.white54),
-            )
-          else
-            Column(
-              children: printerController.printers
-                  .map(
-                    (printer) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _PrinterDeviceTile(
-                        printer: printer,
-                        selected:
-                            selected != null && _samePrinter(printer, selected),
-                        connecting: printerController.connecting,
-                        onTap: () => printerController.connectPrinter(printer),
-                      ),
-                    ),
-                  )
-                  .toList(growable: false),
-            ),
-          if (printerController.classicBluetoothDevices.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            const Text(
-              '\u50b3\u7d71\u85cd\u7259\u88dd\u7f6e\uff08Classic\uff09',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              '\u4ee5\u4e0b\u88dd\u7f6e\u5df2\u88ab Android \u5075\u6e2c\u5230\uff0c\u4f46\u76ee\u524d POS APP \u50c5\u80fd\u76f4\u63a5\u9023\u7dda BLE / USB \u71b1\u611f\u5370\u8868\u6a5f\u3002',
-              style: TextStyle(color: Colors.white54),
-            ),
-            const SizedBox(height: 10),
-            Column(
-              children: printerController.classicBluetoothDevices
-                  .map(
-                    (device) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _ClassicBluetoothDeviceTile(
-                        device: device,
-                        selected: selectedClassic?.address == device.address,
-                        connecting: printerController.connecting,
-                        onTap: () => printerController
-                            .connectClassicBluetoothDevice(device),
-                      ),
-                    ),
-                  )
-                  .toList(growable: false),
-            ),
-          ],
-        ],
-      ),
+        );
+      },
     );
   }
 
