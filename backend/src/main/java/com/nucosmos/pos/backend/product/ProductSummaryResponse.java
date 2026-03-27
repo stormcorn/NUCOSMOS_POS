@@ -22,6 +22,7 @@ public record ProductSummaryResponse(
         OffsetDateTime campaignStartsAt,
         OffsetDateTime campaignEndsAt,
         boolean available,
+        int quantityOnHand,
         List<ProductCustomizationGroupResponse> customizationGroups
 ) {
 }

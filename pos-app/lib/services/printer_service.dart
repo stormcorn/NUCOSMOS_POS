@@ -430,12 +430,12 @@ class PrinterService {
       _twoColumn('列印時間', _formatDateTime(now), width),
       _twoColumn('列印模式', 'Android 系統列印', width),
       '-' * width,
-      '這是提供一般印表機的測試頁。',
-      '可用於 HP / Brother / Canon / Epson',
-      '等 Android 系統列印支援的裝置。',
+      '此測試頁用來確認一般印表機列印流程。',
+      '支援 Android 系統列印服務的裝置，',
+      '例如 HP、Brother、Canon、Epson。',
       '',
-      '若此頁能正常印出，代表一般印表機',
-      '入口已可用。',
+      '如果這頁可以順利列印，表示之後的',
+      '消費單據也能透過系統印表機輸出。',
       '-' * width,
       _centerText('NUCOSMOS POS', width),
     ].join('\n');
@@ -447,11 +447,37 @@ class PrinterService {
     String? storeCode,
     String? staffName,
   }) {
+    return [
+      _buildSystemOrderCopy(
+        copyLabel: '顧客聯',
+        receipt: receipt,
+        lines: lines,
+        storeCode: storeCode,
+        staffName: staffName,
+      ),
+      _buildSystemOrderCopy(
+        copyLabel: '店家留存聯',
+        receipt: receipt,
+        lines: lines,
+        storeCode: storeCode,
+        staffName: staffName,
+      ),
+    ].join('\f');
+  }
+
+  String _buildSystemOrderCopy({
+    required String copyLabel,
+    required OrderReceipt receipt,
+    required List<PosCartLine> lines,
+    String? storeCode,
+    String? staffName,
+  }) {
     const width = 40;
     final printedAt = _formatDateTime(DateTime.now());
     final buffer = StringBuffer()
       ..writeln(_centerText('NUCOSMOS', width))
-      ..writeln(_centerText('門市消費單據', width));
+      ..writeln(_centerText('門市消費單據', width))
+      ..writeln(_centerText(copyLabel, width));
 
     if (storeCode != null && storeCode.trim().isNotEmpty) {
       buffer.writeln(_centerText('門市 $storeCode', width));
@@ -489,9 +515,10 @@ class PrinterService {
             ? ' (+${_currency(selection.priceDelta)})'
             : '';
         buffer.writeln(
-          '  + ${selection.groupName}：${selection.optionName}$deltaText',
+          '  + ${selection.groupName}: ${selection.optionName}$deltaText',
         );
       }
+      buffer.writeln();
     }
 
     buffer

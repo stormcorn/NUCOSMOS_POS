@@ -501,10 +501,6 @@ class MainActivity : FlutterActivity() {
                 typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
             }
 
-            val bodyLines = content
-                .replace("\r\n", "\n")
-                .split('\n')
-                .ifEmpty { listOf("") }
             val lineHeight = textPaint.fontSpacing + 4f
             val titleHeight = titlePaint.fontSpacing + 16f
             val horizontalPadding = 36f
@@ -513,51 +509,60 @@ class MainActivity : FlutterActivity() {
 
             try {
                 var pageNumber = 0
-                var lineIndex = 0
-                var wrappedLineOffset = 0
+                val sections = content
+                    .replace("\r\n", "\n")
+                    .split('\u000C')
+                    .ifEmpty { listOf("") }
 
-                while (lineIndex < bodyLines.size) {
-                    if (cancellationSignal.isCanceled) {
-                        callback.onWriteCancelled()
-                        pdfDocument.close()
-                        destination.close()
-                        return
-                    }
+                for ((sectionIndex, section) in sections.withIndex()) {
+                    val bodyLines = section.split('\n').ifEmpty { listOf("") }
+                    var lineIndex = 0
+                    var wrappedLineOffset = 0
 
-                    val page = pdfDocument.startPage(pageNumber)
-                    val canvas: Canvas = page.canvas
-                    val pageHeight = page.info.pageHeight.toFloat()
-                    val pageWidth = page.info.pageWidth.toFloat()
-                    val usableWidth = pageWidth - horizontalPadding * 2
-                    val maxBodyY = pageHeight - bottomPadding
-
-                    var y = topPadding
-                    if (pageNumber == 0) {
-                        canvas.drawText(title, horizontalPadding, y, titlePaint)
-                        y += titleHeight
-                    }
-
-                    while (lineIndex < bodyLines.size && y <= maxBodyY) {
-                        val wrappedLines = wrapLine(bodyLines[lineIndex], textPaint, usableWidth)
-                        while (wrappedLineOffset < wrappedLines.size && y <= maxBodyY) {
-                            canvas.drawText(
-                                wrappedLines[wrappedLineOffset],
-                                horizontalPadding,
-                                y,
-                                textPaint,
-                            )
-                            y += lineHeight
-                            wrappedLineOffset += 1
+                    while (lineIndex < bodyLines.size) {
+                        if (cancellationSignal.isCanceled) {
+                            callback.onWriteCancelled()
+                            pdfDocument.close()
+                            destination.close()
+                            return
                         }
 
-                        if (wrappedLineOffset >= wrappedLines.size) {
-                            lineIndex += 1
-                            wrappedLineOffset = 0
-                        }
-                    }
+                        val page = pdfDocument.startPage(pageNumber)
+                        val canvas: Canvas = page.canvas
+                        val pageHeight = page.info.pageHeight.toFloat()
+                        val pageWidth = page.info.pageWidth.toFloat()
+                        val usableWidth = pageWidth - horizontalPadding * 2
+                        val maxBodyY = pageHeight - bottomPadding
 
-                    pdfDocument.finishPage(page)
-                    pageNumber += 1
+                        var y = topPadding
+                        if (pageNumber == 0 || lineIndex == 0) {
+                            val header = if (sectionIndex == 0) title else "$title (${sectionIndex + 1})"
+                            canvas.drawText(header, horizontalPadding, y, titlePaint)
+                            y += titleHeight
+                        }
+
+                        while (lineIndex < bodyLines.size && y <= maxBodyY) {
+                            val wrappedLines = wrapLine(bodyLines[lineIndex], textPaint, usableWidth)
+                            while (wrappedLineOffset < wrappedLines.size && y <= maxBodyY) {
+                                canvas.drawText(
+                                    wrappedLines[wrappedLineOffset],
+                                    horizontalPadding,
+                                    y,
+                                    textPaint,
+                                )
+                                y += lineHeight
+                                wrappedLineOffset += 1
+                            }
+
+                            if (wrappedLineOffset >= wrappedLines.size) {
+                                lineIndex += 1
+                                wrappedLineOffset = 0
+                            }
+                        }
+
+                        pdfDocument.finishPage(page)
+                        pageNumber += 1
+                    }
                 }
 
                 pdfDocument.writeTo(ParcelFileDescriptor.AutoCloseOutputStream(destination))

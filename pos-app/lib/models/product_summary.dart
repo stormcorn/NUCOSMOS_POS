@@ -16,6 +16,7 @@ class ProductSummary {
     required this.campaignStartsAt,
     required this.campaignEndsAt,
     required this.available,
+    required this.quantityOnHand,
     required this.customizationGroups,
   });
 
@@ -35,6 +36,7 @@ class ProductSummary {
   final DateTime? campaignStartsAt;
   final DateTime? campaignEndsAt;
   final bool available;
+  final int quantityOnHand;
   final List<ProductCustomizationGroup> customizationGroups;
 
   factory ProductSummary.fromJson(Map<String, dynamic> json) {
@@ -59,8 +61,10 @@ class ProductSummary {
           ? null
           : DateTime.tryParse(json['campaignEndsAt'] as String),
       available: json['available'] as bool? ?? true,
+      quantityOnHand: (json['quantityOnHand'] as num?)?.toInt() ?? 0,
       customizationGroups: ((json['customizationGroups'] as List?) ?? const [])
-          .map((item) => ProductCustomizationGroup.fromJson((item as Map).cast<String, dynamic>()))
+          .map((item) => ProductCustomizationGroup.fromJson(
+              (item as Map).cast<String, dynamic>()))
           .toList(growable: false),
     );
   }
@@ -99,7 +103,8 @@ class ProductCustomizationGroup {
       maxSelections: (json['maxSelections'] as num?)?.toInt() ?? 1,
       displayOrder: (json['displayOrder'] as num?)?.toInt() ?? 0,
       options: ((json['options'] as List?) ?? const [])
-          .map((item) => ProductCustomizationOption.fromJson((item as Map).cast<String, dynamic>()))
+          .map((item) => ProductCustomizationOption.fromJson(
+              (item as Map).cast<String, dynamic>()))
           .toList(growable: false),
     );
   }

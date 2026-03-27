@@ -1,6 +1,8 @@
 package com.nucosmos.pos.backend.product;
 
+import com.nucosmos.pos.backend.auth.AuthenticatedUser;
 import com.nucosmos.pos.backend.common.api.ApiResponse;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,7 +20,8 @@ public class ProductController {
     }
 
     @GetMapping
-    public ApiResponse<List<ProductSummaryResponse>> listProducts() {
-        return ApiResponse.ok(productQueryService.listAvailableProducts());
+    public ApiResponse<List<ProductSummaryResponse>> listProducts(Authentication authentication) {
+        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+        return ApiResponse.ok(productQueryService.listAvailableProducts(user));
     }
 }

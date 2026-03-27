@@ -28,7 +28,7 @@ class ProductGrid extends StatelessWidget {
         ),
         alignment: Alignment.center,
         child: const Text(
-          'No products available.\nPlease check inventory or API connection.',
+          '目前沒有可販售商品。\n請檢查庫存同步或 API 連線。',
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.white70, height: 1.7),
         ),
@@ -125,7 +125,7 @@ class _ProductCard extends StatelessWidget {
                       child: Text(
                         product.campaignLabel?.trim().isNotEmpty == true
                             ? product.campaignLabel!
-                            : 'Promo',
+                            : '優惠中',
                         style: const TextStyle(
                           color: Color(0xFF07111C),
                           fontWeight: FontWeight.bold,
@@ -160,10 +160,42 @@ class _ProductCard extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: compact ? 6 : 8),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: compact ? 8 : 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: product.quantityOnHand > 0
+                          ? const Color(0x1F68F3C6)
+                          : const Color(0x33FF6E79),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: product.quantityOnHand > 0
+                            ? const Color(0x3368F3C6)
+                            : const Color(0x66FF6E79),
+                      ),
+                    ),
+                    child: Text(
+                      product.quantityOnHand > 0
+                          ? '剩餘庫存 ${product.quantityOnHand}'
+                          : '目前缺貨',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: product.quantityOnHand > 0
+                            ? const Color(0xFF68F3C6)
+                            : const Color(0xFFFFA0A8),
+                        fontSize: compact ? 10.5 : 11.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: compact ? 6 : 8),
                   Expanded(
                     child: Text(
                       (product.description ?? '').trim().isEmpty
-                          ? 'Freshly prepared and ready to serve.'
+                          ? '現點現做，適合門市快速出單。'
                           : product.description!,
                       maxLines: compact ? 2 : 3,
                       overflow: TextOverflow.ellipsis,
@@ -190,7 +222,7 @@ class _ProductCard extends StatelessWidget {
                       SizedBox(
                         height: compact ? 30 : 34,
                         child: FilledButton(
-                          onPressed: onAdd,
+                          onPressed: product.quantityOnHand > 0 ? onAdd : null,
                           style: FilledButton.styleFrom(
                             backgroundColor: const Color(0xFF14F1FF),
                             foregroundColor: const Color(0xFF07111C),
@@ -199,12 +231,13 @@ class _ProductCard extends StatelessWidget {
                               vertical: 0,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(compact ? 10 : 12),
+                              borderRadius: BorderRadius.circular(
+                                compact ? 10 : 12,
+                              ),
                             ),
                           ),
                           child: Text(
-                            'Add',
+                            product.quantityOnHand > 0 ? '加入' : '缺貨',
                             style: TextStyle(
                               fontSize: compact ? 12 : 14,
                               fontWeight: FontWeight.w700,
