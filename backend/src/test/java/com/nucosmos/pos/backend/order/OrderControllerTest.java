@@ -503,6 +503,76 @@ class OrderControllerTest {
     }
 
     @Test
+    void shouldCloseOtherPaymentOrderWithoutRevenueButStillCommitInventory() throws Exception {
+        seedRecipeForProduct(
+                UUID.fromString("44444444-4444-4444-4444-444444444441"),
+                UUID.fromString("91500000-0000-0000-0000-000000000001"),
+                UUID.fromString("91700000-0000-0000-0000-000000000001")
+        );
+
+        StoreEntity store = storeRepository.findByCodeAndStatus("TW001", "ACTIVE").orElseThrow();
+        UUID productId = UUID.fromString("44444444-4444-4444-4444-444444444441");
+        int sellableBefore = inventoryStockRepository.findByStore_IdAndProduct_Id(store.getId(), productId).orElseThrow().getSellableQuantity();
+        int materialBefore = materialItemRepository.findById(UUID.fromString("91500000-0000-0000-0000-000000000001")).orElseThrow().getQuantityOnHand();
+        int packagingBefore = packagingItemRepository.findById(UUID.fromString("91700000-0000-0000-0000-000000000001")).orElseThrow().getQuantityOnHand();
+
+        String token = TestLoginSupport.loginAndExtractToken(mockMvc, """
+                {
+                  "storeCode": "TW001",
+                  "roleCode": "CASHIER",
+                  "pin": "123456",
+                  "deviceCode": "POS-TABLET-001"
+                }
+                """);
+
+        MvcResult createResult = mockMvc.perform(post("/api/v1/orders")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "items": [
+                                    {
+                                      "productId": "44444444-4444-4444-4444-444444444441",
+                                      "quantity": 1
+                                    }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        UUID orderId = TestLoginSupport.extractDataFieldAsUuid(createResult, "id");
+
+        mockMvc.perform(post("/api/v1/orders/{orderId}/payments", orderId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "paymentMethod": "OTHER",
+                                  "amount": 0.00,
+                                  "amountReceived": 0.00,
+                                  "note": "Non-revenue internal order"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PAID"))
+                .andExpect(jsonPath("$.data.paymentStatus").value("PAID"))
+                .andExpect(jsonPath("$.data.paidAmount").value(0.00))
+                .andExpect(jsonPath("$.data.payments[0].paymentMethod").value("OTHER"))
+                .andExpect(jsonPath("$.data.payments[0].amount").value(0.00));
+
+        org.assertj.core.api.Assertions.assertThat(
+                inventoryStockRepository.findByStore_IdAndProduct_Id(store.getId(), productId).orElseThrow().getSellableQuantity()
+        ).isEqualTo(sellableBefore - 1);
+        org.assertj.core.api.Assertions.assertThat(
+                materialItemRepository.findById(UUID.fromString("91500000-0000-0000-0000-000000000001")).orElseThrow().getQuantityOnHand()
+        ).isEqualTo(materialBefore - 10);
+        org.assertj.core.api.Assertions.assertThat(
+                packagingItemRepository.findById(UUID.fromString("91700000-0000-0000-0000-000000000001")).orElseThrow().getQuantityOnHand()
+        ).isEqualTo(packagingBefore - 1);
+    }
+
+    @Test
     void shouldRejectPaymentWhenReceivedAmountIsLessThanAppliedAmount() throws Exception {
         String token = TestLoginSupport.loginAndExtractToken(mockMvc, """
                 {

@@ -252,7 +252,9 @@ class PrinterService {
       bytes.addAll(generator.text('Staff: $staffName'));
     }
     bytes.addAll(generator.text('Order: ${receipt.orderNumber}'));
-    bytes.addAll(generator.text('Payment: CASH'));
+    bytes.addAll(
+      generator.text('Payment: ${_paymentMethodLabel(receipt.paymentMethod)}'),
+    );
     bytes.addAll(generator.text('Status: ${receipt.paymentStatus}'));
     bytes.addAll(generator.text('Printed: ${_formatDateTime(DateTime.now())}'));
     bytes.addAll(generator.hr());
@@ -389,7 +391,7 @@ class PrinterService {
         styles: const PosStyles(bold: true),
       ),
       PosColumn(
-        text: 'Cash',
+        text: _paymentMethodLabel(receipt.paymentMethod),
         width: 4,
         styles: const PosStyles(align: PosAlign.right, bold: true),
       ),
@@ -487,7 +489,9 @@ class PrinterService {
       ..writeln('=' * width)
       ..writeln(_twoColumn('訂單編號', receipt.orderNumber, width))
       ..writeln(_twoColumn('列印時間', printedAt, width))
-      ..writeln(_twoColumn('付款方式', '現金', width))
+      ..writeln(
+        _twoColumn('付款方式', _paymentMethodLabel(receipt.paymentMethod), width),
+      )
       ..writeln(
         _twoColumn('付款狀態', _paymentStatusLabel(receipt.paymentStatus), width),
       );
@@ -573,6 +577,19 @@ class PrinterService {
         return '已退款';
       default:
         return value;
+    }
+  }
+
+  String _paymentMethodLabel(String value) {
+    switch (value.trim().toUpperCase()) {
+      case 'CASH':
+        return '現金';
+      case 'CARD':
+        return '刷卡';
+      case 'OTHER':
+        return '其他';
+      default:
+        return value.isEmpty ? '未指定' : value;
     }
   }
 

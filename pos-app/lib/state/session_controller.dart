@@ -246,10 +246,10 @@ class SessionController extends ChangeNotifier {
       errorMessage = error.message;
       return false;
     } on Exception {
-      errorMessage = '無法連線到 POS 伺服器，請檢查 API：$_apiBaseUrl';
+      errorMessage = '?⊥??????POS 隡箸??剁?隢炎??API嚗?_apiBaseUrl';
       return false;
     } catch (_) {
-      errorMessage = '無法連線到 POS 伺服器，請檢查 API：$_apiBaseUrl';
+      errorMessage = '?⊥??????POS 隡箸??剁?隢炎??API嚗?_apiBaseUrl';
       return false;
     } finally {
       loading = false;
@@ -285,9 +285,9 @@ class SessionController extends ChangeNotifier {
     } on ApiException catch (error) {
       errorMessage = error.message;
     } on Exception {
-      errorMessage = '無法取得商品資料，請檢查 API：$_apiBaseUrl';
+      errorMessage = '?⊥?????鞈?嚗?瑼Ｘ API嚗?_apiBaseUrl';
     } catch (_) {
-      errorMessage = '無法取得商品資料，請檢查 API：$_apiBaseUrl';
+      errorMessage = '?⊥?????鞈?嚗?瑼Ｘ API嚗?_apiBaseUrl';
     } finally {
       catalogLoading = false;
       notifyListeners();
@@ -323,16 +323,16 @@ class SessionController extends ChangeNotifier {
       errorMessage = '';
     } on ApiException catch (error) {
       errorMessage = _hasQuickReceiveCatalogCache()
-          ? '收貨清單暫時無法更新，以下顯示的是先前同步資料。'
+          ? '快速收貨資料更新失敗，先顯示先前同步的內容。'
           : error.message;
     } on Exception {
       errorMessage = _hasQuickReceiveCatalogCache()
-          ? '收貨清單暫時無法更新，以下顯示的是先前同步資料。'
-          : '無法同步收貨品項，請確認網路連線或稍後再試。';
+          ? '快速收貨資料更新失敗，先顯示先前同步的內容。'
+          : '無法載入快速收貨資料，請稍後再試。';
     } catch (_) {
       errorMessage = _hasQuickReceiveCatalogCache()
-          ? '收貨清單暫時無法更新，以下顯示的是先前同步資料。'
-          : '無法同步收貨品項，請確認網路連線或稍後再試。';
+          ? '快速收貨資料更新失敗，先顯示先前同步的內容。'
+          : '無法載入快速收貨資料，請稍後再試。';
     } finally {
       quickReceiveLoading = false;
       notifyListeners();
@@ -425,6 +425,32 @@ class SessionController extends ChangeNotifier {
   }
 
   Future<OrderReceipt?> checkoutCash() async {
+    return _checkoutWithPayment(
+      paymentLabel: '現金',
+      addPayment: (order) => _orderService.addCashPayment(
+        accessToken: accessToken!,
+        orderId: order.id,
+        amount: order.totalAmount,
+        note: 'Flutter POS cash checkout',
+      ),
+    );
+  }
+
+  Future<OrderReceipt?> checkoutOther() async {
+    return _checkoutWithPayment(
+      paymentLabel: '其他',
+      addPayment: (order) => _orderService.addOtherPayment(
+        accessToken: accessToken!,
+        orderId: order.id,
+        note: 'Flutter POS other checkout',
+      ),
+    );
+  }
+
+  Future<OrderReceipt?> _checkoutWithPayment({
+    required String paymentLabel,
+    required Future<OrderReceipt> Function(OrderReceipt order) addPayment,
+  }) async {
     if (accessToken == null || session == null) {
       errorMessage = '請先登入後再結帳。';
       notifyListeners();
@@ -432,7 +458,7 @@ class SessionController extends ChangeNotifier {
     }
 
     if (cart.isEmpty) {
-      errorMessage = '購物車是空的，請先加入商品。';
+      errorMessage = '購物車目前沒有商品，無法結帳。';
       notifyListeners();
       return null;
     }
@@ -460,19 +486,13 @@ class SessionController extends ChangeNotifier {
         ),
       );
 
-      final paidOrder = await _runWithApiFallback(
-        () => _orderService.addCashPayment(
-          accessToken: accessToken!,
-          orderId: order.id,
-          amount: order.totalAmount,
-          note: 'Flutter POS cash checkout',
-        ),
-      );
+      final paidOrder = await _runWithApiFallback(() => addPayment(order));
 
       lastCompletedOrder = paidOrder;
       cart = const [];
-      checkoutMessage =
-          '訂單 ${paidOrder.orderNumber} 已完成，現金收款 ${paidOrder.paidAmount.toStringAsFixed(2)} 元';
+      checkoutMessage = paidOrder.paymentMethod.toUpperCase() == 'OTHER'
+          ? '訂單 ${paidOrder.orderNumber} 已完成，其他結帳 0 元，庫存已同步扣減。'
+          : '訂單 ${paidOrder.orderNumber} 已完成，$paymentLabel 收款 ${paidOrder.paidAmount.toStringAsFixed(2)} 元。';
       await loadProducts(showLoading: false);
       return paidOrder;
     } on ApiException catch (error) {
@@ -497,7 +517,7 @@ class SessionController extends ChangeNotifier {
     String? note,
   }) async {
     if (accessToken == null || session == null) {
-      errorMessage = '請先登入後再進行收貨。';
+      errorMessage = '請先登入後再進行快速收貨。';
       notifyListeners();
       return null;
     }
@@ -518,18 +538,18 @@ class SessionController extends ChangeNotifier {
         ),
       );
       quickReceiveMessage =
-          '${item.type.label} ${result.itemName} 已收貨 $purchaseQuantity ${item.purchaseUnit}'
-          '（入庫 ${result.receivedStockQuantity} ${item.unit}）';
+          '${item.type.label} ${result.itemName} 已收貨 $purchaseQuantity ${item.purchaseUnit}，'
+          '換算增加 ${result.receivedStockQuantity} ${item.unit}。';
       await loadQuickReceiveCatalog(showLoading: false);
       return result;
     } on ApiException catch (error) {
       errorMessage = error.message;
       return null;
     } on Exception {
-      errorMessage = '快速收貨失敗，請確認網路連線或稍後再試。';
+      errorMessage = '快速收貨失敗，請稍後再試。';
       return null;
     } catch (_) {
-      errorMessage = '快速收貨失敗，請確認網路連線或稍後再試。';
+      errorMessage = '快速收貨失敗，請稍後再試。';
       return null;
     } finally {
       quickReceiveSaving = false;
@@ -549,7 +569,7 @@ class SessionController extends ChangeNotifier {
     double? latestUnitCost,
   }) async {
     if (accessToken == null || session == null) {
-      errorMessage = '請先登入後再新增收貨品項。';
+      errorMessage = '請先登入後再建立快速收貨品項。';
       notifyListeners();
       return null;
     }
@@ -574,17 +594,17 @@ class SessionController extends ChangeNotifier {
           latestUnitCost: latestUnitCost,
         ),
       );
-      quickReceiveMessage = '${type.label} ${createdItem.name} 已建立，可直接收貨。';
+      quickReceiveMessage = '${type.label} ${createdItem.name} 已建立，可直接開始收貨。';
       await loadQuickReceiveCatalog(showLoading: false);
       return createdItem;
     } on ApiException catch (error) {
       errorMessage = error.message;
       return null;
     } on Exception {
-      errorMessage = '新增收貨品項失敗，請確認網路連線或稍後再試。';
+      errorMessage = '建立快速收貨品項失敗，請稍後再試。';
       return null;
     } catch (_) {
-      errorMessage = '新增收貨品項失敗，請確認網路連線或稍後再試。';
+      errorMessage = '建立快速收貨品項失敗，請稍後再試。';
       return null;
     } finally {
       quickReceiveSaving = false;
@@ -623,10 +643,10 @@ class SessionController extends ChangeNotifier {
       errorMessage = error.message;
       return false;
     } on Exception {
-      errorMessage = '目前無法連線到 $_apiBaseUrl';
+      errorMessage = '?桀??⊥??????$_apiBaseUrl';
       return false;
     } catch (_) {
-      errorMessage = '目前無法連線到 $_apiBaseUrl';
+      errorMessage = '?桀??⊥??????$_apiBaseUrl';
       return false;
     } finally {
       notifyListeners();

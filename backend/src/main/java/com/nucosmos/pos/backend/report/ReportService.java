@@ -116,8 +116,8 @@ public class ReportService {
                 voidedOrderCount++;
             } else {
                 orderCount++;
-                grossSalesAmount = grossSalesAmount.add(order.getTotalAmount());
-                refundedAmount = refundedAmount.add(order.getRefundedAmount());
+                grossSalesAmount = grossSalesAmount.add(recognizedGrossAmount(order));
+                refundedAmount = refundedAmount.add(recognizedRefundedAmount(order));
             }
 
             for (PaymentEntity payment : order.getPayments()) {
@@ -315,8 +315,8 @@ public class ReportService {
                     return this;
                 }
 
-                BigDecimal grossAmount = order.getTotalAmount().setScale(2, RoundingMode.HALF_UP);
-                BigDecimal refundedAmount = order.getRefundedAmount().setScale(2, RoundingMode.HALF_UP);
+                BigDecimal grossAmount = recognizedGrossAmount(order);
+                BigDecimal refundedAmount = recognizedRefundedAmount(order);
                 BigDecimal netAmount = grossAmount.subtract(refundedAmount).setScale(2, RoundingMode.HALF_UP);
 
                 return new TrendAccumulator(
@@ -410,8 +410,9 @@ public class ReportService {
         BigDecimal standardRefundedCogsAmount = zeroMoney();
 
         for (OrderEntity order : effectiveOrders) {
-            grossSalesAmount = grossSalesAmount.add(order.getTotalAmount()).setScale(2, RoundingMode.HALF_UP);
-            refundedAmount = refundedAmount.add(order.getRefundedAmount()).setScale(2, RoundingMode.HALF_UP);
+            boolean nonRevenueOtherOrder = isNonRevenueOtherOrder(order);
+            grossSalesAmount = grossSalesAmount.add(recognizedGrossAmount(order)).setScale(2, RoundingMode.HALF_UP);
+            refundedAmount = refundedAmount.add(recognizedRefundedAmount(order)).setScale(2, RoundingMode.HALF_UP);
             realizedCogsAmount = realizedCogsAmount.add(order.getCogsAmount()).setScale(2, RoundingMode.HALF_UP);
             realizedRefundedCogsAmount = realizedRefundedCogsAmount.add(order.getRefundedCogsAmount()).setScale(2, RoundingMode.HALF_UP);
 
@@ -435,13 +436,17 @@ public class ReportService {
                 BigDecimal standardRefundedCost = standardUnitCost.multiply(BigDecimal.valueOf(effectiveRefundedQuantity)).setScale(2, RoundingMode.HALF_UP);
                 BigDecimal standardNetCogs = standardLineCost.subtract(standardRefundedCost).setScale(2, RoundingMode.HALF_UP);
 
-                BigDecimal refundedSales = item.getQuantity() == 0
+                BigDecimal refundedSales = nonRevenueOtherOrder
+                        ? zeroMoney()
+                        : item.getQuantity() == 0
                         ? zeroMoney()
                         : item.getLineTotalAmount()
                                 .divide(BigDecimal.valueOf(item.getQuantity()), 6, RoundingMode.HALF_UP)
                                 .multiply(BigDecimal.valueOf(effectiveRefundedQuantity))
                                 .setScale(2, RoundingMode.HALF_UP);
-                BigDecimal netSales = item.getLineTotalAmount().subtract(refundedSales).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal netSales = nonRevenueOtherOrder
+                        ? zeroMoney()
+                        : item.getLineTotalAmount().subtract(refundedSales).setScale(2, RoundingMode.HALF_UP);
 
                 orderStandardCogs = orderStandardCogs.add(standardLineCost).setScale(2, RoundingMode.HALF_UP);
                 orderStandardRefundedCogs = orderStandardRefundedCogs.add(standardRefundedCost).setScale(2, RoundingMode.HALF_UP);
@@ -480,8 +485,9 @@ public class ReportService {
             standardCogsAmount = standardCogsAmount.add(orderStandardCogs).setScale(2, RoundingMode.HALF_UP);
             standardRefundedCogsAmount = standardRefundedCogsAmount.add(orderStandardRefundedCogs).setScale(2, RoundingMode.HALF_UP);
 
-            BigDecimal orderNetSales = order.getTotalAmount().subtract(order.getRefundedAmount()).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal orderNetSales = recognizedGrossAmount(order).subtract(recognizedRefundedAmount(order)).setScale(2, RoundingMode.HALF_UP);
             BigDecimal orderStandardNetCogs = orderStandardCogs.subtract(orderStandardRefundedCogs).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal orderRealizedGrossProfit = orderNetSales.subtract(order.getNetCogsAmount()).setScale(2, RoundingMode.HALF_UP);
             BigDecimal orderStandardGrossProfit = orderNetSales.subtract(orderStandardNetCogs).setScale(2, RoundingMode.HALF_UP);
 
             orderRows.add(new OrderProfitabilityResponse(
@@ -493,9 +499,9 @@ public class ReportService {
                     order.getNetCogsAmount(),
                     orderStandardNetCogs,
                     order.getNetCogsAmount().subtract(orderStandardNetCogs).setScale(2, RoundingMode.HALF_UP),
-                    order.getGrossProfitAmount(),
+                    orderRealizedGrossProfit,
                     orderStandardGrossProfit,
-                    calculateMarginRate(order.getGrossProfitAmount(), orderNetSales),
+                    calculateMarginRate(orderRealizedGrossProfit, orderNetSales),
                     calculateMarginRate(orderStandardGrossProfit, orderNetSales)
             ));
         }
@@ -650,6 +656,26 @@ public class ReportService {
         }
 
         return quantity.multiply(unitCost).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal recognizedGrossAmount(OrderEntity order) {
+        return isNonRevenueOtherOrder(order)
+                ? zeroMoney()
+                : order.getTotalAmount().setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal recognizedRefundedAmount(OrderEntity order) {
+        return isNonRevenueOtherOrder(order)
+                ? zeroMoney()
+                : order.getRefundedAmount().setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private boolean isNonRevenueOtherOrder(OrderEntity order) {
+        List<PaymentEntity> settledPayments = order.getPayments().stream()
+                .filter(this::isSettledPayment)
+                .toList();
+        return !settledPayments.isEmpty()
+                && settledPayments.stream().allMatch(payment -> "OTHER".equals(payment.getPaymentMethod()));
     }
 
     private BigDecimal calculateMarginRate(BigDecimal profitAmount, BigDecimal salesAmount) {

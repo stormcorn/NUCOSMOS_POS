@@ -145,8 +145,8 @@ public class ShiftService {
                 voidedOrderCount++;
             } else {
                 orderCount++;
-                grossSales = grossSales.add(order.getTotalAmount());
-                refundedAmount = refundedAmount.add(order.getRefundedAmount());
+                grossSales = grossSales.add(recognizedGrossAmount(order));
+                refundedAmount = refundedAmount.add(recognizedRefundedAmount(order));
             }
 
             for (PaymentEntity payment : order.getPayments()) {
@@ -180,6 +180,22 @@ public class ShiftService {
 
     private boolean isSettledPayment(PaymentEntity payment) {
         return "CAPTURED".equals(payment.getStatus()) || "REFUNDED".equals(payment.getStatus());
+    }
+
+    private BigDecimal recognizedGrossAmount(OrderEntity order) {
+        return isNonRevenueOtherOrder(order) ? BigDecimal.ZERO : order.getTotalAmount();
+    }
+
+    private BigDecimal recognizedRefundedAmount(OrderEntity order) {
+        return isNonRevenueOtherOrder(order) ? BigDecimal.ZERO : order.getRefundedAmount();
+    }
+
+    private boolean isNonRevenueOtherOrder(OrderEntity order) {
+        List<PaymentEntity> settledPayments = order.getPayments().stream()
+                .filter(this::isSettledPayment)
+                .toList();
+        return !settledPayments.isEmpty()
+                && settledPayments.stream().allMatch(payment -> "OTHER".equals(payment.getPaymentMethod()));
     }
 
     private StoreEntity resolveStore(AuthenticatedUser user) {

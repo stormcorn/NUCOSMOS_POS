@@ -4,7 +4,8 @@ import com.nucosmos.pos.backend.common.exception.BadRequestException;
 
 public enum PaymentMethod {
     CASH,
-    CARD;
+    CARD,
+    OTHER;
 
     public static PaymentMethod from(String value) {
         if (value == null || value.isBlank()) {

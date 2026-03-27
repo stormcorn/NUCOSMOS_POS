@@ -175,7 +175,7 @@ public class OrderService {
         }
 
         BigDecimal remainingAmount = order.getTotalAmount().subtract(order.getPaidAmount());
-        PaymentAmounts paymentAmounts = normalizePayment(request, remainingAmount);
+        PaymentAmounts paymentAmounts = normalizePayment(request, remainingAmount, paymentMethod);
         OffsetDateTime paidAt = OffsetDateTime.now();
 
         PaymentEntity payment = new PaymentEntity(
@@ -212,7 +212,8 @@ public class OrderService {
                 .map(PaymentEntity::getChangeAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        boolean fullyPaid = totalCaptured.compareTo(order.getTotalAmount()) >= 0;
+        boolean fullyPaid = paymentMethod == PaymentMethod.OTHER
+                || totalCaptured.compareTo(order.getTotalAmount()) >= 0;
         order.applyPayment(totalCaptured, totalChange, fullyPaid ? paidAt : null, fullyPaid);
         if (fullyPaid) {
             orderInventoryWorkflowService.commitOrderInventory(order, createdByUser);
@@ -627,9 +628,20 @@ public class OrderService {
         return order;
     }
 
-    private PaymentAmounts normalizePayment(PaymentRequest request, BigDecimal remainingAmount) {
+    private PaymentAmounts normalizePayment(PaymentRequest request, BigDecimal remainingAmount, PaymentMethod paymentMethod) {
         BigDecimal amountApplied = request.amount();
         BigDecimal amountReceived = request.amountReceived() != null ? request.amountReceived() : request.amount();
+
+        if (paymentMethod == PaymentMethod.OTHER) {
+            if (amountApplied.compareTo(BigDecimal.ZERO) != 0 || amountReceived.compareTo(BigDecimal.ZERO) != 0) {
+                throw new BadRequestException("OTHER payments must use zero amount");
+            }
+            return new PaymentAmounts(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+        }
+
+        if (amountApplied.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException("Payment amount must be greater than zero");
+        }
 
         if (amountApplied.compareTo(remainingAmount) > 0) {
             throw new BadRequestException("Payment amount exceeds remaining balance");
@@ -759,6 +771,10 @@ public class OrderService {
 
         if (originalPaymentMethod == PaymentMethod.CASH && refundMethod != RefundMethod.CASH) {
             throw new BadRequestException("Cash payments must use CASH refund method");
+        }
+
+        if (originalPaymentMethod == PaymentMethod.OTHER) {
+            throw new BadRequestException("Non-revenue OTHER payments cannot be refunded");
         }
 
         if (originalPaymentMethod == PaymentMethod.CARD

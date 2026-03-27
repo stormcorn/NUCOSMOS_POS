@@ -47,4 +47,23 @@ class OrderService {
 
     return ApiEnvelope<OrderReceipt>.fromJson(json, OrderReceipt.fromJson).data;
   }
+
+  Future<OrderReceipt> addOtherPayment({
+    required String accessToken,
+    required String orderId,
+    String? note,
+  }) async {
+    final json = await _apiClient.post(
+      '/api/v1/orders/$orderId/payments',
+      accessToken: accessToken,
+      body: {
+        'paymentMethod': 'OTHER',
+        'amount': 0,
+        'amountReceived': 0,
+        if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+      },
+    );
+
+    return ApiEnvelope<OrderReceipt>.fromJson(json, OrderReceipt.fromJson).data;
+  }
 }

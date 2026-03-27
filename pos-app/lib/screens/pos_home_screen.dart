@@ -212,8 +212,33 @@ class _PosHomeScreenState extends State<PosHomeScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Order ${receipt.orderNumber} completed. Paid ${_currency(receipt.paidAmount)}',
+          '訂單 ${receipt.orderNumber} 已完成，${_paymentMethodLabel(receipt.paymentMethod)} ${_currency(receipt.paidAmount)}',
         ),
+      ),
+    );
+  }
+
+  Future<void> _checkoutOther() async {
+    final cartSnapshot = widget.controller.cart.toList(growable: false);
+    final receipt = await widget.controller.checkoutOther();
+    if (!mounted || receipt == null) {
+      return;
+    }
+
+    await widget.printerController.printReceiptForOrder(
+      receipt: receipt,
+      lines: cartSnapshot,
+      storeCode: widget.controller.session?.storeCode,
+      staffName: widget.controller.session?.displayName,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('其他結帳已完成，這筆訂單不計收入但已同步庫存。'),
       ),
     );
   }
@@ -365,6 +390,7 @@ class _PosHomeScreenState extends State<PosHomeScreen>
                                     child: _CurrentOrderPanel(
                                       controller: controller,
                                       onCheckout: _checkoutCash,
+                                      onCheckoutOther: _checkoutOther,
                                       compact: !layout.desktopLayout,
                                     ),
                                   ),
@@ -402,6 +428,7 @@ class _PosHomeScreenState extends State<PosHomeScreen>
                                         _CurrentOrderPanel(
                                           controller: controller,
                                           onCheckout: _checkoutCash,
+                                          onCheckoutOther: _checkoutOther,
                                           compact: true,
                                         ),
                                       ],
@@ -1742,11 +1769,13 @@ class _CurrentOrderPanel extends StatelessWidget {
   const _CurrentOrderPanel({
     required this.controller,
     required this.onCheckout,
+    required this.onCheckoutOther,
     this.compact = false,
   });
 
   final SessionController controller;
   final Future<void> Function() onCheckout;
+  final Future<void> Function() onCheckoutOther;
   final bool compact;
 
   @override
@@ -1826,52 +1855,93 @@ class _CurrentOrderPanel extends StatelessWidget {
             emphasize: true,
           ),
           const SizedBox(height: 18),
-          SizedBox(
-            width: double.infinity,
-            height: compact ? 54 : 48,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1FE4FF), Color(0xFF785BFF)],
-                ),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x3314F1FF),
-                    blurRadius: 16,
-                    offset: Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: FilledButton.icon(
-                onPressed: cart.isEmpty || controller.checkoutLoading
-                    ? null
-                    : onCheckout,
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  foregroundColor: const Color(0xFF07111C),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: compact ? 54 : 48,
+                  child: OutlinedButton.icon(
+                    onPressed: cart.isEmpty || controller.checkoutLoading
+                        ? null
+                        : onCheckoutOther,
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF4C5B74)),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    icon: const Icon(Icons.more_horiz_rounded),
+                    label: const Text(
+                      '其他',
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
                   ),
                 ),
-                icon: controller.checkoutLoading
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.credit_card_rounded),
-                label: Text(
-                  controller.checkoutLoading ? 'PROCESSING' : 'CHECKOUT',
-                  style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: compact ? 54 : 48,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF1FE4FF), Color(0xFF785BFF)],
+                      ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x3314F1FF),
+                          blurRadius: 16,
+                          offset: Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: FilledButton.icon(
+                      onPressed: cart.isEmpty || controller.checkoutLoading
+                          ? null
+                          : onCheckout,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        foregroundColor: const Color(0xFF07111C),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      icon: controller.checkoutLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.credit_card_rounded),
+                      label: Text(
+                        controller.checkoutLoading ? '處理中' : '結帳',
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
         ],
       ),
     );
+  }
+}
+
+String _paymentMethodLabel(String value) {
+  switch (value.trim().toUpperCase()) {
+    case 'CASH':
+      return '現金';
+    case 'CARD':
+      return '刷卡';
+    case 'OTHER':
+      return '其他';
+    default:
+      return value.isEmpty ? '未指定' : value;
   }
 }
 
