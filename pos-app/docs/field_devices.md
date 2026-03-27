@@ -21,3 +21,7 @@
 - Login screen
 - Checkout panel
 - Product grid on compact tablet widths
+- Printer settings panel:
+  - Toggle state must refresh immediately in place.
+  - Scan, stop, connect, disconnect, and selection changes must update visible status without requiring a screen switch.
+  - Device diagnostics, connection summaries, and error banners must always reflect the latest action in the same panel.
