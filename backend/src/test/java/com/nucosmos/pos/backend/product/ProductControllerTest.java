@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -203,6 +205,49 @@ class ProductControllerTest {
                                 """.formatted(SMALL_PNG_DATA_URL)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.imageUrl").value(SMALL_PNG_DATA_URL));
+    }
+
+    @Test
+    void shouldOmitInlineProductImagesFromPosCatalogPayload() throws Exception {
+        String managerToken = TestLoginSupport.loginAndExtractToken(mockMvc, """
+                {
+                  "storeCode": "TW001",
+                  "roleCode": "MANAGER",
+                  "pin": "999999",
+                  "deviceCode": "POS-TABLET-001"
+                }
+                """);
+
+        mockMvc.perform(post("/api/v1/admin/products")
+                        .header("Authorization", "Bearer " + managerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "categoryId": "33333333-3333-3333-3333-333333333331",
+                                  "sku": "drink-inline-pos-hidden",
+                                  "name": "Inline Payload Tea",
+                                  "description": "Should not bloat POS payload",
+                                  "imageUrl": "%s",
+                                  "price": 8.50
+                                }
+                                """.formatted(SMALL_PNG_DATA_URL)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.imageUrl").value(SMALL_PNG_DATA_URL));
+
+        String cashierToken = TestLoginSupport.loginAndExtractToken(mockMvc, """
+                {
+                  "storeCode": "TW001",
+                  "roleCode": "CASHIER",
+                  "pin": "123456",
+                  "deviceCode": "POS-TABLET-001"
+                }
+                """);
+
+        mockMvc.perform(get("/api/v1/products")
+                        .header("Authorization", "Bearer " + cashierToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[?(@.sku=='drink-inline-pos-hidden')].imageUrl")
+                        .value(hasItem(nullValue())));
     }
 
     @Test

@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 class ApiClient {
   ApiClient({required this.baseUrl});
 
-  static const requestTimeout = Duration(seconds: 8);
+  static const requestTimeout = Duration(seconds: 20);
 
   String baseUrl;
 

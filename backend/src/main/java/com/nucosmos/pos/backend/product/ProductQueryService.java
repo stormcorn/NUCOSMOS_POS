@@ -67,7 +67,7 @@ public class ProductQueryService {
                 product.getSku(),
                 product.getName(),
                 product.getDescription(),
-                product.getImageUrl(),
+                toPosImageUrl(product.getImageUrl()),
                 product.getCategory().getCode(),
                 product.getCategory().getName(),
                 product.getPrice(),
@@ -82,6 +82,26 @@ public class ProductQueryService {
                 stock == null ? 0 : stock.getSellableQuantity(),
                 loadCustomizationGroups(product.getId())
         );
+    }
+
+    private String toPosImageUrl(String imageUrl) {
+        if (imageUrl == null) {
+            return null;
+        }
+
+        String normalized = imageUrl.trim();
+        if (normalized.isEmpty()) {
+            return null;
+        }
+
+        // Keep the POS catalog payload small and predictable.
+        // Inline data URLs can inflate the response to tens of megabytes and
+        // cause tablet clients to time out before any products are shown.
+        if (normalized.startsWith("data:image/")) {
+            return null;
+        }
+
+        return normalized;
     }
 
     private List<ProductCustomizationGroupResponse> loadCustomizationGroups(UUID productId) {
