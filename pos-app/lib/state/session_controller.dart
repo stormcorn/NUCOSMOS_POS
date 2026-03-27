@@ -246,10 +246,10 @@ class SessionController extends ChangeNotifier {
       errorMessage = error.message;
       return false;
     } on Exception {
-      errorMessage = '?⊥??????POS 隡箸??剁?隢炎??API嚗?_apiBaseUrl';
+      errorMessage = '無法登入 POS，請確認 API：$_apiBaseUrl';
       return false;
     } catch (_) {
-      errorMessage = '?⊥??????POS 隡箸??剁?隢炎??API嚗?_apiBaseUrl';
+      errorMessage = '無法登入 POS，請確認 API：$_apiBaseUrl';
       return false;
     } finally {
       loading = false;
@@ -285,9 +285,9 @@ class SessionController extends ChangeNotifier {
     } on ApiException catch (error) {
       errorMessage = error.message;
     } on Exception {
-      errorMessage = '?⊥?????鞈?嚗?瑼Ｘ API嚗?_apiBaseUrl';
+      errorMessage = '無法取得商品資料，請確認 API：$_apiBaseUrl';
     } catch (_) {
-      errorMessage = '?⊥?????鞈?嚗?瑼Ｘ API嚗?_apiBaseUrl';
+      errorMessage = '無法取得商品資料，請確認 API：$_apiBaseUrl';
     } finally {
       catalogLoading = false;
       notifyListeners();
@@ -426,7 +426,7 @@ class SessionController extends ChangeNotifier {
 
   Future<OrderReceipt?> checkoutCash() async {
     return _checkoutWithPayment(
-      paymentLabel: '現金',
+      paymentLabel: '?暸?',
       addPayment: (order) => _orderService.addCashPayment(
         accessToken: accessToken!,
         orderId: order.id,
@@ -438,7 +438,7 @@ class SessionController extends ChangeNotifier {
 
   Future<OrderReceipt?> checkoutOther() async {
     return _checkoutWithPayment(
-      paymentLabel: '其他',
+      paymentLabel: '?嗡?',
       addPayment: (order) => _orderService.addOtherPayment(
         accessToken: accessToken!,
         orderId: order.id,
@@ -492,17 +492,17 @@ class SessionController extends ChangeNotifier {
       cart = const [];
       checkoutMessage = paidOrder.paymentMethod.toUpperCase() == 'OTHER'
           ? '訂單 ${paidOrder.orderNumber} 已完成，其他結帳 0 元，庫存已同步扣減。'
-          : '訂單 ${paidOrder.orderNumber} 已完成，$paymentLabel 收款 ${paidOrder.paidAmount.toStringAsFixed(2)} 元。';
+          : '訂單 ${paidOrder.orderNumber} 已完成，${paymentLabel} 收款 ${paidOrder.paidAmount.toStringAsFixed(2)} 元。';
       await loadProducts(showLoading: false);
       return paidOrder;
     } on ApiException catch (error) {
       errorMessage = error.message;
       return null;
     } on Exception {
-      errorMessage = '結帳失敗，請確認 API：$_apiBaseUrl';
+      errorMessage = '蝯董憭望?嚗?蝣箄? API嚗?_apiBaseUrl';
       return null;
     } catch (_) {
-      errorMessage = '結帳失敗，請確認 API：$_apiBaseUrl';
+      errorMessage = '蝯董憭望?嚗?蝣箄? API嚗?_apiBaseUrl';
       return null;
     } finally {
       checkoutLoading = false;
@@ -538,7 +538,7 @@ class SessionController extends ChangeNotifier {
         ),
       );
       quickReceiveMessage =
-          '${item.type.label} ${result.itemName} 已收貨 $purchaseQuantity ${item.purchaseUnit}，'
+          '${item.type.label} ${result.itemName} 已收貨 ${purchaseQuantity} ${item.purchaseUnit}，'
           '換算增加 ${result.receivedStockQuantity} ${item.unit}。';
       await loadQuickReceiveCatalog(showLoading: false);
       return result;
@@ -643,10 +643,10 @@ class SessionController extends ChangeNotifier {
       errorMessage = error.message;
       return false;
     } on Exception {
-      errorMessage = '?桀??⊥??????$_apiBaseUrl';
+      errorMessage = '測試連線失敗，請確認 API：$_apiBaseUrl';
       return false;
     } catch (_) {
-      errorMessage = '?桀??⊥??????$_apiBaseUrl';
+      errorMessage = '測試連線失敗，請確認 API：$_apiBaseUrl';
       return false;
     } finally {
       notifyListeners();
