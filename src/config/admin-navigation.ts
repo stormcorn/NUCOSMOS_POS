@@ -148,6 +148,22 @@ export const adminNavigationItems: AdminNavigationItem[] = [
       },
     ],
   },
+  {
+    to: "/settings/image-optimization",
+    label: "系統管理",
+    short: "SM",
+    description: "集中處理系統維護工具與批次整理工作。",
+    permissionKeys: [PERMISSIONS.SETTINGS_VIEW],
+    children: [
+      {
+        to: "/settings/image-optimization",
+        label: "圖片優化",
+        short: "IO",
+        description: "掃描並批次壓縮既有商品、原料、製成品和包裝圖片。",
+        permissionKeys: [PERMISSIONS.SETTINGS_VIEW],
+      },
+    ],
+  },
 ];
 
 export function cloneAdminNavigationItems() {

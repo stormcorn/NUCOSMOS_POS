@@ -18,6 +18,8 @@ export const PERMISSIONS = {
   USERS_EDIT: "USERS_EDIT",
   ROLES_VIEW: "ROLES_VIEW",
   ROLES_EDIT: "ROLES_EDIT",
+  SETTINGS_VIEW: "SETTINGS_VIEW",
+  SETTINGS_EDIT: "SETTINGS_EDIT",
 } as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

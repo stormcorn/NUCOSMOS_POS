@@ -23,6 +23,7 @@ import RolePermissionsView from "@/views/RolePermissionsView.vue";
 import ShiftsView from "@/views/ShiftsView.vue";
 import SuppliersView from "@/views/SuppliersView.vue";
 import UsersAccessView from "@/views/UsersAccessView.vue";
+import ImageOptimizationView from "@/views/ImageOptimizationView.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -213,6 +214,16 @@ const router = createRouter({
         title: "Roles",
         requiresAuth: true,
         permissionKeys: [PERMISSIONS.ROLES_VIEW],
+      },
+    },
+    {
+      path: "/settings/image-optimization",
+      name: "settings-image-optimization",
+      component: ImageOptimizationView,
+      meta: {
+        title: "圖片優化",
+        requiresAuth: true,
+        permissionKeys: [PERMISSIONS.SETTINGS_VIEW],
       },
     },
   ],
