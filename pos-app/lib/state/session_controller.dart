@@ -322,15 +322,27 @@ class SessionController extends ChangeNotifier {
       receivePackagingItems = results[2];
       errorMessage = '';
     } on ApiException catch (error) {
-      errorMessage = error.message;
+      errorMessage = _hasQuickReceiveCatalogCache()
+          ? '收貨清單暫時無法更新，以下顯示的是先前同步資料。'
+          : error.message;
     } on Exception {
-      errorMessage = '無法同步收貨品項，請確認網路連線或稍後再試。';
+      errorMessage = _hasQuickReceiveCatalogCache()
+          ? '收貨清單暫時無法更新，以下顯示的是先前同步資料。'
+          : '無法同步收貨品項，請確認網路連線或稍後再試。';
     } catch (_) {
-      errorMessage = '無法同步收貨品項，請確認網路連線或稍後再試。';
+      errorMessage = _hasQuickReceiveCatalogCache()
+          ? '收貨清單暫時無法更新，以下顯示的是先前同步資料。'
+          : '無法同步收貨品項，請確認網路連線或稍後再試。';
     } finally {
       quickReceiveLoading = false;
       notifyListeners();
     }
+  }
+
+  bool _hasQuickReceiveCatalogCache() {
+    return receiveMaterials.isNotEmpty ||
+        receiveManufacturedItems.isNotEmpty ||
+        receivePackagingItems.isNotEmpty;
   }
 
   void selectCategory(String? categoryCode) {
