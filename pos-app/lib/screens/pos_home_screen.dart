@@ -1993,7 +1993,7 @@ class _PrinterPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Printer Settings',
+            '印表機設定',
             style: TextStyle(
               fontWeight: FontWeight.w800,
               fontSize: 18,
@@ -2002,15 +2002,15 @@ class _PrinterPanel extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             selected == null
-                ? 'No printer selected'
-                : 'Selected: ${selected.name ?? selected.address ?? 'Unnamed Printer'}',
+                ? '尚未選擇印表機'
+                : '已選擇：${selected.name ?? selected.address ?? '未命名印表機'}',
             style: const TextStyle(color: Colors.white70),
           ),
           const SizedBox(height: 6),
           Text(
             selected == null
-                ? 'Supports Bluetooth BLE and USB thermal printers'
-                : 'Status: ${(selected.isConnected ?? false) ? 'Connected' : 'Disconnected'} / ${selected.connectionTypeString}',
+                ? '支援藍牙 BLE 與 USB 熱感印表機'
+                : '狀態：${(selected.isConnected ?? false) ? '已連線' : '未連線'} / ${selected.connectionTypeString}',
             style: const TextStyle(color: Colors.white60),
           ),
           if (printerController.statusMessage.isNotEmpty) ...[
@@ -2037,35 +2037,35 @@ class _PrinterPanel extends StatelessWidget {
                     ? null
                     : printerController.startScan,
                 icon: const Icon(Icons.radar_rounded),
-                label: const Text('Scan'),
+                label: const Text('掃描'),
               ),
               OutlinedButton.icon(
                 onPressed: printerController.scanning
                     ? printerController.stopScan
                     : null,
                 icon: const Icon(Icons.stop_circle_outlined),
-                label: const Text('Stop'),
+                label: const Text('停止'),
               ),
               OutlinedButton.icon(
                 onPressed: printerController.printing || selected == null
                     ? null
                     : printerController.printTestReceipt,
                 icon: const Icon(Icons.receipt_long_rounded),
-                label: const Text('Test Print'),
+                label: const Text('測試列印'),
               ),
             ],
           ),
           const SizedBox(height: 12),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Auto print after checkout'),
+            title: const Text('結帳後自動列印'),
             value: printerController.autoPrintReceipt,
             onChanged: printerController.setAutoPrintReceipt,
           ),
           const SizedBox(height: 8),
           if (printerController.printers.isEmpty)
             const Text(
-              'No printers found yet. Tap Scan to search nearby devices.',
+              '尚未找到印表機，請按「掃描」搜尋附近裝置。',
               style: TextStyle(color: Colors.white54),
             )
           else

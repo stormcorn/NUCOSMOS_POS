@@ -61,7 +61,7 @@ class PrinterController extends ChangeNotifier {
 
   Future<void> startScan() async {
     errorMessage = '';
-    statusMessage = '正在掃描藍牙 / USB 印表機...';
+    statusMessage = '正在掃描附近的藍牙 BLE / USB 印表機...';
     scanning = true;
     notifyListeners();
 
@@ -77,8 +77,8 @@ class PrinterController extends ChangeNotifier {
   Future<void> stopScan() async {
     _printerService.stopDiscovery();
     scanning = false;
-    if (statusMessage == '正在掃描藍牙 / USB 印表機...') {
-      statusMessage = '已停止掃描';
+    if (statusMessage == '正在掃描附近的藍牙 BLE / USB 印表機...') {
+      statusMessage = '已停止掃描。';
     }
     notifyListeners();
   }
@@ -142,7 +142,7 @@ class PrinterController extends ChangeNotifier {
 
     try {
       await _printerService.printTestReceipt(printer);
-      statusMessage = '測試列印完成';
+      statusMessage = '測試單列印完成。';
     } catch (error) {
       errorMessage = '測試列印失敗：$error';
     } finally {
@@ -179,7 +179,7 @@ class PrinterController extends ChangeNotifier {
         storeCode: storeCode,
         staffName: staffName,
       );
-      statusMessage = '訂單 ${receipt.orderNumber} 列印完成';
+      statusMessage = '訂單 ${receipt.orderNumber} 已列印。';
     } catch (error) {
       errorMessage = '訂單列印失敗：$error';
     } finally {
@@ -196,19 +196,17 @@ class PrinterController extends ChangeNotifier {
   }
 
   void _handlePrinterUpdate(List<Printer> devices) {
-    printers = devices
-        .where((printer) {
-          final name = (printer.name ?? '').trim();
-          return name.isNotEmpty;
-        })
-        .toList(growable: false);
+    printers = devices.where((printer) {
+      final name = (printer.name ?? '').trim();
+      return name.isNotEmpty;
+    }).toList(growable: false);
 
     scanning = false;
     _refreshSelectedPrinterFromDevices();
     if (printers.isEmpty) {
-      statusMessage = '未找到可用的藍牙 / USB 印表機';
+      statusMessage = '尚未找到可用的藍牙 / USB 印表機。';
     } else {
-      statusMessage = '找到 ${printers.length} 台印表機';
+      statusMessage = '已找到 ${printers.length} 台印表機。';
     }
     notifyListeners();
   }
@@ -233,12 +231,13 @@ class PrinterController extends ChangeNotifier {
 
     final match = printers.cast<Printer?>().firstWhere(
           (printer) =>
-              printer != null && _matchesRememberedPrinter(printer, rememberedPrinter!),
+              printer != null &&
+              _matchesRememberedPrinter(printer, rememberedPrinter!),
           orElse: () => null,
         );
     if (match != null) {
       selectedPrinter = match;
-      statusMessage = '找到已記住的印表機：${_printerLabel(match)}';
+      statusMessage = '已找到先前配對的印表機：${_printerLabel(match)}';
     }
   }
 
@@ -259,7 +258,7 @@ class PrinterController extends ChangeNotifier {
   Future<Printer?> _ensureSelectedPrinterConnected() async {
     final printer = selectedPrinter;
     if (printer == null) {
-      errorMessage = '請先掃描並連線一台熱感出單機。';
+      errorMessage = '請先掃描並選擇一台印表機，再進行列印。';
       notifyListeners();
       return null;
     }
