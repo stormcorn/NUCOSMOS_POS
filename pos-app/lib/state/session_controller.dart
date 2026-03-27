@@ -324,9 +324,9 @@ class SessionController extends ChangeNotifier {
     } on ApiException catch (error) {
       errorMessage = error.message;
     } on Exception {
-      errorMessage = '無法取得收貨品項，請檢查 API：$_apiBaseUrl';
+      errorMessage = '無法同步收貨品項，請確認網路連線或稍後再試。';
     } catch (_) {
-      errorMessage = '無法取得收貨品項，請檢查 API：$_apiBaseUrl';
+      errorMessage = '無法同步收貨品項，請確認網路連線或稍後再試。';
     } finally {
       quickReceiveLoading = false;
       notifyListeners();
@@ -514,10 +514,10 @@ class SessionController extends ChangeNotifier {
       errorMessage = error.message;
       return null;
     } on Exception {
-      errorMessage = '快速收貨失敗，請檢查 API：$_apiBaseUrl';
+      errorMessage = '快速收貨失敗，請確認網路連線或稍後再試。';
       return null;
     } catch (_) {
-      errorMessage = '快速收貨失敗，請檢查 API：$_apiBaseUrl';
+      errorMessage = '快速收貨失敗，請確認網路連線或稍後再試。';
       return null;
     } finally {
       quickReceiveSaving = false;
@@ -569,10 +569,10 @@ class SessionController extends ChangeNotifier {
       errorMessage = error.message;
       return null;
     } on Exception {
-      errorMessage = '新增收貨品項失敗，請確認 API：$_apiBaseUrl';
+      errorMessage = '新增收貨品項失敗，請確認網路連線或稍後再試。';
       return null;
     } catch (_) {
-      errorMessage = '新增收貨品項失敗，請確認 API：$_apiBaseUrl';
+      errorMessage = '新增收貨品項失敗，請確認網路連線或稍後再試。';
       return null;
     } finally {
       quickReceiveSaving = false;

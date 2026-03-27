@@ -1023,7 +1023,7 @@ class _QuickReceiveListPane extends StatelessWidget {
                                       ),
                                       const SizedBox(height: 6),
                                       Text(
-                                        '${item.sku} ? ?? ${item.quantityOnHand} ${item.unit}',
+                                        '${item.sku} ｜ 現有 ${item.quantityOnHand} ${item.unit}',
                                         style: const TextStyle(
                                           color: Color(0xFF8DA2BD),
                                           fontSize: 12,
