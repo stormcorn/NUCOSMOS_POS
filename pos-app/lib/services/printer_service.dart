@@ -2,7 +2,9 @@ import 'dart:convert';
 
 import 'package:flutter_thermal_printer/flutter_thermal_printer.dart';
 import 'package:flutter_thermal_printer/utils/printer.dart';
+import 'package:flutter/services.dart';
 
+import '../models/classic_bluetooth_device.dart';
 import '../models/order_models.dart';
 import '../state/session_controller.dart';
 
@@ -13,9 +15,28 @@ class PrinterService {
     );
   }
 
+  static const MethodChannel _classicBluetoothChannel = MethodChannel(
+    'nucosmos_pos_app/classic_bluetooth',
+  );
+
   final FlutterThermalPrinter _plugin = FlutterThermalPrinter.instance;
 
   Stream<List<Printer>> get devicesStream => _plugin.devicesStream;
+
+  Future<List<ClassicBluetoothDevice>> scanClassicBluetoothDevices() async {
+    final result = await _classicBluetoothChannel.invokeMethod<List<dynamic>>(
+      'scanClassicDevices',
+    );
+
+    if (result == null) {
+      return const [];
+    }
+
+    return result
+        .whereType<Map>()
+        .map(ClassicBluetoothDevice.fromMap)
+        .toList(growable: false);
+  }
 
   Future<void> startDiscovery() async {
     await _plugin.getPrinters(

@@ -20,3 +20,12 @@ android/app/src/*
 !android/app/src/main/
 android/app/src/main/*
 !android/app/src/main/AndroidManifest.xml
+!android/app/src/main/kotlin/
+android/app/src/main/kotlin/*
+!android/app/src/main/kotlin/com/
+android/app/src/main/kotlin/com/*
+!android/app/src/main/kotlin/com/example/
+android/app/src/main/kotlin/com/example/*
+!android/app/src/main/kotlin/com/example/nucosmos_pos_app/
+android/app/src/main/kotlin/com/example/nucosmos_pos_app/*
+!android/app/src/main/kotlin/com/example/nucosmos_pos_app/MainActivity.kt

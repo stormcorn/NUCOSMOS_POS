@@ -5,6 +5,7 @@ import 'package:flutter_thermal_printer/utils/printer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/order_models.dart';
+import '../models/classic_bluetooth_device.dart';
 import '../models/printer_target.dart';
 import '../services/printer_service.dart';
 import 'session_controller.dart';
@@ -20,6 +21,7 @@ class PrinterController extends ChangeNotifier {
 
   StreamSubscription<List<Printer>>? _devicesSubscription;
   List<Printer> printers = const [];
+  List<ClassicBluetoothDevice> classicBluetoothDevices = const [];
   Printer? selectedPrinter;
   PrinterTarget? rememberedPrinter;
 
@@ -62,12 +64,19 @@ class PrinterController extends ChangeNotifier {
   Future<void> startScan() async {
     errorMessage = '';
     statusMessage =
-        '\u6b63\u5728\u6383\u63cf\u9644\u8fd1\u7684\u85cd\u7259 BLE / USB \u5370\u8868\u6a5f...';
+        '\u6b63\u5728\u6383\u63cf\u9644\u8fd1\u7684 BLE / USB \u5370\u8868\u6a5f\uff0c\u4e26\u6aa2\u67e5 Classic \u85cd\u7259\u88dd\u7f6e...';
     scanning = true;
     notifyListeners();
 
     try {
       await _printerService.startDiscovery();
+      try {
+        classicBluetoothDevices =
+            await _printerService.scanClassicBluetoothDevices();
+      } catch (error) {
+        errorMessage =
+            '\u50b3\u7d71\u85cd\u7259\u88dd\u7f6e\u5075\u6e2c\u5931\u6557\uff1a$error';
+      }
     } catch (error) {
       scanning = false;
       errorMessage = '\u6383\u63cf\u5931\u6557\uff1a$error';
@@ -214,12 +223,18 @@ class PrinterController extends ChangeNotifier {
 
     scanning = false;
     _refreshSelectedPrinterFromDevices();
-    if (printers.isEmpty) {
+    if (printers.isEmpty && classicBluetoothDevices.isEmpty) {
       statusMessage =
-          '\u5c1a\u672a\u627e\u5230\u53ef\u7528\u7684\u85cd\u7259 / USB \u5370\u8868\u6a5f\u3002';
+          '\u5c1a\u672a\u627e\u5230 BLE / USB \u5370\u8868\u6a5f\uff0c\u4e5f\u6c92\u6709\u5075\u6e2c\u5230 Classic \u85cd\u7259\u88dd\u7f6e\u3002';
+    } else if (printers.isEmpty && classicBluetoothDevices.isNotEmpty) {
+      statusMessage =
+          '\u5075\u6e2c\u5230 ${classicBluetoothDevices.length} \u500b Classic \u85cd\u7259\u88dd\u7f6e\uff0c\u4f46\u76ee\u524d\u53ef\u76f4\u63a5\u5217\u5370\u7684\u4ecd\u662f BLE / USB \u5370\u8868\u6a5f\u3002';
     } else {
+      final classicSuffix = classicBluetoothDevices.isEmpty
+          ? ''
+          : '\uff0c\u53e6\u5916\u9084\u5075\u6e2c\u5230 ${classicBluetoothDevices.length} \u500b Classic \u85cd\u7259\u88dd\u7f6e';
       statusMessage =
-          '\u5df2\u627e\u5230 ${printers.length} \u53f0\u5370\u8868\u6a5f\uff0c\u8acb\u9078\u64c7\u8981\u9023\u7dda\u7684\u88dd\u7f6e\u3002';
+          '\u5df2\u627e\u5230 ${printers.length} \u53f0\u53ef\u5217\u5370\u88dd\u7f6e$classicSuffix\uff0c\u8acb\u9078\u64c7\u8981\u9023\u7dda\u7684\u5370\u8868\u6a5f\u3002';
     }
     notifyListeners();
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_thermal_printer/utils/printer.dart';
 
+import '../models/classic_bluetooth_device.dart';
 import '../models/product_summary.dart';
 import '../models/pos_layout_profile.dart';
 import '../models/quick_receive_models.dart';
@@ -2127,6 +2128,32 @@ class _PrinterPanel extends StatelessWidget {
                   )
                   .toList(growable: false),
             ),
+          if (printerController.classicBluetoothDevices.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            const Text(
+              '\u50b3\u7d71\u85cd\u7259\u88dd\u7f6e\uff08Classic\uff09',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              '\u4ee5\u4e0b\u88dd\u7f6e\u5df2\u88ab Android \u5075\u6e2c\u5230\uff0c\u4f46\u76ee\u524d POS APP \u50c5\u80fd\u76f4\u63a5\u9023\u7dda BLE / USB \u71b1\u611f\u5370\u8868\u6a5f\u3002',
+              style: TextStyle(color: Colors.white54),
+            ),
+            const SizedBox(height: 10),
+            Column(
+              children: printerController.classicBluetoothDevices
+                  .map(
+                    (device) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _ClassicBluetoothDeviceTile(device: device),
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+          ],
         ],
       ),
     );
@@ -2226,6 +2253,61 @@ class _PrinterDeviceTile extends StatelessWidget {
                       ? '\u5df2\u9078\u64c7'
                       : '\u91cd\u65b0\u9023\u7dda')
                   : '\u9078\u64c7\u4e26\u9023\u7dda',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ClassicBluetoothDeviceTile extends StatelessWidget {
+  const _ClassicBluetoothDeviceTile({required this.device});
+
+  final ClassicBluetoothDevice device;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF101827),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF3A335A)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.bluetooth_audio_rounded, color: Color(0xFFFFC46B)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  device.name,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${device.address} / ${device.bondState}',
+                  style: const TextStyle(color: Colors.white60),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF3A2740),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: const Color(0xFF7A436B)),
+            ),
+            child: const Text(
+              '\u50c5\u5075\u6e2c',
+              style: TextStyle(
+                color: Color(0xFFFFD1D1),
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
