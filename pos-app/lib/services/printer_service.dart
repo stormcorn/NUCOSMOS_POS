@@ -337,6 +337,26 @@ class PrinterService {
         styles: const PosStyles(align: PosAlign.right, bold: true),
       ),
     ]));
+    if (receipt.discountAmount > 0) {
+      bytes.addAll(generator.row([
+        PosColumn(
+          text: '優惠',
+          width: 8,
+          styles: const PosStyles(bold: true),
+        ),
+        PosColumn(
+          text: '-${_currency(receipt.discountAmount)}',
+          width: 4,
+          styles: const PosStyles(align: PosAlign.right, bold: true),
+        ),
+      ]));
+      if (receipt.discountNote?.trim().isNotEmpty ?? false) {
+        bytes.addAll(generator.text(
+          '  優惠說明: ${receipt.discountNote!.trim()}',
+          styles: const PosStyles(align: PosAlign.left),
+        ));
+      }
+    }
     bytes.addAll(generator.row([
       PosColumn(
         text: 'Total',
@@ -529,6 +549,16 @@ class PrinterService {
       ..writeln('-' * width)
       ..writeln(_twoColumn('品項數量', '${receipt.itemCount}', width))
       ..writeln(_twoColumn('小計', _currency(receipt.subtotalAmount), width))
+      ..writeln(
+        receipt.discountAmount > 0
+            ? _twoColumn('優惠', '-${_currency(receipt.discountAmount)}', width)
+            : '',
+      )
+      ..writeln(
+        receipt.discountAmount > 0 && (receipt.discountNote?.trim().isNotEmpty ?? false)
+            ? '優惠說明：${receipt.discountNote!.trim()}'
+            : '',
+      )
       ..writeln(_twoColumn('合計', _currency(receipt.totalAmount), width))
       ..writeln(_twoColumn('實收', _currency(receipt.paidAmount), width));
 

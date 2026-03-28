@@ -71,6 +71,11 @@ class SessionController extends ChangeNotifier {
   String _deviceSummary = 'POS Tablet';
   String get deviceSummary => _deviceSummary;
 
+  double _discountAmount = 0;
+  String _discountNote = '';
+  double get discountAmount => _discountAmount;
+  String get discountNote => _discountNote;
+
   String? accessToken;
   CurrentSession? session;
   List<StoreSummary> availableStores = const [];
@@ -131,6 +136,11 @@ class SessionController extends ChangeNotifier {
 
   double get cartSubtotal =>
       cart.fold<double>(0, (total, line) => total + line.lineTotal);
+
+  double get cartTotal {
+    final total = cartSubtotal - _discountAmount;
+    return total > 0 ? total : 0;
+  }
 
   List<QuickReceiveItem> itemsForReceiveType(QuickReceiveItemType type) {
     final source = switch (type) {
@@ -375,6 +385,7 @@ class SessionController extends ChangeNotifier {
     }
 
     cart = List.unmodifiable(nextCart);
+    _syncDiscountWithCart();
     checkoutMessage = '';
     notifyListeners();
   }
@@ -390,6 +401,7 @@ class SessionController extends ChangeNotifier {
       quantity: nextCart[index].quantity + 1,
     );
     cart = List.unmodifiable(nextCart);
+    _syncDiscountWithCart();
     notifyListeners();
   }
 
@@ -408,6 +420,7 @@ class SessionController extends ChangeNotifier {
     }
 
     cart = List.unmodifiable(nextCart);
+    _syncDiscountWithCart();
     notifyListeners();
   }
 
@@ -415,11 +428,41 @@ class SessionController extends ChangeNotifier {
     cart = List.unmodifiable(
       cart.where((line) => line.key != cartKey).toList(growable: false),
     );
+    _syncDiscountWithCart();
     notifyListeners();
   }
 
   void clearCart() {
     cart = const [];
+    _discountAmount = 0;
+    _discountNote = '';
+    checkoutMessage = '';
+    notifyListeners();
+  }
+
+  void applyDiscount({
+    required double amount,
+    String? note,
+  }) {
+    final subtotal = cartSubtotal;
+    if (subtotal <= 0) {
+      _discountAmount = 0;
+      _discountNote = '';
+    } else {
+      final normalizedAmount = amount.isNaN ? 0 : amount;
+      final clampedAmount = normalizedAmount < 0
+          ? 0
+          : (normalizedAmount > subtotal ? subtotal : normalizedAmount);
+      _discountAmount = double.parse(clampedAmount.toStringAsFixed(2));
+      _discountNote = _discountAmount > 0 ? (note ?? '').trim() : '';
+    }
+    checkoutMessage = '';
+    notifyListeners();
+  }
+
+  void clearDiscount() {
+    _discountAmount = 0;
+    _discountNote = '';
     checkoutMessage = '';
     notifyListeners();
   }
@@ -443,6 +486,18 @@ class SessionController extends ChangeNotifier {
         accessToken: accessToken!,
         orderId: order.id,
         note: 'Flutter POS other checkout',
+      ),
+    );
+  }
+
+  Future<OrderReceipt?> checkoutDiscountedCash() async {
+    return _checkoutWithPayment(
+      paymentLabel: '現金',
+      addPayment: (order) => _orderService.addCashPayment(
+        accessToken: accessToken!,
+        orderId: order.id,
+        amount: order.totalAmount,
+        note: 'Flutter POS cash checkout',
       ),
     );
   }
@@ -483,6 +538,8 @@ class SessionController extends ChangeNotifier {
                 ),
               )
               .toList(growable: false),
+              discountAmount: _discountAmount > 0 ? _discountAmount : null,
+              discountNote: _discountNote.isNotEmpty ? _discountNote : null,
         ),
       );
 
@@ -490,10 +547,15 @@ class SessionController extends ChangeNotifier {
 
       lastCompletedOrder = paidOrder;
       cart = const [];
+      _discountAmount = 0;
+      _discountNote = '';
       checkoutMessage = paidOrder.paymentMethod.toUpperCase() == 'OTHER'
           ? '訂單 ${paidOrder.orderNumber} 已完成，其他結帳 0 元，庫存已同步扣減。'
           : '訂單 ${paidOrder.orderNumber} 已完成，${paymentLabel} 收款 ${paidOrder.paidAmount.toStringAsFixed(2)} 元。';
       await loadProducts(showLoading: false);
+      checkoutMessage = paidOrder.discountAmount > 0
+          ? '訂單 ${paidOrder.orderNumber} 已完成，$paymentLabel 收款 ${paidOrder.paidAmount.toStringAsFixed(2)} 元，已套用優惠 ${paidOrder.discountAmount.toStringAsFixed(2)} 元。'
+          : '訂單 ${paidOrder.orderNumber} 已完成，$paymentLabel 收款 ${paidOrder.paidAmount.toStringAsFixed(2)} 元。';
       return paidOrder;
     } on ApiException catch (error) {
       errorMessage = error.message;
@@ -620,6 +682,8 @@ class SessionController extends ChangeNotifier {
     receiveMaterials = const [];
     receiveManufacturedItems = const [];
     receivePackagingItems = const [];
+    _discountAmount = 0;
+    _discountNote = '';
     errorMessage = '';
     checkoutMessage = '';
     quickReceiveMessage = '';
@@ -901,6 +965,24 @@ class SessionController extends ChangeNotifier {
     final nextSelections = [...selections]
       ..sort((left, right) => left.optionId.compareTo(right.optionId));
     return List.unmodifiable(nextSelections);
+  }
+
+  void _syncDiscountWithCart() {
+    final subtotal = cartSubtotal;
+    if (subtotal <= 0) {
+      _discountAmount = 0;
+      _discountNote = '';
+      return;
+    }
+
+    if (_discountAmount > subtotal) {
+      _discountAmount = double.parse(subtotal.toStringAsFixed(2));
+    }
+
+    if (_discountAmount <= 0) {
+      _discountAmount = 0;
+      _discountNote = '';
+    }
   }
 }
 

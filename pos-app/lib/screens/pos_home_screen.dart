@@ -193,7 +193,7 @@ class _PosHomeScreenState extends State<PosHomeScreen>
 
   Future<void> _checkoutCash() async {
     final cartSnapshot = widget.controller.cart.toList(growable: false);
-    final receipt = await widget.controller.checkoutCash();
+    final receipt = await widget.controller.checkoutDiscountedCash();
     if (!mounted || receipt == null) {
       return;
     }
@@ -218,28 +218,17 @@ class _PosHomeScreenState extends State<PosHomeScreen>
     );
   }
 
-  Future<void> _checkoutOther() async {
-    final cartSnapshot = widget.controller.cart.toList(growable: false);
-    final receipt = await widget.controller.checkoutOther();
-    if (!mounted || receipt == null) {
+  Future<void> _openDiscountSheet() async {
+    final subtotal = widget.controller.cartSubtotal;
+    if (subtotal <= 0) {
       return;
     }
 
-    await widget.printerController.printReceiptForOrder(
-      receipt: receipt,
-      lines: cartSnapshot,
-      storeCode: widget.controller.session?.storeCode,
-      staffName: widget.controller.session?.displayName,
-    );
-
-    if (!mounted) {
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('其他結帳已完成，這筆訂單不計收入但已同步庫存。'),
-      ),
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF101827),
+      builder: (context) => _DiscountSheet(controller: widget.controller),
     );
   }
 
@@ -392,7 +381,7 @@ class _PosHomeScreenState extends State<PosHomeScreen>
                                     child: _CurrentOrderPanel(
                                       controller: controller,
                                       onCheckout: _checkoutCash,
-                                      onCheckoutOther: _checkoutOther,
+                                      onOpenDiscount: _openDiscountSheet,
                                       compact: !layout.desktopLayout,
                                     ),
                                   ),
@@ -432,7 +421,7 @@ class _PosHomeScreenState extends State<PosHomeScreen>
                                         _CurrentOrderPanel(
                                           controller: controller,
                                           onCheckout: _checkoutCash,
-                                          onCheckoutOther: _checkoutOther,
+                                          onOpenDiscount: _openDiscountSheet,
                                           compact: true,
                                         ),
                                       ],
@@ -1773,21 +1762,22 @@ class _CurrentOrderPanel extends StatelessWidget {
   const _CurrentOrderPanel({
     required this.controller,
     required this.onCheckout,
-    required this.onCheckoutOther,
+    required this.onOpenDiscount,
     this.compact = false,
   });
 
   final SessionController controller;
   final Future<void> Function() onCheckout;
-  final Future<void> Function() onCheckoutOther;
+  final Future<void> Function() onOpenDiscount;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final cart = controller.cart;
     final subtotal = controller.cartSubtotal;
+    final discount = controller.discountAmount;
     const tax = 0.0;
-    final total = subtotal + tax;
+    final total = controller.cartTotal + tax;
 
     return Container(
       color: const Color(0xFF050709),
@@ -1849,12 +1839,26 @@ class _CurrentOrderPanel extends StatelessWidget {
                   ),
           ),
           SizedBox(height: compact ? 12 : 16),
-          _TotalRow(label: 'Subtotal', value: _currency(subtotal)),
+          _TotalRow(label: '小計', value: _currency(subtotal)),
           const SizedBox(height: 10),
-          _TotalRow(label: 'Tax', value: _currency(tax)),
+          if (discount > 0) ...[
+            _TotalRow(label: '優惠', value: '-${_currency(discount)}'),
+            if (controller.discountNote.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                controller.discountNote,
+                style: TextStyle(
+                  color: const Color(0xFF8DA2BD),
+                  fontSize: compact ? 11 : 12,
+                ),
+              ),
+            ],
+            const SizedBox(height: 10),
+          ],
+          _TotalRow(label: '稅額', value: _currency(tax)),
           const Divider(color: Color(0xFF202A39), height: 28),
           _TotalRow(
-            label: 'Total',
+            label: '合計',
             value: _currency(total),
             emphasize: true,
           ),
@@ -1867,7 +1871,7 @@ class _CurrentOrderPanel extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: cart.isEmpty || controller.checkoutLoading
                         ? null
-                        : onCheckoutOther,
+                        : onOpenDiscount,
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Color(0xFF4C5B74)),
                       foregroundColor: Colors.white,
@@ -1875,9 +1879,9 @@ class _CurrentOrderPanel extends StatelessWidget {
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    icon: const Icon(Icons.more_horiz_rounded),
+                    icon: const Icon(Icons.local_offer_rounded),
                     label: const Text(
-                      '其他',
+                      '優惠',
                       style: TextStyle(fontWeight: FontWeight.w800),
                     ),
                   ),
@@ -1946,6 +1950,161 @@ String _paymentMethodLabel(String value) {
       return '其他';
     default:
       return value.isEmpty ? '未指定' : value;
+  }
+}
+
+class _DiscountSheet extends StatefulWidget {
+  const _DiscountSheet({required this.controller});
+
+  final SessionController controller;
+
+  @override
+  State<_DiscountSheet> createState() => _DiscountSheetState();
+}
+
+class _DiscountSheetState extends State<_DiscountSheet> {
+  late final TextEditingController _amountController;
+  late final TextEditingController _noteController;
+  String _errorMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _amountController = TextEditingController(
+      text: widget.controller.discountAmount > 0
+          ? widget.controller.discountAmount.toStringAsFixed(2)
+          : '',
+    );
+    _noteController = TextEditingController(text: widget.controller.discountNote);
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final subtotal = widget.controller.cartSubtotal;
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          20,
+          20,
+          20 + MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '套用優惠',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '目前小計 ${_currency(subtotal)}，優惠金額不能超過小計。',
+              style: const TextStyle(color: Color(0xFF8DA2BD)),
+            ),
+            if (_errorMessage.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _BannerMessage(
+                color: const Color(0xFF35161B),
+                borderColor: const Color(0xFFB74B57),
+                message: _errorMessage,
+              ),
+            ],
+            const SizedBox(height: 16),
+            TextField(
+              controller: _amountController,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: '優惠金額',
+                hintText: '例如 10 或 25.5',
+                labelStyle: const TextStyle(color: Color(0xFF8DA2BD)),
+                hintStyle: const TextStyle(color: Color(0xFF5C6B83)),
+                filled: true,
+                fillColor: const Color(0xFF172132),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _noteController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: '優惠說明',
+                hintText: '例如 會員折扣、活動優惠',
+                labelStyle: const TextStyle(color: Color(0xFF8DA2BD)),
+                hintStyle: const TextStyle(color: Color(0xFF5C6B83)),
+                filled: true,
+                fillColor: const Color(0xFF172132),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      widget.controller.clearDiscount();
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('清除優惠'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _applyDiscount,
+                    child: const Text('套用'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _applyDiscount() {
+    final parsedAmount = double.tryParse(_amountController.text.trim());
+    if (parsedAmount == null || parsedAmount < 0) {
+      setState(() {
+        _errorMessage = '請輸入有效的優惠金額。';
+      });
+      return;
+    }
+
+    final subtotal = widget.controller.cartSubtotal;
+    if (parsedAmount > subtotal) {
+      setState(() {
+        _errorMessage = '優惠金額不能超過目前小計。';
+      });
+      return;
+    }
+
+    widget.controller.applyDiscount(
+      amount: parsedAmount,
+      note: _noteController.text,
+    );
+    Navigator.of(context).pop();
   }
 }
 

@@ -30,9 +30,11 @@ class OrderReceipt {
     required this.paymentMethod,
     required this.itemCount,
     required this.subtotalAmount,
+    required this.discountAmount,
     required this.totalAmount,
     required this.paidAmount,
     required this.changeAmount,
+    this.discountNote,
   });
 
   final String id;
@@ -42,9 +44,11 @@ class OrderReceipt {
   final String paymentMethod;
   final int itemCount;
   final double subtotalAmount;
+  final double discountAmount;
   final double totalAmount;
   final double paidAmount;
   final double changeAmount;
+  final String? discountNote;
 
   factory OrderReceipt.fromJson(Map<String, dynamic> json) {
     return OrderReceipt(
@@ -55,9 +59,11 @@ class OrderReceipt {
       paymentMethod: _resolvePaymentMethod(json),
       itemCount: (json['itemCount'] as num?)?.toInt() ?? 0,
       subtotalAmount: (json['subtotalAmount'] as num?)?.toDouble() ?? 0,
+      discountAmount: (json['discountAmount'] as num?)?.toDouble() ?? 0,
       totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0,
       paidAmount: (json['paidAmount'] as num?)?.toDouble() ?? 0,
       changeAmount: (json['changeAmount'] as num?)?.toDouble() ?? 0,
+      discountNote: json['discountNote'] as String?,
     );
   }
 

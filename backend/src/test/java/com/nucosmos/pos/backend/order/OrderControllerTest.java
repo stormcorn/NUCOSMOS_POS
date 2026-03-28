@@ -116,6 +116,44 @@ class OrderControllerTest {
     }
 
     @Test
+    void shouldCreateOrderWithDiscountBeforeCheckout() throws Exception {
+        String token = TestLoginSupport.loginAndExtractToken(mockMvc, """
+                {
+                  "storeCode": "TW001",
+                  "roleCode": "CASHIER",
+                  "pin": "123456",
+                  "deviceCode": "POS-TABLET-001"
+                }
+                """);
+
+        mockMvc.perform(post("/api/v1/orders")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "discountAmount": 2.25,
+                                  "discountNote": "Member discount",
+                                  "items": [
+                                    {
+                                      "productId": "44444444-4444-4444-4444-444444444441",
+                                      "quantity": 2
+                                    },
+                                    {
+                                      "productId": "44444444-4444-4444-4444-444444444443",
+                                      "quantity": 1
+                                    }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.subtotalAmount").value(22.25))
+                .andExpect(jsonPath("$.data.discountAmount").value(2.25))
+                .andExpect(jsonPath("$.data.discountNote").value("Member discount"))
+                .andExpect(jsonPath("$.data.totalAmount").value(20.00));
+    }
+
+    @Test
     void shouldRejectOrderWhenProductIsUnknown() throws Exception {
         String token = TestLoginSupport.loginAndExtractToken(mockMvc, """
                 {

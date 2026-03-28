@@ -37,6 +37,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -109,7 +110,7 @@ public class OrderService {
         Map<UUID, ProductEntity> products = loadProducts(request.items());
 
         OffsetDateTime orderedAt = OffsetDateTime.now();
-        OrderTotals totals = calculateTotals(request.items(), products, orderedAt);
+        OrderTotals totals = calculateTotals(request.items(), products, orderedAt, request);
 
         OrderEntity order = new OrderEntity(
                 store,
@@ -120,11 +121,13 @@ public class OrderService {
                 "UNPAID",
                 totals.itemCount(),
                 totals.subtotalAmount(),
+                totals.discountAmount(),
                 totals.totalAmount(),
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,
                 blankToNull(request.note()),
+                blankToNull(request.discountNote()),
                 orderedAt
         );
 
@@ -466,7 +469,12 @@ public class OrderService {
         return products;
     }
 
-    private OrderTotals calculateTotals(List<OrderCreateItemRequest> items, Map<UUID, ProductEntity> products, OffsetDateTime orderedAt) {
+    private OrderTotals calculateTotals(
+            List<OrderCreateItemRequest> items,
+            Map<UUID, ProductEntity> products,
+            OffsetDateTime orderedAt,
+            OrderCreateRequest request
+    ) {
         int itemCount = 0;
         BigDecimal subtotal = BigDecimal.ZERO;
 
@@ -478,7 +486,10 @@ public class OrderService {
             subtotal = subtotal.add(displayPrice.multiply(BigDecimal.valueOf(item.quantity())));
         }
 
-        return new OrderTotals(itemCount, subtotal, subtotal);
+        BigDecimal discountAmount = normalizeDiscountAmount(request.discountAmount(), subtotal);
+        BigDecimal totalAmount = subtotal.subtract(discountAmount).setScale(2, RoundingMode.HALF_UP);
+
+        return new OrderTotals(itemCount, subtotal, discountAmount, totalAmount);
     }
 
     private String generateOrderNumber(String storeCode, OffsetDateTime orderedAt) {
@@ -516,6 +527,7 @@ public class OrderService {
                 order.getCreatedByUser().getEmployeeCode(),
                 order.getItemCount(),
                 order.getSubtotalAmount(),
+                order.getDiscountAmount(),
                 order.getTotalAmount(),
                 order.getPaidAmount(),
                 order.getChangeAmount(),
@@ -525,6 +537,7 @@ public class OrderService {
                 order.getNetCogsAmount(),
                 order.getGrossProfitAmount(),
                 order.getNote(),
+                order.getDiscountNote(),
                 order.getOrderedAt(),
                 order.getClosedAt(),
                 order.getVoidedAt(),
@@ -657,6 +670,20 @@ public class OrderService {
 
     private String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value;
+    }
+
+    private BigDecimal normalizeDiscountAmount(BigDecimal requestedDiscount, BigDecimal subtotal) {
+        BigDecimal discountAmount = requestedDiscount == null
+                ? BigDecimal.ZERO
+                : requestedDiscount.setScale(2, RoundingMode.HALF_UP);
+
+        if (discountAmount.compareTo(BigDecimal.ZERO) < 0) {
+            throw new BadRequestException("Discount amount cannot be negative");
+        }
+        if (discountAmount.compareTo(subtotal) > 0) {
+            throw new BadRequestException("Discount amount cannot exceed subtotal");
+        }
+        return discountAmount;
     }
 
     private List<ResolvedCustomizationSelection> resolveCustomizationSelections(ProductEntity product, List<UUID> selectedOptionIds) {
@@ -845,6 +872,7 @@ public class OrderService {
     private record OrderTotals(
             int itemCount,
             BigDecimal subtotalAmount,
+            BigDecimal discountAmount,
             BigDecimal totalAmount
     ) {
     }

@@ -52,6 +52,9 @@ public class OrderEntity extends BaseEntity {
     private BigDecimal subtotalAmount;
 
     @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal discountAmount;
+
+    @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
 
     @Column(nullable = false, precision = 10, scale = 2)
@@ -77,6 +80,9 @@ public class OrderEntity extends BaseEntity {
 
     @Column(length = 500)
     private String note;
+
+    @Column(length = 255)
+    private String discountNote;
 
     @Column(nullable = false)
     private OffsetDateTime orderedAt;
@@ -117,11 +123,13 @@ public class OrderEntity extends BaseEntity {
             String paymentStatus,
             int itemCount,
             BigDecimal subtotalAmount,
+            BigDecimal discountAmount,
             BigDecimal totalAmount,
             BigDecimal paidAmount,
             BigDecimal changeAmount,
             BigDecimal refundedAmount,
             String note,
+            String discountNote,
             OffsetDateTime orderedAt
     ) {
         this.store = store;
@@ -132,6 +140,7 @@ public class OrderEntity extends BaseEntity {
         this.paymentStatus = paymentStatus;
         this.itemCount = itemCount;
         this.subtotalAmount = subtotalAmount;
+        this.discountAmount = discountAmount;
         this.totalAmount = totalAmount;
         this.paidAmount = paidAmount;
         this.changeAmount = changeAmount;
@@ -141,6 +150,7 @@ public class OrderEntity extends BaseEntity {
         this.netCogsAmount = BigDecimal.ZERO.setScale(2);
         this.grossProfitAmount = totalAmount.setScale(2);
         this.note = note;
+        this.discountNote = discountNote;
         this.orderedAt = orderedAt;
         this.inventoryCommitted = false;
     }
@@ -234,6 +244,10 @@ public class OrderEntity extends BaseEntity {
         return subtotalAmount;
     }
 
+    public BigDecimal getDiscountAmount() {
+        return discountAmount;
+    }
+
     public BigDecimal getTotalAmount() {
         return totalAmount;
     }
@@ -268,6 +282,10 @@ public class OrderEntity extends BaseEntity {
 
     public String getNote() {
         return note;
+    }
+
+    public String getDiscountNote() {
+        return discountNote;
     }
 
     public OffsetDateTime getOrderedAt() {
