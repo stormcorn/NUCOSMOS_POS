@@ -45,6 +45,28 @@ public final class ImageReferenceValidator {
         return trimmed;
     }
 
+    public static boolean isEmbeddedDataUrl(String value) {
+        if (value == null) {
+            return false;
+        }
+        return DATA_URL_PATTERN.matcher(value.trim()).matches();
+    }
+
+    public static String extractMimeType(String dataUrl) {
+        Matcher matcher = requireDataUrl(dataUrl);
+        return matcher.group(1).toLowerCase(Locale.ROOT);
+    }
+
+    public static byte[] decodeDataUrlBytes(String dataUrl) {
+        Matcher matcher = requireDataUrl(dataUrl);
+        String encodedPayload = matcher.group(2).replaceAll("\\s+", "");
+        try {
+            return Base64.getDecoder().decode(encodedPayload);
+        } catch (IllegalArgumentException exception) {
+            throw new BadRequestException("Uploaded image data is invalid");
+        }
+    }
+
     private static void validateHttpUrl(String value) {
         try {
             URI uri = new URI(value);
@@ -63,26 +85,23 @@ public final class ImageReferenceValidator {
     }
 
     private static void validateDataUrl(String value) {
-        Matcher matcher = DATA_URL_PATTERN.matcher(value);
-        if (!matcher.matches()) {
-            throw new BadRequestException("Uploaded image must be a JPG, PNG, GIF, or WebP file under 2MB");
-        }
-
+        Matcher matcher = requireDataUrl(value);
         String mimeType = matcher.group(1).toLowerCase(Locale.ROOT);
         if (!ALLOWED_MIME_TYPES.contains(mimeType)) {
             throw new BadRequestException("Uploaded image must be a JPG, PNG, GIF, or WebP file under 2MB");
         }
 
-        String encodedPayload = matcher.group(2).replaceAll("\\s+", "");
-        byte[] decodedBytes;
-        try {
-            decodedBytes = Base64.getDecoder().decode(encodedPayload);
-        } catch (IllegalArgumentException exception) {
-            throw new BadRequestException("Uploaded image data is invalid");
-        }
-
+        byte[] decodedBytes = decodeDataUrlBytes(value);
         if (decodedBytes.length > MAX_UPLOAD_BYTES) {
             throw new BadRequestException("Uploaded image must be 2MB or smaller");
         }
+    }
+
+    private static Matcher requireDataUrl(String value) {
+        Matcher matcher = DATA_URL_PATTERN.matcher(value);
+        if (!matcher.matches()) {
+            throw new BadRequestException("Uploaded image must be a JPG, PNG, GIF, or WebP file under 2MB");
+        }
+        return matcher;
     }
 }

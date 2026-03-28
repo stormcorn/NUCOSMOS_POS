@@ -6,6 +6,8 @@ class ProductGrid extends StatelessWidget {
   const ProductGrid({
     required this.products,
     required this.onAddProduct,
+    required this.apiBaseUrl,
+    required this.accessToken,
     this.embedInParentScroll = false,
     this.compactTabletMode = false,
     super.key,
@@ -13,6 +15,8 @@ class ProductGrid extends StatelessWidget {
 
   final List<ProductSummary> products;
   final ValueChanged<ProductSummary> onAddProduct;
+  final String apiBaseUrl;
+  final String? accessToken;
   final bool embedInParentScroll;
   final bool compactTabletMode;
 
@@ -65,6 +69,8 @@ class ProductGrid extends StatelessWidget {
             return _ProductCard(
               product: product,
               onTap: () => onAddProduct(product),
+              apiBaseUrl: apiBaseUrl,
+              accessToken: accessToken,
               compact: compactCard,
             );
           },
@@ -78,11 +84,15 @@ class _ProductCard extends StatelessWidget {
   const _ProductCard({
     required this.product,
     required this.onTap,
+    required this.apiBaseUrl,
+    required this.accessToken,
     required this.compact,
   });
 
   final ProductSummary product;
   final VoidCallback onTap;
+  final String apiBaseUrl;
+  final String? accessToken;
   final bool compact;
 
   @override
@@ -117,7 +127,11 @@ class _ProductCard extends StatelessWidget {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      _ProductImage(imageUrl: product.imageUrl),
+                      _ProductImage(
+                        imageUrl: product.imageUrl,
+                        apiBaseUrl: apiBaseUrl,
+                        accessToken: accessToken,
+                      ),
                       const DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -301,9 +315,15 @@ class _InfoChip extends StatelessWidget {
 }
 
 class _ProductImage extends StatelessWidget {
-  const _ProductImage({required this.imageUrl});
+  const _ProductImage({
+    required this.imageUrl,
+    required this.apiBaseUrl,
+    required this.accessToken,
+  });
 
   final String? imageUrl;
+  final String apiBaseUrl;
+  final String? accessToken;
 
   @override
   Widget build(BuildContext context) {
@@ -320,9 +340,13 @@ class _ProductImage extends StatelessWidget {
       );
     }
 
+    final resolvedUrl = _resolveImageUrl(apiBaseUrl, url);
+    final imageHeaders = _resolveImageHeaders(url, accessToken);
+
     return Image.network(
-      url,
+      resolvedUrl,
       fit: BoxFit.cover,
+      headers: imageHeaders,
       errorBuilder: (context, error, stackTrace) {
         return Container(
           color: const Color(0xFF0C1320),
@@ -335,5 +359,26 @@ class _ProductImage extends StatelessWidget {
         );
       },
     );
+  }
+
+  static String _resolveImageUrl(String apiBaseUrl, String rawUrl) {
+    if (rawUrl.startsWith('http://') ||
+        rawUrl.startsWith('https://') ||
+        rawUrl.startsWith('data:')) {
+      return rawUrl;
+    }
+    return Uri.parse(apiBaseUrl.trim()).resolve(rawUrl).toString();
+  }
+
+  static Map<String, String>? _resolveImageHeaders(
+    String rawUrl,
+    String? accessToken,
+  ) {
+    if (!rawUrl.startsWith('/api/') ||
+        accessToken == null ||
+        accessToken.isEmpty) {
+      return null;
+    }
+    return {'Authorization': 'Bearer $accessToken'};
   }
 }

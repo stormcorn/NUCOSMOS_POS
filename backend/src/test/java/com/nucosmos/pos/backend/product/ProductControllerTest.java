@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -14,9 +15,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.endsWith;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -190,7 +193,7 @@ class ProductControllerTest {
                 }
                 """);
 
-        mockMvc.perform(post("/api/v1/admin/products")
+        MvcResult createResult = mockMvc.perform(post("/api/v1/admin/products")
                         .header("Authorization", "Bearer " + managerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -204,11 +207,14 @@ class ProductControllerTest {
                                 }
                                 """.formatted(SMALL_PNG_DATA_URL)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.imageUrl").value(SMALL_PNG_DATA_URL));
+                .andExpect(jsonPath("$.data.imageUrl").value(SMALL_PNG_DATA_URL))
+                .andReturn();
+
+        String productId = TestLoginSupport.extractDataFieldAsUuid(createResult, "id").toString();
     }
 
     @Test
-    void shouldOmitInlineProductImagesFromPosCatalogPayload() throws Exception {
+    void shouldExposeEmbeddedProductImagesThroughPosImageEndpoint() throws Exception {
         String managerToken = TestLoginSupport.loginAndExtractToken(mockMvc, """
                 {
                   "storeCode": "TW001",
@@ -218,7 +224,7 @@ class ProductControllerTest {
                 }
                 """);
 
-        mockMvc.perform(post("/api/v1/admin/products")
+        MvcResult createResult = mockMvc.perform(post("/api/v1/admin/products")
                         .header("Authorization", "Bearer " + managerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -232,7 +238,10 @@ class ProductControllerTest {
                                 }
                                 """.formatted(SMALL_PNG_DATA_URL)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.imageUrl").value(SMALL_PNG_DATA_URL));
+                .andExpect(jsonPath("$.data.imageUrl").value(SMALL_PNG_DATA_URL))
+                .andReturn();
+
+        String productId = TestLoginSupport.extractDataFieldAsUuid(createResult, "id").toString();
 
         String cashierToken = TestLoginSupport.loginAndExtractToken(mockMvc, """
                 {
@@ -246,8 +255,58 @@ class ProductControllerTest {
         mockMvc.perform(get("/api/v1/products")
                         .header("Authorization", "Bearer " + cashierToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[?(@.sku=='drink-inline-pos-hidden')].imageUrl")
-                        .value(hasItem(nullValue())));
+                .andExpect(jsonPath("$.data[*].sku", hasItem("drink-inline-pos-hidden")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "/api/v1/products/" + productId + "/image"
+                )));
+    }
+
+    @Test
+    void shouldServeEmbeddedProductImageBytesForPos() throws Exception {
+        String managerToken = TestLoginSupport.loginAndExtractToken(mockMvc, """
+                {
+                  "storeCode": "TW001",
+                  "roleCode": "MANAGER",
+                  "pin": "999999",
+                  "deviceCode": "POS-TABLET-001"
+                }
+                """);
+
+        MvcResult createResult = mockMvc.perform(post("/api/v1/admin/products")
+                        .header("Authorization", "Bearer " + managerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "categoryId": "33333333-3333-3333-3333-333333333331",
+                                  "sku": "drink-inline-image-endpoint",
+                                  "name": "Inline Endpoint Tea",
+                                  "description": "Image endpoint should serve bytes",
+                                  "imageUrl": "%s",
+                                  "price": 8.50
+                                }
+                                """.formatted(SMALL_PNG_DATA_URL)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String productId = TestLoginSupport.extractDataFieldAsUuid(createResult, "id").toString();
+
+        String cashierToken = TestLoginSupport.loginAndExtractToken(mockMvc, """
+                {
+                  "storeCode": "TW001",
+                  "roleCode": "CASHIER",
+                  "pin": "123456",
+                  "deviceCode": "POS-TABLET-001"
+                }
+                """);
+
+        mockMvc.perform(get("/api/v1/products/{productId}/image", productId)
+                        .header("Authorization", "Bearer " + cashierToken))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.IMAGE_PNG))
+                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, org.hamcrest.Matchers.containsString("max-age")))
+                .andExpect(content().bytes(java.util.Base64.getDecoder().decode(
+                        SMALL_PNG_DATA_URL.substring(SMALL_PNG_DATA_URL.indexOf(',') + 1)
+                )));
     }
 
     @Test

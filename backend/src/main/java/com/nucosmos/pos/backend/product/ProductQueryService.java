@@ -2,6 +2,7 @@ package com.nucosmos.pos.backend.product;
 
 import com.nucosmos.pos.backend.auth.AuthenticatedUser;
 import com.nucosmos.pos.backend.common.exception.BadRequestException;
+import com.nucosmos.pos.backend.common.media.ImageReferenceValidator;
 import com.nucosmos.pos.backend.inventory.persistence.InventoryStockEntity;
 import com.nucosmos.pos.backend.inventory.repository.InventoryStockRepository;
 import com.nucosmos.pos.backend.product.persistence.ProductCustomizationGroupEntity;
@@ -47,8 +48,7 @@ public class ProductQueryService {
 
     @Transactional(readOnly = true)
     public List<ProductSummaryResponse> listAvailableProducts(AuthenticatedUser user) {
-        StoreEntity store = storeRepository.findByCodeAndStatus(user.storeCode(), "ACTIVE")
-                .orElseThrow(() -> new BadRequestException("Store is not available"));
+        StoreEntity store = requireActiveStore(user);
         Map<UUID, InventoryStockEntity> stockByProductId = inventoryStockRepository
                 .findAllByStore_IdOrderByProduct_Category_DisplayOrderAscProduct_NameAsc(store.getId())
                 .stream()
@@ -67,7 +67,7 @@ public class ProductQueryService {
                 product.getSku(),
                 product.getName(),
                 product.getDescription(),
-                toPosImageUrl(product.getImageUrl()),
+                toPosImageUrl(product),
                 product.getCategory().getCode(),
                 product.getCategory().getName(),
                 product.getPrice(),
@@ -84,7 +84,26 @@ public class ProductQueryService {
         );
     }
 
-    private String toPosImageUrl(String imageUrl) {
+    @Transactional(readOnly = true)
+    public ProductImageResource loadProductImage(AuthenticatedUser user, UUID productId) {
+        requireActiveStore(user);
+        ProductEntity product = productRepository.findById(productId)
+                .filter(ProductEntity::isActive)
+                .orElseThrow(() -> new BadRequestException("Product is not available"));
+
+        String imageUrl = product.getImageUrl();
+        if (!ImageReferenceValidator.isEmbeddedDataUrl(imageUrl)) {
+            throw new BadRequestException("Product image is not stored as an embedded upload");
+        }
+
+        return new ProductImageResource(
+                ImageReferenceValidator.extractMimeType(imageUrl),
+                ImageReferenceValidator.decodeDataUrlBytes(imageUrl)
+        );
+    }
+
+    private String toPosImageUrl(ProductEntity product) {
+        String imageUrl = product.getImageUrl();
         if (imageUrl == null) {
             return null;
         }
@@ -97,11 +116,16 @@ public class ProductQueryService {
         // Keep the POS catalog payload small and predictable.
         // Inline data URLs can inflate the response to tens of megabytes and
         // cause tablet clients to time out before any products are shown.
-        if (normalized.startsWith("data:image/")) {
-            return null;
+        if (ImageReferenceValidator.isEmbeddedDataUrl(normalized)) {
+            return "/api/v1/products/" + product.getId() + "/image";
         }
 
         return normalized;
+    }
+
+    private StoreEntity requireActiveStore(AuthenticatedUser user) {
+        return storeRepository.findByCodeAndStatus(user.storeCode(), "ACTIVE")
+                .orElseThrow(() -> new BadRequestException("Store is not available"));
     }
 
     private List<ProductCustomizationGroupResponse> loadCustomizationGroups(UUID productId) {
@@ -143,5 +167,8 @@ public class ProductQueryService {
                         optionsByGroupId.getOrDefault(group.getId(), List.of())
                 ))
                 .toList();
+    }
+
+    public record ProductImageResource(String mimeType, byte[] content) {
     }
 }

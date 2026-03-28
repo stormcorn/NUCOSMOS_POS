@@ -377,6 +377,8 @@ class _PosHomeScreenState extends State<PosHomeScreen>
                                               products:
                                                   controller.filteredProducts,
                                               onAddProduct: _handleAddProduct,
+                                              apiBaseUrl: controller.apiBaseUrl,
+                                              accessToken: controller.accessToken,
                                               compactTabletMode: layout
                                                   .isCompactLandscapeTablet,
                                             ),
@@ -420,6 +422,8 @@ class _PosHomeScreenState extends State<PosHomeScreen>
                                         ProductGrid(
                                           products: controller.filteredProducts,
                                           onAddProduct: _handleAddProduct,
+                                          apiBaseUrl: controller.apiBaseUrl,
+                                          accessToken: controller.accessToken,
                                           embedInParentScroll: true,
                                           compactTabletMode:
                                               layout.isCompactLandscapeTablet,
