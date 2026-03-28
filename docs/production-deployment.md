@@ -7,7 +7,8 @@ Recommended target:
 - Domain: `nucosmos.io`
 - Server: Namecheap Linux VPS
 - App root: `/srv/nucosmos-pos`
-- If the VPS is managed by `WHM/cPanel`, keep Apache on `80/443` and expose the app stack on `127.0.0.1:8080`
+- Production baseline on the current VPS is `Apache/httpd` on `80/443`
+- Host `nginx.service` must remain `disabled` so it cannot steal `80/443` from Apache after reboot
 
 ## Production files
 
@@ -43,7 +44,7 @@ Before real deployment, you still need:
 - SSH user
 - DNS A record for `nucosmos.io`
 - GitHub repository secrets for SSH deployment
-- Reverse proxy from host Apache or Nginx to `127.0.0.1:8080`
+- Reverse proxy from host Apache to `127.0.0.1:8080`
 
 ## Current production note
 
@@ -56,6 +57,48 @@ The currently verified production routing on the VPS is:
 
 This is the path that was validated after VPS recovery and should be treated as the canonical
 reference unless a future deployment intentionally changes it.
+
+## Apache-only production rule
+
+The current production VPS must follow this rule:
+
+- host `Apache/httpd` is the only public web server
+- host `nginx.service` must stay `disabled`
+- container nginx is allowed only inside the `admin-web` Docker image
+
+This distinction is important:
+
+- host Apache owns public `80/443`
+- Docker `admin-web` exposes internal app traffic on `:8080`
+- Docker-internal nginx is not the same thing as host `nginx.service`
+
+## Reboot recovery guardrail
+
+If the VPS reboots and the public sites come back as an nginx default page or HTTPS stops listening,
+check service ownership before redeploying the app:
+
+```bash
+systemctl status httpd --no-pager
+systemctl status nginx --no-pager
+ss -ltnp | grep -E ':80|:443'
+```
+
+Expected steady state:
+
+- `httpd` is `active (running)`
+- `nginx` is `inactive` or `disabled`
+- `80/443` are owned by `httpd`
+
+If host nginx has taken port `80`, restore the expected state:
+
+```bash
+systemctl stop nginx
+systemctl disable nginx
+systemctl enable httpd
+systemctl start httpd
+apachectl -t
+ss -ltnp | grep -E ':80|:443'
+```
 
 ## VPS memory stability note
 

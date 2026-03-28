@@ -14,6 +14,12 @@ Current verified app status on the VPS:
 - admin web: `http://127.0.0.1:8080/erp/`
 - backend API: `http://127.0.0.1:8080/api/v1/health`
 
+Production rule:
+
+- host `Apache/httpd` is the only public web server
+- host `nginx.service` must stay `disabled`
+- Docker-internal nginx inside `admin-web` is allowed and expected
+
 Target public URLs:
 
 - landing page: `https://nucosmos.io/`
@@ -104,7 +110,25 @@ actively debugging the backend container.
 
 ## 7. VPS reboot recovery
 
-If the VPS has been restarted and the site comes back with `503` or `502`, use this sequence:
+If the VPS has been restarted, first make sure host nginx did not steal `80/443` from Apache:
+
+```bash
+systemctl status httpd --no-pager
+systemctl status nginx --no-pager
+ss -ltnp | grep -E ':80|:443'
+```
+
+If `nginx` is listening on `80/443`, restore the correct service ownership:
+
+```bash
+systemctl stop nginx
+systemctl disable nginx
+systemctl enable httpd
+systemctl start httpd
+apachectl -t
+```
+
+Then, if the site still comes back with `503` or `502`, use this sequence:
 
 ```bash
 systemctl start docker

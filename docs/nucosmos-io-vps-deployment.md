@@ -28,8 +28,13 @@ Install:
 - Docker Engine
 - Docker Compose plugin
 - Git
-- If this VPS already uses `WHM/cPanel`, keep host Apache on `80/443` and reverse proxy to `127.0.0.1:8080`
-- If this is a plain Linux VPS, you may instead use host Nginx or Caddy for TLS termination
+- Host `Apache/httpd` on `80/443`
+
+Current mandatory rule for the production VPS:
+
+- host `Apache/httpd` is the only public web server
+- host `nginx.service` must remain `disabled`
+- Docker-internal nginx inside `admin-web` is allowed, but it does not replace host Apache
 
 ## 3. Upload project to VPS
 
@@ -68,7 +73,7 @@ VITE_API_BASE_URL=
 ADMIN_WEB_PORT=8080
 ```
 
-Set `ADMIN_WEB_PORT=8080` when host Apache, Nginx, or Caddy will reverse proxy traffic from ports `80/443`.
+Set `ADMIN_WEB_PORT=8080` because host Apache will reverse proxy traffic from ports `80/443`.
 
 ## 5. Deploy
 
@@ -114,43 +119,14 @@ Apply the Apache config:
 /usr/local/cpanel/scripts/restartsrv_httpd
 ```
 
-### Option B: Host Nginx example
-
-If host Nginx handles TLS and reverse proxy:
-
-```nginx
-server {
-    listen 80;
-    server_name nucosmos.io www.nucosmos.io;
-
-    location / {
-        proxy_pass http://127.0.0.1:8080;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-Because container Nginx already routes `/api` to backend, the host reverse proxy only needs to proxy everything to `127.0.0.1:8080`.
-
 ## 7. HTTPS
 
 Recommended options:
 
-- `certbot --nginx`
-- Caddy with automatic TLS
+- Apache-managed certificate on the VPS
 - Cloudflare proxy in front of the VPS
 
-For a simple VPS setup with host Nginx:
-
-```bash
-sudo apt update
-sudo apt install -y nginx certbot python3-certbot-nginx
-sudo certbot --nginx -d nucosmos.io -d www.nucosmos.io
-```
+Do not enable host nginx for TLS termination on this production server.
 
 ## 8. GitHub Actions secrets
 
@@ -174,3 +150,19 @@ docker compose --env-file /srv/nucosmos-pos/deployment/.env.prod -f /srv/nucosmo
 curl http://127.0.0.1:8080
 curl http://127.0.0.1:8080/actuator/health
 ```
+
+## 10. Reboot ownership check
+
+After every VPS reboot, verify that Apache still owns the public ports:
+
+```bash
+systemctl status httpd --no-pager
+systemctl status nginx --no-pager
+ss -ltnp | grep -E ':80|:443'
+```
+
+Expected:
+
+- `httpd` is running
+- `nginx` is disabled or inactive
+- `80/443` are bound by `httpd`
