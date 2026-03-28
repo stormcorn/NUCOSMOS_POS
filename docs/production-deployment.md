@@ -31,6 +31,7 @@ Recommended target:
 - VPS deployment guide: [nucosmos-io-vps-deployment.md](/c:/NUCOSMOS_POS/docs/nucosmos-io-vps-deployment.md)
 - Apache without cPanel account: [nucosmos-io-apache-without-cpanel.md](/c:/NUCOSMOS_POS/docs/nucosmos-io-apache-without-cpanel.md)
 - SFTP upload package: [sftp-deployment-package.md](/c:/NUCOSMOS_POS/docs/sftp-deployment-package.md)
+- 2026-03-28 outage and recovery record: [2026-03-28-vps-recovery-incident.md](/c:/NUCOSMOS_POS/docs/2026-03-28-vps-recovery-incident.md)
 
 ## Local validation already completed
 
@@ -99,6 +100,12 @@ systemctl start httpd
 apachectl -t
 ss -ltnp | grep -E ':80|:443'
 ```
+
+If Docker redeploy then fails with `overlay2 ... device or resource busy`, check whether cPanel
+`virtfs` has mounted the old Docker overlay filesystem under `/home/virtfs/...` before retrying
+container removal. See the incident record:
+
+- [2026-03-28-vps-recovery-incident.md](/c:/NUCOSMOS_POS/docs/2026-03-28-vps-recovery-incident.md)
 
 ## VPS memory stability note
 

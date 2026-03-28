@@ -166,3 +166,37 @@ Expected:
 - `httpd` is running
 - `nginx` is disabled or inactive
 - `80/443` are bound by `httpd`
+
+## 11. If Docker redeploy is blocked by overlay removal
+
+On this VPS, cPanel jailed-shell `virtfs` can keep old Docker overlay directories mounted under:
+
+```text
+/home/virtfs/<cpanel-user>/var/lib/docker/overlay2/.../merged
+```
+
+Typical failure:
+
+```text
+driver "overlay2" failed to remove root filesystem ... device or resource busy
+```
+
+If this happens:
+
+```bash
+mount | grep '/home/virtfs'
+umount -l /home/virtfs/<cpanel-user>/var/lib/docker/overlay2/<overlay-id>/merged
+docker rm -f <stuck-container-id>
+systemctl restart docker
+```
+
+Then recreate the affected services:
+
+```bash
+cd /srv/nucosmos-pos
+docker compose --env-file deployment/.env.prod -f deployment/docker-compose.prod.yml up -d --build backend admin-web
+```
+
+See the full incident record:
+
+- [2026-03-28-vps-recovery-incident.md](/c:/NUCOSMOS_POS/docs/2026-03-28-vps-recovery-incident.md)
