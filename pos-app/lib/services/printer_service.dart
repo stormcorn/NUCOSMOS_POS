@@ -1,6 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:flutter_thermal_printer/flutter_thermal_printer.dart';
 import 'package:flutter_thermal_printer/utils/printer.dart';
 import 'package:flutter/services.dart';
@@ -340,7 +338,7 @@ class PrinterService {
     if (receipt.discountAmount > 0) {
       bytes.addAll(generator.row([
         PosColumn(
-          text: '優惠',
+          text: 'Discount',
           width: 8,
           styles: const PosStyles(bold: true),
         ),
@@ -350,9 +348,23 @@ class PrinterService {
           styles: const PosStyles(align: PosAlign.right, bold: true),
         ),
       ]));
+      final discountTypeLabel = _discountTypeLabel(receipt.discountType);
+      if (discountTypeLabel != null) {
+        bytes.addAll(generator.text(
+          '  類型: $discountTypeLabel',
+          styles: const PosStyles(align: PosAlign.left),
+        ));
+      }
+      final discountValueLabel = _discountValueLabel(receipt);
+      if (discountValueLabel != null) {
+        bytes.addAll(generator.text(
+          '  內容: $discountValueLabel',
+          styles: const PosStyles(align: PosAlign.left),
+        ));
+      }
       if (receipt.discountNote?.trim().isNotEmpty ?? false) {
         bytes.addAll(generator.text(
-          '  優惠說明: ${receipt.discountNote!.trim()}',
+          '  說明: ${receipt.discountNote!.trim()}',
           styles: const PosStyles(align: PosAlign.left),
         ));
       }
@@ -452,12 +464,12 @@ class PrinterService {
       _twoColumn('列印時間', _formatDateTime(now), width),
       _twoColumn('列印模式', 'Android 系統列印', width),
       '-' * width,
-      '此測試頁用來確認一般印表機列印流程。',
-      '支援 Android 系統列印服務的裝置，',
-      '例如 HP、Brother、Canon、Epson。',
+      '列印測試頁會透過 Android 系統列印介面送出。',
+      '請在 Android 列印視窗中選擇可用的印表機。',
+      '可搭配 HP、Brother、Canon、Epson 等一般印表機。',
       '',
-      '如果這頁可以順利列印，表示之後的',
-      '消費單據也能透過系統印表機輸出。',
+      '如果要列印門市消費單據，請先完成一筆結帳。',
+      '完成後可透過系統列印輸出顧客聯與店家留存聯。',
       '-' * width,
       _centerText('NUCOSMOS POS', width),
     ].join('\n');
@@ -494,7 +506,7 @@ class PrinterService {
     String? storeCode,
     String? staffName,
   }) {
-    const width = 40;
+    const width = 42;
     final printedAt = _formatDateTime(DateTime.now());
     final buffer = StringBuffer()
       ..writeln(_centerText('NUCOSMOS', width))
@@ -502,7 +514,7 @@ class PrinterService {
       ..writeln(_centerText(copyLabel, width));
 
     if (storeCode != null && storeCode.trim().isNotEmpty) {
-      buffer.writeln(_centerText('門市 $storeCode', width));
+      buffer.writeln(_centerText('門市：$storeCode', width));
     }
 
     buffer
@@ -510,11 +522,9 @@ class PrinterService {
       ..writeln(_twoColumn('訂單編號', receipt.orderNumber, width))
       ..writeln(_twoColumn('列印時間', printedAt, width))
       ..writeln(
-        _twoColumn('付款方式', _paymentMethodLabel(receipt.paymentMethod), width),
-      )
-      ..writeln(
-        _twoColumn('付款狀態', _paymentStatusLabel(receipt.paymentStatus), width),
-      );
+          _twoColumn('付款方式', _paymentMethodLabel(receipt.paymentMethod), width))
+      ..writeln(_twoColumn(
+          '付款狀態', _paymentStatusLabel(receipt.paymentStatus), width));
 
     if (staffName != null && staffName.trim().isNotEmpty) {
       buffer.writeln(_twoColumn('收銀人員', staffName.trim(), width));
@@ -548,17 +558,25 @@ class PrinterService {
     buffer
       ..writeln('-' * width)
       ..writeln(_twoColumn('品項數量', '${receipt.itemCount}', width))
-      ..writeln(_twoColumn('小計', _currency(receipt.subtotalAmount), width))
-      ..writeln(
-        receipt.discountAmount > 0
-            ? _twoColumn('優惠', '-${_currency(receipt.discountAmount)}', width)
-            : '',
-      )
-      ..writeln(
-        receipt.discountAmount > 0 && (receipt.discountNote?.trim().isNotEmpty ?? false)
-            ? '優惠說明：${receipt.discountNote!.trim()}'
-            : '',
-      )
+      ..writeln(_twoColumn('小計', _currency(receipt.subtotalAmount), width));
+
+    if (receipt.discountAmount > 0) {
+      buffer.writeln(
+          _twoColumn('優惠', '-${_currency(receipt.discountAmount)}', width));
+      final discountTypeLabel = _discountTypeLabel(receipt.discountType);
+      if (discountTypeLabel != null) {
+        buffer.writeln('優惠類型：$discountTypeLabel');
+      }
+      final discountValueLabel = _discountValueLabel(receipt);
+      if (discountValueLabel != null) {
+        buffer.writeln('優惠內容：$discountValueLabel');
+      }
+      if (receipt.discountNote?.trim().isNotEmpty ?? false) {
+        buffer.writeln('優惠說明：${receipt.discountNote!.trim()}');
+      }
+    }
+
+    buffer
       ..writeln(_twoColumn('合計', _currency(receipt.totalAmount), width))
       ..writeln(_twoColumn('實收', _currency(receipt.paidAmount), width));
 
@@ -617,9 +635,42 @@ class PrinterService {
       case 'CARD':
         return '刷卡';
       case 'OTHER':
-        return '其他';
+        return '招待';
       default:
-        return value.isEmpty ? '未指定' : value;
+        return value.isEmpty ? '未設定' : value;
+    }
+  }
+
+  String? _discountTypeLabel(CheckoutDiscountType? type) {
+    switch (type) {
+      case CheckoutDiscountType.percentage:
+        return '折扣';
+      case CheckoutDiscountType.amount:
+        return '抵用';
+      case CheckoutDiscountType.complimentary:
+        return '招待';
+      case null:
+        return null;
+    }
+  }
+
+  String? _discountValueLabel(OrderReceipt receipt) {
+    switch (receipt.discountType) {
+      case CheckoutDiscountType.percentage:
+        if (receipt.discountValue == null) {
+          return null;
+        }
+        final value = receipt.discountValue!;
+        return '${value.toStringAsFixed(value == value.roundToDouble() ? 0 : 2)}%';
+      case CheckoutDiscountType.amount:
+        if (receipt.discountValue == null) {
+          return null;
+        }
+        return _currency(receipt.discountValue!);
+      case CheckoutDiscountType.complimentary:
+        return '整筆招待';
+      case null:
+        return null;
     }
   }
 

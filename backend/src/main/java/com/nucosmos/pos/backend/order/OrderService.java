@@ -121,6 +121,8 @@ public class OrderService {
                 "UNPAID",
                 totals.itemCount(),
                 totals.subtotalAmount(),
+                totals.discountType().name(),
+                totals.discountValue(),
                 totals.discountAmount(),
                 totals.totalAmount(),
                 BigDecimal.ZERO,
@@ -486,10 +488,17 @@ public class OrderService {
             subtotal = subtotal.add(displayPrice.multiply(BigDecimal.valueOf(item.quantity())));
         }
 
-        BigDecimal discountAmount = normalizeDiscountAmount(request.discountAmount(), subtotal);
-        BigDecimal totalAmount = subtotal.subtract(discountAmount).setScale(2, RoundingMode.HALF_UP);
+        AppliedDiscount appliedDiscount = resolveDiscount(request, subtotal);
+        BigDecimal totalAmount = subtotal.subtract(appliedDiscount.discountAmount()).setScale(2, RoundingMode.HALF_UP);
 
-        return new OrderTotals(itemCount, subtotal, discountAmount, totalAmount);
+        return new OrderTotals(
+                itemCount,
+                subtotal,
+                appliedDiscount.type(),
+                appliedDiscount.discountValue(),
+                appliedDiscount.discountAmount(),
+                totalAmount
+        );
     }
 
     private String generateOrderNumber(String storeCode, OffsetDateTime orderedAt) {
@@ -527,6 +536,8 @@ public class OrderService {
                 order.getCreatedByUser().getEmployeeCode(),
                 order.getItemCount(),
                 order.getSubtotalAmount(),
+                order.getDiscountType(),
+                order.getDiscountValue(),
                 order.getDiscountAmount(),
                 order.getTotalAmount(),
                 order.getPaidAmount(),
@@ -672,18 +683,69 @@ public class OrderService {
         return value == null || value.isBlank() ? null : value;
     }
 
-    private BigDecimal normalizeDiscountAmount(BigDecimal requestedDiscount, BigDecimal subtotal) {
-        BigDecimal discountAmount = requestedDiscount == null
-                ? BigDecimal.ZERO
-                : requestedDiscount.setScale(2, RoundingMode.HALF_UP);
+    private AppliedDiscount resolveDiscount(OrderCreateRequest request, BigDecimal subtotal) {
+        OrderDiscountType discountType = OrderDiscountType.from(request.discountType());
+        BigDecimal discountValue = request.discountValue();
 
-        if (discountAmount.compareTo(BigDecimal.ZERO) < 0) {
+        if (discountType == OrderDiscountType.NONE
+                && request.discountAmount() != null
+                && request.discountAmount().compareTo(BigDecimal.ZERO) > 0) {
+            discountType = OrderDiscountType.AMOUNT;
+            discountValue = request.discountAmount();
+        }
+
+        return switch (discountType) {
+            case NONE -> new AppliedDiscount(OrderDiscountType.NONE, null, BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));
+            case PERCENTAGE -> {
+                BigDecimal normalizedValue = normalizePercentageDiscountValue(discountValue);
+                BigDecimal discountAmount = subtotal
+                        .multiply(normalizedValue)
+                        .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                yield new AppliedDiscount(discountType, normalizedValue, discountAmount);
+            }
+            case AMOUNT -> {
+                BigDecimal normalizedValue = normalizeAmountDiscountValue(discountValue, subtotal);
+                yield new AppliedDiscount(discountType, normalizedValue, normalizedValue);
+            }
+            case COMPLIMENTARY -> new AppliedDiscount(
+                    OrderDiscountType.COMPLIMENTARY,
+                    null,
+                    subtotal.setScale(2, RoundingMode.HALF_UP)
+            );
+        };
+    }
+
+    private BigDecimal normalizePercentageDiscountValue(BigDecimal discountValue) {
+        if (discountValue == null) {
+            throw new BadRequestException("Discount percentage is required");
+        }
+
+        BigDecimal normalizedValue = discountValue.setScale(2, RoundingMode.HALF_UP);
+        if (normalizedValue.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException("Discount percentage must be greater than zero");
+        }
+        if (normalizedValue.compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new BadRequestException("Discount percentage cannot exceed 100");
+        }
+        return normalizedValue;
+    }
+
+    private BigDecimal normalizeAmountDiscountValue(BigDecimal discountValue, BigDecimal subtotal) {
+        if (discountValue == null) {
+            throw new BadRequestException("Discount amount is required");
+        }
+
+        BigDecimal normalizedValue = discountValue.setScale(2, RoundingMode.HALF_UP);
+        if (normalizedValue.compareTo(BigDecimal.ZERO) < 0) {
             throw new BadRequestException("Discount amount cannot be negative");
         }
-        if (discountAmount.compareTo(subtotal) > 0) {
+        if (normalizedValue.compareTo(BigDecimal.ZERO) == 0) {
+            throw new BadRequestException("Discount amount must be greater than zero");
+        }
+        if (normalizedValue.compareTo(subtotal) > 0) {
             throw new BadRequestException("Discount amount cannot exceed subtotal");
         }
-        return discountAmount;
+        return normalizedValue;
     }
 
     private List<ResolvedCustomizationSelection> resolveCustomizationSelections(ProductEntity product, List<UUID> selectedOptionIds) {
@@ -872,8 +934,17 @@ public class OrderService {
     private record OrderTotals(
             int itemCount,
             BigDecimal subtotalAmount,
+            OrderDiscountType discountType,
+            BigDecimal discountValue,
             BigDecimal discountAmount,
             BigDecimal totalAmount
+    ) {
+    }
+
+    private record AppliedDiscount(
+            OrderDiscountType type,
+            BigDecimal discountValue,
+            BigDecimal discountAmount
     ) {
     }
 

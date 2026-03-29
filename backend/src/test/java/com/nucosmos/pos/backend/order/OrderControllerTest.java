@@ -131,7 +131,8 @@ class OrderControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "discountAmount": 2.25,
+                                  "discountType": "AMOUNT",
+                                  "discountValue": 2.25,
                                   "discountNote": "Member discount",
                                   "items": [
                                     {
@@ -148,9 +149,90 @@ class OrderControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.subtotalAmount").value(22.25))
+                .andExpect(jsonPath("$.data.discountType").value("AMOUNT"))
+                .andExpect(jsonPath("$.data.discountValue").value(2.25))
                 .andExpect(jsonPath("$.data.discountAmount").value(2.25))
                 .andExpect(jsonPath("$.data.discountNote").value("Member discount"))
                 .andExpect(jsonPath("$.data.totalAmount").value(20.00));
+    }
+
+    @Test
+    void shouldCreateOrderWithPercentageDiscountBeforeCheckout() throws Exception {
+        String token = TestLoginSupport.loginAndExtractToken(mockMvc, """
+                {
+                  "storeCode": "TW001",
+                  "roleCode": "CASHIER",
+                  "pin": "123456",
+                  "deviceCode": "POS-TABLET-001"
+                }
+                """);
+
+        mockMvc.perform(post("/api/v1/orders")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "discountType": "PERCENTAGE",
+                                  "discountValue": 10,
+                                  "discountNote": "VIP 9折",
+                                  "items": [
+                                    {
+                                      "productId": "44444444-4444-4444-4444-444444444441",
+                                      "quantity": 2
+                                    },
+                                    {
+                                      "productId": "44444444-4444-4444-4444-444444444443",
+                                      "quantity": 1
+                                    }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.subtotalAmount").value(22.25))
+                .andExpect(jsonPath("$.data.discountType").value("PERCENTAGE"))
+                .andExpect(jsonPath("$.data.discountValue").value(10.00))
+                .andExpect(jsonPath("$.data.discountAmount").value(2.23))
+                .andExpect(jsonPath("$.data.totalAmount").value(20.02));
+    }
+
+    @Test
+    void shouldCreateOrderWithComplimentaryDiscountBeforeCheckout() throws Exception {
+        String token = TestLoginSupport.loginAndExtractToken(mockMvc, """
+                {
+                  "storeCode": "TW001",
+                  "roleCode": "CASHIER",
+                  "pin": "123456",
+                  "deviceCode": "POS-TABLET-001"
+                }
+                """);
+
+        mockMvc.perform(post("/api/v1/orders")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "discountType": "COMPLIMENTARY",
+                                  "discountNote": "店長招待",
+                                  "items": [
+                                    {
+                                      "productId": "44444444-4444-4444-4444-444444444441",
+                                      "quantity": 2
+                                    },
+                                    {
+                                      "productId": "44444444-4444-4444-4444-444444444443",
+                                      "quantity": 1
+                                    }
+                                  ]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.subtotalAmount").value(22.25))
+                .andExpect(jsonPath("$.data.discountType").value("COMPLIMENTARY"))
+                .andExpect(jsonPath("$.data.discountValue").doesNotExist())
+                .andExpect(jsonPath("$.data.discountAmount").value(22.25))
+                .andExpect(jsonPath("$.data.totalAmount").value(0.00));
     }
 
     @Test

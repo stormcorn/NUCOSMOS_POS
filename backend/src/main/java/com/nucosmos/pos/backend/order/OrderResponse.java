@@ -15,6 +15,8 @@ public record OrderResponse(
         String createdByEmployeeCode,
         int itemCount,
         BigDecimal subtotalAmount,
+        String discountType,
+        BigDecimal discountValue,
         BigDecimal discountAmount,
         BigDecimal totalAmount,
         BigDecimal paidAmount,

@@ -11,6 +11,8 @@ import java.util.List;
 public record OrderCreateRequest(
         @NotEmpty List<@Valid OrderCreateItemRequest> items,
         @Size(max = 500) String note,
+        String discountType,
+        @DecimalMin(value = "0.00") BigDecimal discountValue,
         @DecimalMin(value = "0.00") BigDecimal discountAmount,
         @Size(max = 255) String discountNote
 ) {

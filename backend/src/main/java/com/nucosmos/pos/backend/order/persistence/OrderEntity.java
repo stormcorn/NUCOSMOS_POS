@@ -51,6 +51,12 @@ public class OrderEntity extends BaseEntity {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal subtotalAmount;
 
+    @Column(nullable = false, length = 30)
+    private String discountType;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal discountValue;
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal discountAmount;
 
@@ -123,6 +129,8 @@ public class OrderEntity extends BaseEntity {
             String paymentStatus,
             int itemCount,
             BigDecimal subtotalAmount,
+            String discountType,
+            BigDecimal discountValue,
             BigDecimal discountAmount,
             BigDecimal totalAmount,
             BigDecimal paidAmount,
@@ -140,6 +148,8 @@ public class OrderEntity extends BaseEntity {
         this.paymentStatus = paymentStatus;
         this.itemCount = itemCount;
         this.subtotalAmount = subtotalAmount;
+        this.discountType = discountType;
+        this.discountValue = discountValue;
         this.discountAmount = discountAmount;
         this.totalAmount = totalAmount;
         this.paidAmount = paidAmount;
@@ -242,6 +252,14 @@ public class OrderEntity extends BaseEntity {
 
     public BigDecimal getSubtotalAmount() {
         return subtotalAmount;
+    }
+
+    public String getDiscountType() {
+        return discountType;
+    }
+
+    public BigDecimal getDiscountValue() {
+        return discountValue;
     }
 
     public BigDecimal getDiscountAmount() {
