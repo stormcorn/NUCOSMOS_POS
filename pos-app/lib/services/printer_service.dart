@@ -244,16 +244,22 @@ class PrinterService {
     ));
     bytes.addAll(generator.feed(1));
     if (storeCode != null && storeCode.trim().isNotEmpty) {
-      bytes.addAll(generator.text('Store: $storeCode'));
+      bytes.addAll(generator.text('Store: ${_thermalSafe(storeCode)}'));
     }
     if (staffName != null && staffName.trim().isNotEmpty) {
-      bytes.addAll(generator.text('Staff: $staffName'));
+      bytes.addAll(generator.text('Staff: ${_thermalSafe(staffName)}'));
     }
     bytes.addAll(generator.text('Order: ${receipt.orderNumber}'));
     bytes.addAll(
-      generator.text('Payment: ${_paymentMethodLabel(receipt.paymentMethod)}'),
+      generator.text(
+        'Payment: ${_thermalPaymentMethodLabel(receipt.paymentMethod)}',
+      ),
     );
-    bytes.addAll(generator.text('Status: ${receipt.paymentStatus}'));
+    bytes.addAll(
+      generator.text(
+        'Status: ${_thermalPaymentStatusLabel(receipt.paymentStatus)}',
+      ),
+    );
     bytes.addAll(generator.text('Printed: ${_formatDateTime(DateTime.now())}'));
     bytes.addAll(generator.hr());
     bytes.addAll(generator.row([
@@ -278,7 +284,7 @@ class PrinterService {
     for (final line in lines) {
       bytes.addAll(generator.row([
         PosColumn(
-          text: _trimForPrinter(line.product.name, 22),
+          text: _trimForPrinter(_thermalProductLabel(line), 22),
           width: 6,
         ),
         PosColumn(
@@ -302,7 +308,7 @@ class PrinterService {
             ? ' (+${_currency(selection.priceDelta)})'
             : '';
         bytes.addAll(generator.text(
-          '  - ${selection.groupName}: ${selection.optionName}$deltaText',
+          '  - ${_thermalSafe(selection.groupName)}: ${_thermalSafe(selection.optionName)}$deltaText',
           styles: const PosStyles(align: PosAlign.left),
         ));
       }
@@ -351,20 +357,20 @@ class PrinterService {
       final discountTypeLabel = _discountTypeLabel(receipt.discountType);
       if (discountTypeLabel != null) {
         bytes.addAll(generator.text(
-          '  類型: $discountTypeLabel',
+          '  Type: ${_thermalSafe(discountTypeLabel)}',
           styles: const PosStyles(align: PosAlign.left),
         ));
       }
       final discountValueLabel = _discountValueLabel(receipt);
       if (discountValueLabel != null) {
         bytes.addAll(generator.text(
-          '  內容: $discountValueLabel',
+          '  Value: ${_thermalSafe(discountValueLabel)}',
           styles: const PosStyles(align: PosAlign.left),
         ));
       }
       if (receipt.discountNote?.trim().isNotEmpty ?? false) {
         bytes.addAll(generator.text(
-          '  說明: ${receipt.discountNote!.trim()}',
+          '  Note: ${_thermalSafe(receipt.discountNote!.trim())}',
           styles: const PosStyles(align: PosAlign.left),
         ));
       }
@@ -423,7 +429,7 @@ class PrinterService {
         styles: const PosStyles(bold: true),
       ),
       PosColumn(
-        text: _paymentMethodLabel(receipt.paymentMethod),
+        text: _thermalPaymentMethodLabel(receipt.paymentMethod),
         width: 4,
         styles: const PosStyles(align: PosAlign.right, bold: true),
       ),
@@ -672,6 +678,69 @@ class PrinterService {
       case null:
         return null;
     }
+  }
+
+  String _thermalPaymentStatusLabel(String value) {
+    switch (value.trim().toUpperCase()) {
+      case 'PAID':
+        return 'PAID';
+      case 'PENDING':
+        return 'PENDING';
+      case 'FAILED':
+        return 'FAILED';
+      case 'REFUNDED':
+        return 'REFUNDED';
+      default:
+        return _thermalSafe(value, fallback: 'UNKNOWN');
+    }
+  }
+
+  String _thermalPaymentMethodLabel(String value) {
+    switch (value.trim().toUpperCase()) {
+      case 'CASH':
+        return 'CASH';
+      case 'CARD':
+        return 'CARD';
+      case 'OTHER':
+        return 'COMPLIMENTARY';
+      default:
+        return _thermalSafe(value, fallback: 'UNKNOWN');
+    }
+  }
+
+  String _thermalProductLabel(PosCartLine line) {
+    final safeName = _thermalSafe(line.product.name, fallback: '');
+    final collapsed = safeName.replaceAll('?', '').trim();
+    if (collapsed.isNotEmpty) {
+      return safeName;
+    }
+    final sku = line.product.sku.trim();
+    if (sku.isNotEmpty) {
+      return _thermalSafe(sku, fallback: 'ITEM');
+    }
+    return 'ITEM';
+  }
+
+  String _thermalSafe(String value, {String fallback = '?'}) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return fallback;
+    }
+
+    final ascii = String.fromCharCodes(
+      trimmed.runes.map((rune) {
+        if (rune == 9 || rune == 10 || rune == 13) {
+          return rune;
+        }
+        if (rune >= 32 && rune <= 126) {
+          return rune;
+        }
+        return 63;
+      }),
+    );
+
+    final normalized = ascii.replaceAll(RegExp(r'\?{2,}'), '?').trim();
+    return normalized.isEmpty ? fallback : normalized;
   }
 
   String _trimForPrinter(String value, int maxLength) {
