@@ -7,10 +7,10 @@ public class RedeemProperties {
 
     /**
      * Public web base URL that serves the redeem page.
-     * In production this should point at the ERP SPA public route, for example:
-     * https://nucosmos.io/erp
+     * In production this should point at the public website origin, for example:
+     * https://nucosmos.io
      */
-    private String publicBaseUrl = "https://nucosmos.io/erp";
+    private String publicBaseUrl = "https://nucosmos.io";
 
     public String getPublicBaseUrl() {
         return publicBaseUrl;

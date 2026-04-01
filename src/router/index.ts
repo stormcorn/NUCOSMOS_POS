@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores/auth";
 import { pinia } from "@/stores/pinia";
 import DefectiveInventoryView from "@/views/DefectiveInventoryView.vue";
 import DevicesView from "@/views/DevicesView.vue";
+import ImageOptimizationView from "@/views/ImageOptimizationView.vue";
 import InventoryStocktakesView from "@/views/InventoryStocktakesView.vue";
 import InventoryView from "@/views/InventoryView.vue";
 import LoginView from "@/views/LoginView.vue";
@@ -16,16 +17,14 @@ import PackagingInventoryView from "@/views/PackagingInventoryView.vue";
 import ProcurementView from "@/views/ProcurementView.vue";
 import ProductCategoriesView from "@/views/ProductCategoriesView.vue";
 import ProductsView from "@/views/ProductsView.vue";
-import PublicRedeemView from "@/views/PublicRedeemView.vue";
-import RegisterView from "@/views/RegisterView.vue";
 import ReceiptFooterSettingsView from "@/views/ReceiptFooterSettingsView.vue";
+import RegisterView from "@/views/RegisterView.vue";
 import ReportsView from "@/views/ReportsView.vue";
 import ReplenishmentView from "@/views/ReplenishmentView.vue";
 import RolePermissionsView from "@/views/RolePermissionsView.vue";
 import ShiftsView from "@/views/ShiftsView.vue";
 import SuppliersView from "@/views/SuppliersView.vue";
 import UsersAccessView from "@/views/UsersAccessView.vue";
-import ImageOptimizationView from "@/views/ImageOptimizationView.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -41,12 +40,6 @@ const router = createRouter({
       name: "register",
       component: RegisterView,
       meta: { title: "Register", layout: "auth", requiresAuth: false },
-    },
-    {
-      path: "/redeem/:token?",
-      name: "public-redeem",
-      component: PublicRedeemView,
-      meta: { title: "Receipt Redeem", layout: "auth", requiresAuth: false },
     },
     {
       path: "/",
@@ -239,7 +232,7 @@ const router = createRouter({
       name: "settings-image-optimization",
       component: ImageOptimizationView,
       meta: {
-        title: "圖片優化",
+        title: "Image Optimization",
         requiresAuth: true,
         permissionKeys: [PERMISSIONS.SETTINGS_VIEW],
       },

@@ -33,6 +33,8 @@ public class SecurityConfig {
                                 "/api/v1/system/info",
                                 "/api/v1/auth/**",
                                 "/api/v1/public/redeem/**",
+                                "/redeem",
+                                "/redeem/**",
                                 "/actuator/health",
                                 "/actuator/info",
                                 "/error"

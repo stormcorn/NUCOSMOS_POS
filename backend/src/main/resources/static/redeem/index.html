@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NUCOSMOS 兌獎驗證</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #04111f;
+        --panel: rgba(15, 23, 42, 0.86);
+        --border: rgba(255, 255, 255, 0.1);
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --accent: #4fe0c6;
+        --danger: #fb7185;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Noto Sans TC", "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top, rgba(79, 224, 198, 0.18), transparent 32%),
+          linear-gradient(180deg, #07111b, #020617);
+      }
+      .wrap {
+        width: min(960px, calc(100vw - 32px));
+        margin: 40px auto;
+        padding: 28px;
+        border: 1px solid var(--border);
+        border-radius: 28px;
+        background: var(--panel);
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
+      }
+      .grid {
+        display: grid;
+        gap: 24px;
+      }
+      @media (min-width: 860px) {
+        .grid {
+          grid-template-columns: 1.02fr 0.98fr;
+        }
+      }
+      h1, h2, p { margin: 0; }
+      .eyebrow {
+        color: rgba(79, 224, 198, 0.86);
+        font-size: 12px;
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+      }
+      .title {
+        margin-top: 12px;
+        font-size: clamp(28px, 4vw, 40px);
+        line-height: 1.1;
+      }
+      .lead {
+        margin-top: 16px;
+        color: var(--muted);
+        line-height: 1.8;
+        font-size: 15px;
+      }
+      .panel {
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.04);
+        padding: 20px;
+      }
+      .label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--text);
+        font-size: 14px;
+      }
+      .row {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      @media (min-width: 620px) {
+        .row {
+          flex-direction: row;
+        }
+      }
+      input, button {
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        font: inherit;
+      }
+      input {
+        flex: 1;
+        min-width: 0;
+        padding: 14px 16px;
+        color: var(--text);
+        background: rgba(15, 23, 42, 0.85);
+      }
+      button {
+        padding: 14px 18px;
+        cursor: pointer;
+        font-weight: 700;
+        transition: 160ms ease;
+      }
+      .primary {
+        color: #04111f;
+        background: var(--accent);
+        border-color: transparent;
+      }
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+      .message, .error {
+        margin-top: 16px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        font-size: 14px;
+      }
+      .message {
+        color: var(--accent);
+        background: rgba(79, 224, 198, 0.1);
+        border: 1px solid rgba(79, 224, 198, 0.2);
+      }
+      .error {
+        color: var(--danger);
+        background: rgba(251, 113, 133, 0.1);
+        border: 1px solid rgba(251, 113, 133, 0.2);
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+      }
+      .stat {
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: rgba(15, 23, 42, 0.5);
+        padding: 16px;
+      }
+      .stat small {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+      .stat strong {
+        display: block;
+        margin-top: 10px;
+        font-size: 20px;
+      }
+      .card {
+        display: none;
+      }
+      .card.active {
+        display: block;
+      }
+      .meta {
+        margin-top: 16px;
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        background: rgba(15, 23, 42, 0.52);
+        padding: 18px;
+        font-size: 14px;
+        line-height: 1.8;
+        color: var(--text);
+      }
+      .meta .muted {
+        color: var(--muted);
+        word-break: break-all;
+      }
+      .placeholder {
+        display: grid;
+        place-items: center;
+        min-height: 360px;
+        border: 1px dashed var(--border);
+        border-radius: 24px;
+        color: var(--muted);
+        text-align: center;
+        line-height: 1.8;
+        padding: 24px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <div class="grid">
+        <section class="panel">
+          <p class="eyebrow">Receipt Redeem</p>
+          <h1 class="title">收據兌獎 / 兌換驗證</h1>
+          <p class="lead">
+            請掃描收據上的 QR Code，或輸入收據兌獎碼查詢這張收據是否有效、是否已兌換，以及目前是否可進行兌獎。
+          </p>
+
+          <div class="panel" style="margin-top: 28px;">
+            <label class="label" for="claim-code">兌獎碼</label>
+            <div class="row">
+              <input id="claim-code" type="text" placeholder="例如 ABCD2345" />
+              <button id="lookup-button" class="primary">查詢收據</button>
+            </div>
+            <p class="lead" style="margin-top: 14px; font-size: 13px;">
+              若您是從收據上的 QR Code 進入，本頁會自動讀取收據資料。若您只有紙本收據，也可以手動輸入兌獎碼查詢。
+            </p>
+          </div>
+
+          <div id="status-message" class="message" style="display:none;"></div>
+          <div id="error-message" class="error" style="display:none;"></div>
+        </section>
+
+        <section class="panel">
+          <div id="ticket-card" class="card">
+            <p class="eyebrow">Ticket</p>
+            <h2 id="order-number" class="title" style="font-size: 30px;"></h2>
+            <p id="store-line" class="lead" style="margin-top: 10px;"></p>
+
+            <div class="stats">
+              <div class="stat">
+                <small>消費金額</small>
+                <strong id="total-amount"></strong>
+              </div>
+              <div class="stat">
+                <small>品項數量</small>
+                <strong id="item-count"></strong>
+              </div>
+              <div class="stat">
+                <small>付款狀態</small>
+                <strong id="payment-status"></strong>
+              </div>
+              <div class="stat">
+                <small>兌換狀態</small>
+                <strong id="claim-status"></strong>
+              </div>
+            </div>
+
+            <div class="meta">
+              <div>消費時間：<span id="ordered-at"></span></div>
+              <div>兌換時間：<span id="claimed-at"></span></div>
+              <div>兌獎碼：<span id="claim-code-view"></span></div>
+              <div class="muted">兌獎網址：<span id="redeem-url"></span></div>
+            </div>
+
+            <button id="claim-button" class="primary" style="margin-top: 18px; width: 100%;">確認兌換</button>
+          </div>
+
+          <div id="placeholder-card" class="placeholder active">
+            請掃描收據上的 QR Code，或先在左側輸入兌獎碼查詢。查詢成功後，這裡會顯示收據狀態與可兌換資訊。
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      const claimCodeInput = document.getElementById("claim-code");
+      const lookupButton = document.getElementById("lookup-button");
+      const claimButton = document.getElementById("claim-button");
+      const statusMessage = document.getElementById("status-message");
+      const errorMessage = document.getElementById("error-message");
+      const ticketCard = document.getElementById("ticket-card");
+      const placeholderCard = document.getElementById("placeholder-card");
+
+      let currentTicket = null;
+
+      function formatCurrency(value) {
+        return new Intl.NumberFormat("zh-TW", {
+          style: "currency",
+          currency: "TWD",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2,
+        }).format(value ?? 0);
+      }
+
+      function formatDateTime(value) {
+        if (!value) {
+          return "尚未兌換";
+        }
+        return new Intl.DateTimeFormat("zh-TW", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        }).format(new Date(value));
+      }
+
+      function setMessage(text) {
+        statusMessage.textContent = text || "";
+        statusMessage.style.display = text ? "block" : "none";
+      }
+
+      function setError(text) {
+        errorMessage.textContent = text || "";
+        errorMessage.style.display = text ? "block" : "none";
+      }
+
+      function renderTicket(ticket) {
+        currentTicket = ticket;
+        ticketCard.classList.add("active");
+        placeholderCard.classList.remove("active");
+
+        document.getElementById("order-number").textContent = ticket.orderNumber;
+        document.getElementById("store-line").textContent = `${ticket.storeName} (${ticket.storeCode})`;
+        document.getElementById("total-amount").textContent = formatCurrency(ticket.totalAmount);
+        document.getElementById("item-count").textContent = String(ticket.itemCount);
+        document.getElementById("payment-status").textContent = ticket.paymentStatus;
+        document.getElementById("claim-status").textContent = ticket.claimed ? "已兌換" : "未兌換";
+        document.getElementById("ordered-at").textContent = formatDateTime(ticket.orderedAt);
+        document.getElementById("claimed-at").textContent = formatDateTime(ticket.claimedAt);
+        document.getElementById("claim-code-view").textContent = ticket.claimCode;
+        document.getElementById("redeem-url").textContent = ticket.redeemUrl;
+
+        claimCodeInput.value = ticket.claimCode || "";
+        claimButton.disabled = !ticket.claimable;
+        claimButton.textContent = ticket.claimed ? "已兌換完成" : "確認兌換";
+      }
+
+      async function requestJson(url, options = {}) {
+        const response = await fetch(url, options);
+        let payload = null;
+        try {
+          payload = await response.json();
+        } catch (_) {
+          payload = null;
+        }
+
+        if (!response.ok) {
+          throw new Error(payload?.message || `Request failed with status ${response.status}`);
+        }
+
+        return payload.data;
+      }
+
+      async function lookupByToken(token) {
+        if (!token) {
+          return;
+        }
+
+        setError("");
+        setMessage("正在查詢收據...");
+        const ticket = await requestJson(`/api/v1/public/redeem/${encodeURIComponent(token)}`);
+        renderTicket(ticket);
+        setMessage(ticket.message);
+      }
+
+      async function lookupByCode() {
+        const code = claimCodeInput.value.trim().toUpperCase();
+        if (!code) {
+          setError("請先輸入兌獎碼。");
+          return;
+        }
+
+        setError("");
+        setMessage("正在查詢收據...");
+        const ticket = await requestJson(`/api/v1/public/redeem/search?code=${encodeURIComponent(code)}`);
+        renderTicket(ticket);
+        setMessage(ticket.message);
+      }
+
+      async function claimTicket() {
+        if (!currentTicket?.token || !currentTicket.claimable) {
+          return;
+        }
+
+        setError("");
+        setMessage("正在送出兌換...");
+        const ticket = await requestJson(`/api/v1/public/redeem/${encodeURIComponent(currentTicket.token)}/claim`, {
+          method: "POST",
+        });
+        renderTicket(ticket);
+        setMessage(ticket.claimed
+          ? "這張收據已完成兌換，您可以保留畫面作為查詢紀錄。"
+          : ticket.message);
+      }
+
+      lookupButton.addEventListener("click", () => {
+        lookupByCode().catch((error) => {
+          setMessage("");
+          setError(error.message || "查詢收據失敗，請稍後再試。");
+        });
+      });
+
+      claimButton.addEventListener("click", () => {
+        claimTicket().catch((error) => {
+          setMessage("");
+          setError(error.message || "兌換失敗，請稍後再試。");
+        });
+      });
+
+      const pathParts = window.location.pathname.split("/").filter(Boolean);
+      const token = pathParts.length >= 2 && pathParts[0] === "redeem" ? pathParts[1] : "";
+      if (token) {
+        lookupByToken(token).catch((error) => {
+          setMessage("");
+          setError(error.message || "讀取兌獎資料失敗，請稍後再試。");
+        });
+      } else {
+        setMessage("請輸入收據上的兌獎碼，或直接使用收據 QR Code 開啟本頁。");
+      }
+    </script>
+  </body>
+</html>

@@ -87,7 +87,7 @@ public class ReceiptRedemptionService {
     public String buildRedeemUrl(ReceiptRedemptionEntity redemption) {
         String baseUrl = redeemProperties.getPublicBaseUrl();
         String normalizedBaseUrl = baseUrl == null || baseUrl.isBlank()
-                ? "https://nucosmos.io/erp"
+                ? "https://nucosmos.io"
                 : baseUrl.trim().replaceAll("/+$", "");
         return normalizedBaseUrl + "/redeem/" + redemption.getPublicToken();
     }

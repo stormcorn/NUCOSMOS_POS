@@ -41,7 +41,7 @@ app:
   firebase:
     admin-credentials-path: ${FIREBASE_ADMIN_CREDENTIALS_PATH:}
   redeem:
-    public-base-url: ${PUBLIC_WEB_BASE_URL:https://nucosmos.io/erp}
+    public-base-url: ${PUBLIC_WEB_BASE_URL:https://nucosmos.io}
   security:
     jwt:
       secret-base64: ${JWT_SECRET_BASE64:bmV2ZXItc2hpcC10aGlzLWRlZmF1bHQtc2VjcmV0LWluLXByb2QtdXNlLWFuLWVudi12YXI=}

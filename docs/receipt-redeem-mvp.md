@@ -13,7 +13,7 @@ This is the foundation for later member, points, coupon, or lucky-draw features.
 
 ## Public Entry
 
-- Public page route: `/erp/redeem/:token`
+- Public page route: `/redeem/:token`
 - Public API:
   - `GET /api/v1/public/redeem/{token}`
   - `GET /api/v1/public/redeem/search?code=<claimCode>`
@@ -83,6 +83,15 @@ Backend uses:
 
 Production value should be:
 
-- `https://nucosmos.io/erp`
+- `https://nucosmos.io`
 
 If omitted, backend falls back to that same default.
+
+## Public Routing
+
+- Public redeem page must not expose `/erp` to customers.
+- Public route `/redeem/` is served by backend static content.
+- Apache should proxy:
+  - `/redeem/` -> `http://127.0.0.1:8081/redeem/`
+- ERP admin remains under:
+  - `/erp/`
