@@ -204,6 +204,7 @@ class _PosHomeScreenState extends State<PosHomeScreen>
       lines: cartSnapshot,
       storeCode: widget.controller.session?.storeCode,
       staffName: widget.controller.session?.displayName,
+      receiptFooterText: widget.controller.storeReceiptFooterText,
     );
 
     if (!mounted) {
@@ -243,7 +244,10 @@ class _PosHomeScreenState extends State<PosHomeScreen>
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: SingleChildScrollView(
-              child: _PrinterPanel(printerController: widget.printerController),
+              child: _PrinterPanel(
+                printerController: widget.printerController,
+                sessionController: widget.controller,
+              ),
             ),
           ),
         );
@@ -2351,9 +2355,13 @@ class _CircleButton extends StatelessWidget {
 }
 
 class _PrinterPanel extends StatefulWidget {
-  const _PrinterPanel({required this.printerController});
+  const _PrinterPanel({
+    required this.printerController,
+    required this.sessionController,
+  });
 
   final PrinterController printerController;
+  final SessionController sessionController;
 
   @override
   State<_PrinterPanel> createState() => _PrinterPanelState();
@@ -2361,15 +2369,27 @@ class _PrinterPanel extends StatefulWidget {
 
 class _PrinterPanelState extends State<_PrinterPanel>
     with WidgetsBindingObserver {
+  late final TextEditingController _receiptFooterController;
+
   @override
   void initState() {
     super.initState();
+    _receiptFooterController = TextEditingController(
+      text: widget.sessionController.storeReceiptFooterText,
+    );
     WidgetsBinding.instance.addObserver(this);
-    Future.microtask(widget.printerController.refreshVisibleState);
+    Future.microtask(() async {
+      await widget.printerController.refreshVisibleState();
+      await widget.sessionController.loadCurrentStoreReceiptSettings();
+      if (mounted) {
+        _syncReceiptFooterText();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _receiptFooterController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -2378,18 +2398,56 @@ class _PrinterPanelState extends State<_PrinterPanel>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       widget.printerController.refreshVisibleState();
+      widget.sessionController.loadCurrentStoreReceiptSettings();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _PrinterPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncReceiptFooterText();
+  }
+
+  void _syncReceiptFooterText() {
+    final nextText = widget.sessionController.storeReceiptFooterText;
+    if (_receiptFooterController.text == nextText) {
+      return;
+    }
+    _receiptFooterController.value = TextEditingValue(
+      text: nextText,
+      selection: TextSelection.collapsed(offset: nextText.length),
+    );
+  }
+
+  Future<void> _saveReceiptFooterText() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final success = await widget.sessionController.updateStoreReceiptFooterText(
+      _receiptFooterController.text,
+    );
+    if (!mounted) {
+      return;
+    }
+    if (success) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('收據自訂內容已更新。')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: widget.printerController,
+      animation: Listenable.merge([
+        widget.printerController,
+        widget.sessionController,
+      ]),
       builder: (context, _) {
         final printerController = widget.printerController;
+        final sessionController = widget.sessionController;
         final selected = printerController.selectedPrinter;
         final selectedClassic = printerController.selectedClassicDevice;
         final classicStatus = printerController.classicStatus;
+        _syncReceiptFooterText();
 
         return Container(
           padding: const EdgeInsets.all(18),
@@ -2550,6 +2608,66 @@ class _PrinterPanelState extends State<_PrinterPanel>
                 ),
                 value: printerController.useAndroidSystemPrint,
                 onChanged: printerController.setUseAndroidSystemPrint,
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF101827),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF243047)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '收據自訂內容',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      '這段內容會印在熱感收據與 Android 系統列印單據下方，並與後台共用同一份門市設定。',
+                      style: TextStyle(color: Colors.white60),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _receiptFooterController,
+                      minLines: 3,
+                      maxLines: 6,
+                      maxLength: 1000,
+                      decoration: const InputDecoration(
+                        hintText: '例如：\\n歡迎再次光臨\\n營業時間 10:00 - 22:00',
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        FilledButton.icon(
+                          onPressed: sessionController.receiptFooterSaving
+                              ? null
+                              : _saveReceiptFooterText,
+                          icon: const Icon(Icons.save_outlined),
+                          label: Text(
+                            sessionController.receiptFooterSaving
+                                ? '儲存中...'
+                                : '儲存內容',
+                          ),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: sessionController.receiptFooterSaving
+                              ? null
+                              : () {
+                                  _receiptFooterController.clear();
+                                },
+                          icon: const Icon(Icons.clear_rounded),
+                          label: const Text('清空'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
               if (printerController.statusMessage.isNotEmpty) ...[
                 const SizedBox(height: 8),

@@ -65,4 +65,36 @@ class AuthService {
   Future<void> healthCheck() async {
     await _apiClient.get('/api/v1/health');
   }
+
+  Future<StoreReceiptSettings> fetchCurrentStoreReceiptSettings(
+    String accessToken,
+  ) async {
+    final json = await _apiClient.get(
+      '/api/v1/auth/stores/current/receipt-settings',
+      accessToken: accessToken,
+    );
+
+    return ApiEnvelope<StoreReceiptSettings>.fromJson(
+      json,
+      StoreReceiptSettings.fromJson,
+    ).data;
+  }
+
+  Future<StoreReceiptSettings> updateCurrentStoreReceiptSettings({
+    required String accessToken,
+    required String receiptFooterText,
+  }) async {
+    final json = await _apiClient.put(
+      '/api/v1/auth/stores/current/receipt-settings',
+      accessToken: accessToken,
+      body: {
+        'receiptFooterText': receiptFooterText,
+      },
+    );
+
+    return ApiEnvelope<StoreReceiptSettings>.fromJson(
+      json,
+      StoreReceiptSettings.fromJson,
+    ).data;
+  }
 }

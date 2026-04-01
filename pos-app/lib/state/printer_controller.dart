@@ -384,6 +384,7 @@ class PrinterController extends ChangeNotifier {
     required List<PosCartLine> lines,
     String? storeCode,
     String? staffName,
+    String? receiptFooterText,
   }) async {
     if (!autoPrintReceipt) {
       return;
@@ -402,6 +403,7 @@ class PrinterController extends ChangeNotifier {
           lines: lines,
           storeCode: storeCode,
           staffName: staffName,
+          receiptFooterText: receiptFooterText,
         );
       } else if (selectedClassicDevice != null) {
         await _printerService.printClassicOrderReceipt(
@@ -410,6 +412,7 @@ class PrinterController extends ChangeNotifier {
           lines: lines,
           storeCode: storeCode,
           staffName: staffName,
+          receiptFooterText: receiptFooterText,
         );
       } else {
         final printer = await _ensureSelectedPrinterConnected();
@@ -423,6 +426,7 @@ class PrinterController extends ChangeNotifier {
           lines: lines,
           storeCode: storeCode,
           staffName: staffName,
+          receiptFooterText: receiptFooterText,
         );
       }
       statusMessage = useAndroidSystemPrint
@@ -441,6 +445,7 @@ class PrinterController extends ChangeNotifier {
     required List<PosCartLine> lines,
     String? storeCode,
     String? staffName,
+    String? receiptFooterText,
   }) async {
     printing = true;
     errorMessage = '';
@@ -454,6 +459,7 @@ class PrinterController extends ChangeNotifier {
         lines: lines,
         storeCode: storeCode,
         staffName: staffName,
+        receiptFooterText: receiptFooterText,
       );
       statusMessage =
           '\u5df2\u6253\u958b Android \u7cfb\u7d71\u5217\u5370\uff0c\u8acb\u9078\u64c7\u4e00\u822c\u5370\u8868\u6a5f\u5217\u5370\u8a02\u55ae ${receipt.orderNumber}\u3002';

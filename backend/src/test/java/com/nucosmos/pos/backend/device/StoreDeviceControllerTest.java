@@ -11,6 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -36,7 +37,8 @@ class StoreDeviceControllerTest {
                         .header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(1))
-                .andExpect(jsonPath("$.data[0].code").value("TW001"));
+                .andExpect(jsonPath("$.data[0].code").value("TW001"))
+                .andExpect(jsonPath("$.data[0].receiptFooterText").value(""));
 
         mockMvc.perform(get("/api/v1/admin/devices")
                         .param("storeCode", "TW001")
@@ -45,6 +47,18 @@ class StoreDeviceControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[*].deviceCode", hasItem("POS-TABLET-001")))
                 .andExpect(jsonPath("$.data[*].platform", hasItem("ANDROID")));
+
+        mockMvc.perform(put("/api/v1/admin/stores/{storeId}/receipt-settings", "11111111-1111-1111-1111-111111111111")
+                        .header("Authorization", "Bearer " + managerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "receiptFooterText": "門市備註\\n感謝您的光臨"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.storeCode").value("TW001"))
+                .andExpect(jsonPath("$.data.receiptFooterText").value("門市備註\n感謝您的光臨"));
     }
 
     @Test

@@ -89,12 +89,14 @@ class PrinterService {
     required List<PosCartLine> lines,
     String? storeCode,
     String? staffName,
+    String? receiptFooterText,
   }) async {
     final bytes = await _buildOrderReceiptBytes(
       receipt: receipt,
       lines: lines,
       storeCode: storeCode,
       staffName: staffName,
+      receiptFooterText: receiptFooterText,
     );
     await _printClassicBytes(device, bytes);
   }
@@ -115,6 +117,7 @@ class PrinterService {
     required List<PosCartLine> lines,
     String? storeCode,
     String? staffName,
+    String? receiptFooterText,
   }) async {
     await _androidPrintChannel.invokeMethod(
       'printSystemDocument',
@@ -125,6 +128,7 @@ class PrinterService {
           lines: lines,
           storeCode: storeCode,
           staffName: staffName,
+          receiptFooterText: receiptFooterText,
         ),
       },
     );
@@ -159,12 +163,14 @@ class PrinterService {
     required List<PosCartLine> lines,
     String? storeCode,
     String? staffName,
+    String? receiptFooterText,
   }) async {
     final bytes = await _buildOrderReceiptBytes(
       receipt: receipt,
       lines: lines,
       storeCode: storeCode,
       staffName: staffName,
+      receiptFooterText: receiptFooterText,
     );
     await _plugin.printData(printer, bytes, longData: true);
   }
@@ -224,6 +230,7 @@ class PrinterService {
     required List<PosCartLine> lines,
     String? storeCode,
     String? staffName,
+    String? receiptFooterText,
   }) async {
     final profile = await CapabilityProfile.load();
     final generator = Generator(PaperSize.mm80, profile);
@@ -443,6 +450,22 @@ class PrinterService {
       'NUCOSMOS POS',
       styles: const PosStyles(align: PosAlign.center),
     ));
+    final normalizedFooter = _normalizeReceiptFooterText(receiptFooterText);
+    if (normalizedFooter.isNotEmpty) {
+      bytes.addAll(generator.feed(1));
+      bytes.addAll(generator.hr());
+      for (final line in normalizedFooter.split('\n')) {
+        final safeLine = _thermalSafe(line, fallback: '');
+        if (safeLine.trim().isNotEmpty) {
+          bytes.addAll(
+            generator.text(
+              safeLine,
+              styles: const PosStyles(align: PosAlign.center),
+            ),
+          );
+        }
+      }
+    }
     bytes.addAll(generator.feed(2));
     bytes.addAll(generator.cut());
     return bytes;
@@ -465,20 +488,20 @@ class PrinterService {
     const width = 40;
     return [
       _centerText('NUCOSMOS', width),
-      _centerText('系統列印測試頁', width),
+      _centerText('\u5370\u8868\u6a5f\u6e2c\u8a66\u9801', width),
       '=' * width,
-      _twoColumn('列印時間', _formatDateTime(now), width),
-      _twoColumn('列印模式', 'Android 系統列印', width),
+      _twoColumn('\u5217\u5370\u6642\u9593', _formatDateTime(now), width),
+      _twoColumn('\u5217\u5370\u985e\u578b', 'Android \u7cfb\u7d71\u5217\u5370', width),
       '-' * width,
-      '列印測試頁會透過 Android 系統列印介面送出。',
-      '請在 Android 列印視窗中選擇可用的印表機。',
-      '可搭配 HP、Brother、Canon、Epson 等一般印表機。',
+      '\u9019\u662f Android \u7cfb\u7d71\u5217\u5370\u7684\u6e2c\u8a66\u9801\u3002',
+      '\u5982\u679c\u756b\u9762\u6709\u8df3\u51fa\u7cfb\u7d71\u5217\u5370\u9078\u55ae\uff0c\u4ee3\u8868\u4e00\u822c\u5370\u8868\u6a5f\u5217\u5370\u5165\u53e3\u6b63\u5e38\u3002',
+      '\u53ef\u642d\u914d HP\u3001Brother\u3001Canon\u3001Epson \u7b49\u4e00\u822c\u5370\u8868\u6a5f\u6e2c\u8a66\u3002',
       '',
-      '如果要列印門市消費單據，請先完成一筆結帳。',
-      '完成後可透過系統列印輸出顧客聯與店家留存聯。',
+      '\u82e5\u4f60\u8981\u5217\u5370 POS \u71b1\u611f\u6536\u64da\uff0c\u8acb\u6539\u7528\u4e0a\u65b9\u7684\u71b1\u611f\u6a5f\u6383\u63cf\u8207\u6e2c\u8a66\u6309\u9215\u3002',
+      '\u7cfb\u7d71\u5217\u5370\u9069\u5408\u5e97\u5bb6\u7559\u5b58\u806f\u3001\u4e00\u822c\u8fa6\u516c\u5ba4\u5370\u8868\u6a5f\u8207 A4 \u55ae\u64da\u3002',
       '-' * width,
       _centerText('NUCOSMOS POS', width),
-    ].join('\n');
+    ].join('\\n');
   }
 
   String _buildSystemOrderDocument({
@@ -486,23 +509,26 @@ class PrinterService {
     required List<PosCartLine> lines,
     String? storeCode,
     String? staffName,
+    String? receiptFooterText,
   }) {
     return [
       _buildSystemOrderCopy(
-        copyLabel: '顧客聯',
+        copyLabel: '\u9867\u5ba2\u806f',
         receipt: receipt,
         lines: lines,
         storeCode: storeCode,
         staffName: staffName,
+        receiptFooterText: receiptFooterText,
       ),
       _buildSystemOrderCopy(
-        copyLabel: '店家留存聯',
+        copyLabel: '\u5e97\u5bb6\u7559\u5b58\u806f',
         receipt: receipt,
         lines: lines,
         storeCode: storeCode,
         staffName: staffName,
+        receiptFooterText: receiptFooterText,
       ),
-    ].join('\f');
+    ].join('\\f');
   }
 
   String _buildSystemOrderCopy({
@@ -511,34 +537,33 @@ class PrinterService {
     required List<PosCartLine> lines,
     String? storeCode,
     String? staffName,
+    String? receiptFooterText,
   }) {
     const width = 42;
     final printedAt = _formatDateTime(DateTime.now());
     final buffer = StringBuffer()
       ..writeln(_centerText('NUCOSMOS', width))
-      ..writeln(_centerText('門市消費單據', width))
+      ..writeln(_centerText('\u9580\u5e02\u6d88\u8cbb\u55ae\u64da', width))
       ..writeln(_centerText(copyLabel, width));
 
     if (storeCode != null && storeCode.trim().isNotEmpty) {
-      buffer.writeln(_centerText('門市：$storeCode', width));
+      buffer.writeln(_centerText('\u9580\u5e02\uff1a$storeCode', width));
     }
 
     buffer
       ..writeln('=' * width)
-      ..writeln(_twoColumn('訂單編號', receipt.orderNumber, width))
-      ..writeln(_twoColumn('列印時間', printedAt, width))
-      ..writeln(
-          _twoColumn('付款方式', _paymentMethodLabel(receipt.paymentMethod), width))
-      ..writeln(_twoColumn(
-          '付款狀態', _paymentStatusLabel(receipt.paymentStatus), width));
+      ..writeln(_twoColumn('\u8a02\u55ae\u7de8\u865f', receipt.orderNumber, width))
+      ..writeln(_twoColumn('\u5217\u5370\u6642\u9593', printedAt, width))
+      ..writeln(_twoColumn('\u4ed8\u6b3e\u65b9\u5f0f', _paymentMethodLabel(receipt.paymentMethod), width))
+      ..writeln(_twoColumn('\u4ed8\u6b3e\u72c0\u614b', _paymentStatusLabel(receipt.paymentStatus), width));
 
     if (staffName != null && staffName.trim().isNotEmpty) {
-      buffer.writeln(_twoColumn('收銀人員', staffName.trim(), width));
+      buffer.writeln(_twoColumn('\u6536\u9280\u4eba\u54e1', staffName.trim(), width));
     }
 
     buffer
       ..writeln('-' * width)
-      ..writeln(_twoColumn('品項', '金額', width))
+      ..writeln(_twoColumn('\u5546\u54c1', '\u91d1\u984d', width))
       ..writeln('-' * width);
 
     for (final line in lines) {
@@ -563,39 +588,58 @@ class PrinterService {
 
     buffer
       ..writeln('-' * width)
-      ..writeln(_twoColumn('品項數量', '${receipt.itemCount}', width))
-      ..writeln(_twoColumn('小計', _currency(receipt.subtotalAmount), width));
+      ..writeln(_twoColumn('\u54c1\u9805\u6578\u91cf', '${receipt.itemCount}', width))
+      ..writeln(_twoColumn('\u5c0f\u8a08', _currency(receipt.subtotalAmount), width));
 
     if (receipt.discountAmount > 0) {
-      buffer.writeln(
-          _twoColumn('優惠', '-${_currency(receipt.discountAmount)}', width));
+      buffer.writeln(_twoColumn('\u512a\u60e0', '-${_currency(receipt.discountAmount)}', width));
       final discountTypeLabel = _discountTypeLabel(receipt.discountType);
       if (discountTypeLabel != null) {
-        buffer.writeln('優惠類型：$discountTypeLabel');
+        buffer.writeln('\u512a\u60e0\u985e\u578b\uff1a$discountTypeLabel');
       }
       final discountValueLabel = _discountValueLabel(receipt);
       if (discountValueLabel != null) {
-        buffer.writeln('優惠內容：$discountValueLabel');
+        buffer.writeln('\u512a\u60e0\u5167\u5bb9\uff1a$discountValueLabel');
       }
       if (receipt.discountNote?.trim().isNotEmpty ?? false) {
-        buffer.writeln('優惠說明：${receipt.discountNote!.trim()}');
+        buffer.writeln('\u512a\u60e0\u8aaa\u660e\uff1a${receipt.discountNote!.trim()}');
       }
     }
 
     buffer
-      ..writeln(_twoColumn('合計', _currency(receipt.totalAmount), width))
-      ..writeln(_twoColumn('實收', _currency(receipt.paidAmount), width));
+      ..writeln(_twoColumn('\u5408\u8a08', _currency(receipt.totalAmount), width))
+      ..writeln(_twoColumn('\u5be6\u6536', _currency(receipt.paidAmount), width));
 
     if (receipt.changeAmount > 0) {
-      buffer.writeln(_twoColumn('找零', _currency(receipt.changeAmount), width));
+      buffer.writeln(_twoColumn('\u627e\u96f6', _currency(receipt.changeAmount), width));
     }
 
     buffer
       ..writeln('=' * width)
-      ..writeln(_centerText('感謝您的光臨', width))
+      ..writeln(_centerText('\u611f\u8b1d\u60a8\u7684\u5149\u81e8', width))
       ..writeln(_centerText('NUCOSMOS POS', width));
 
+    final normalizedFooter = _normalizeReceiptFooterText(receiptFooterText);
+    if (normalizedFooter.isNotEmpty) {
+      buffer
+        ..writeln('-' * width)
+        ..writeln(_centerText('\u9580\u5e02\u5099\u8a3b', width));
+      for (final line in normalizedFooter.split('\\n')) {
+        final trimmedLine = line.trim();
+        if (trimmedLine.isNotEmpty) {
+          buffer.writeln(trimmedLine);
+        }
+      }
+    }
+
     return buffer.toString().trimRight();
+  }
+
+  String _normalizeReceiptFooterText(String? value) {
+    if (value == null) {
+      return '';
+    }
+    return value.replaceAll('\\r\\n', '\\n').trim();
   }
 
   String _centerText(String text, int width) {
@@ -616,19 +660,19 @@ class PrinterService {
     }
 
     final rightIndent = (width - normalizedRight.length).clamp(0, width);
-    return '$normalizedLeft\n${' ' * rightIndent}$normalizedRight';
+    return '$normalizedLeft\\n${' ' * rightIndent}$normalizedRight';
   }
 
   String _paymentStatusLabel(String value) {
     switch (value.trim().toUpperCase()) {
       case 'PAID':
-        return '已付款';
+        return '\u5df2\u4ed8\u6b3e';
       case 'PENDING':
-        return '待付款';
+        return '\u5f85\u4ed8\u6b3e';
       case 'FAILED':
-        return '付款失敗';
+        return '\u4ed8\u6b3e\u5931\u6557';
       case 'REFUNDED':
-        return '已退款';
+        return '\u5df2\u9000\u6b3e';
       default:
         return value;
     }
@@ -637,24 +681,24 @@ class PrinterService {
   String _paymentMethodLabel(String value) {
     switch (value.trim().toUpperCase()) {
       case 'CASH':
-        return '現金';
+        return '\u73fe\u91d1';
       case 'CARD':
-        return '刷卡';
+        return '\u5237\u5361';
       case 'OTHER':
-        return '招待';
+        return '\u62db\u5f85';
       default:
-        return value.isEmpty ? '未設定' : value;
+        return value.isEmpty ? '\u672a\u6307\u5b9a' : value;
     }
   }
 
   String? _discountTypeLabel(CheckoutDiscountType? type) {
     switch (type) {
       case CheckoutDiscountType.percentage:
-        return '折扣';
+        return '\u6298\u6263';
       case CheckoutDiscountType.amount:
-        return '抵用';
+        return '\u62b5\u7528';
       case CheckoutDiscountType.complimentary:
-        return '招待';
+        return '\u62db\u5f85';
       case null:
         return null;
     }
@@ -674,7 +718,7 @@ class PrinterService {
         }
         return _currency(receipt.discountValue!);
       case CheckoutDiscountType.complimentary:
-        return '整筆招待';
+        return '\u6574\u7b46\u62db\u5f85';
       case null:
         return null;
     }

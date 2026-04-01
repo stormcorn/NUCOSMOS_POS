@@ -2,6 +2,8 @@ package com.nucosmos.pos.backend.auth;
 
 import com.nucosmos.pos.backend.common.api.ApiResponse;
 import com.nucosmos.pos.backend.common.exception.UnauthorizedException;
+import com.nucosmos.pos.backend.store.StoreReceiptSettingsRequest;
+import com.nucosmos.pos.backend.store.StoreReceiptSettingsResponse;
 import com.nucosmos.pos.backend.store.StoreSummaryResponse;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
@@ -80,6 +82,23 @@ public class AuthController {
     public ApiResponse<CurrentSessionResponse> me(Authentication authentication) {
         AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
         return ApiResponse.ok(pinAuthService.currentSession(user));
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/stores/current/receipt-settings")
+    public ApiResponse<StoreReceiptSettingsResponse> currentStoreReceiptSettings(Authentication authentication) {
+        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+        return ApiResponse.ok(pinAuthService.currentStoreReceiptSettings(user));
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @PutMapping("/stores/current/receipt-settings")
+    public ApiResponse<StoreReceiptSettingsResponse> updateCurrentStoreReceiptSettings(
+            Authentication authentication,
+            @Valid @RequestBody StoreReceiptSettingsRequest request
+    ) {
+        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+        return ApiResponse.ok(pinAuthService.updateCurrentStoreReceiptSettings(user, request));
     }
 
     @PreAuthorize("isAuthenticated()")

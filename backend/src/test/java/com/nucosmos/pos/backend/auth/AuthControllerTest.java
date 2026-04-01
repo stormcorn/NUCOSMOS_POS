@@ -76,7 +76,8 @@ class AuthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(1))
                 .andExpect(jsonPath("$.data[0].code").value("TW001"))
-                .andExpect(jsonPath("$.data[0].name").value("NUCOSMOS Demo Store"));
+                .andExpect(jsonPath("$.data[0].name").value("NUCOSMOS Demo Store"))
+                .andExpect(jsonPath("$.data[0].receiptFooterText").value(""));
     }
 
     @Test
@@ -253,6 +254,36 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.activeRole").value("MANAGER"))
                 .andExpect(jsonPath("$.data.permissionKeys").isArray())
                 .andExpect(jsonPath("$.data.permissionKeys").isNotEmpty());
+    }
+
+    @Test
+    void shouldGetAndUpdateCurrentStoreReceiptSettings() throws Exception {
+        String token = TestLoginSupport.loginAndExtractToken(mockMvc, """
+                {
+                  "storeCode": "TW001",
+                  "roleCode": "MANAGER",
+                  "pin": "999999",
+                  "deviceCode": "POS-TABLET-001"
+                }
+                """);
+
+        mockMvc.perform(get("/api/v1/auth/stores/current/receipt-settings")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.storeCode").value("TW001"))
+                .andExpect(jsonPath("$.data.receiptFooterText").value(""));
+
+        mockMvc.perform(put("/api/v1/auth/stores/current/receipt-settings")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "receiptFooterText": "請妥善保管此收據\\n歡迎再次光臨"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.storeCode").value("TW001"))
+                .andExpect(jsonPath("$.data.receiptFooterText").value("請妥善保管此收據\n歡迎再次光臨"));
     }
 
     @Test

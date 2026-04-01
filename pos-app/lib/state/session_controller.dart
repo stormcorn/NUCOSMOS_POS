@@ -71,6 +71,10 @@ class SessionController extends ChangeNotifier {
   String _deviceSummary = 'POS Tablet';
   String get deviceSummary => _deviceSummary;
 
+  String _storeReceiptFooterText = '';
+  String get storeReceiptFooterText => _storeReceiptFooterText;
+  bool receiptFooterSaving = false;
+
   CheckoutDiscount? _discount;
   CheckoutDiscount? get discount => _discount;
   double get discountAmount => _discount?.amountForSubtotal(cartSubtotal) ?? 0;
@@ -198,6 +202,7 @@ class SessionController extends ChangeNotifier {
         () => _authService.currentSession(storedToken),
       );
       await loadProducts(showLoading: false);
+      await loadCurrentStoreReceiptSettings(notify: false);
       if (canUseQuickReceive) {
         await loadQuickReceiveCatalog(showLoading: false);
       }
@@ -247,6 +252,7 @@ class SessionController extends ChangeNotifier {
       await prefs.setString(_apiBaseUrlKey, _apiBaseUrl);
 
       await loadProducts(showLoading: false);
+      await loadCurrentStoreReceiptSettings(notify: false);
       if (canUseQuickReceive) {
         await loadQuickReceiveCatalog(showLoading: false);
       } else {
@@ -748,6 +754,7 @@ class SessionController extends ChangeNotifier {
     } else {
       await prefs.setString(_selectedStoreCodeKey, value);
     }
+    _storeReceiptFooterText = _storeForCode(value)?.receiptFooterText ?? '';
     notifyListeners();
   }
 
@@ -769,17 +776,25 @@ class SessionController extends ChangeNotifier {
             ]
           : stores;
       _ensureSelectedStoreCode();
+      _storeReceiptFooterText =
+          _storeForCode(selectedStoreCode)?.receiptFooterText ?? '';
       errorMessage = '';
     } on ApiException catch (error) {
       availableStores = _fallbackStores();
       _ensureSelectedStoreCode();
+      _storeReceiptFooterText =
+          _storeForCode(selectedStoreCode)?.receiptFooterText ?? '';
       errorMessage = error.message;
     } on Exception {
       availableStores = _fallbackStores();
       _ensureSelectedStoreCode();
+      _storeReceiptFooterText =
+          _storeForCode(selectedStoreCode)?.receiptFooterText ?? '';
     } catch (_) {
       availableStores = _fallbackStores();
       _ensureSelectedStoreCode();
+      _storeReceiptFooterText =
+          _storeForCode(selectedStoreCode)?.receiptFooterText ?? '';
     } finally {
       if (notify) {
         notifyListeners();
@@ -824,8 +839,67 @@ class SessionController extends ChangeNotifier {
         name: normalized == _fallbackStoreCode
             ? 'NUCOSMOS Demo Store'
             : normalized,
+        receiptFooterText: '',
       ),
     ];
+  }
+
+  Future<void> loadCurrentStoreReceiptSettings({bool notify = true}) async {
+    final token = accessToken;
+    if (token == null || token.isEmpty) {
+      return;
+    }
+
+    try {
+      final settings = await _runWithApiFallback(
+        () => _authService.fetchCurrentStoreReceiptSettings(token),
+      );
+      _storeReceiptFooterText = settings.receiptFooterText;
+      _replaceStoreReceiptFooterText(
+        storeCode: settings.storeCode,
+        receiptFooterText: settings.receiptFooterText,
+      );
+    } on ApiException catch (error) {
+      errorMessage = error.message;
+    }
+
+    if (notify) {
+      notifyListeners();
+    }
+  }
+
+  Future<bool> updateStoreReceiptFooterText(String value) async {
+    final token = accessToken;
+    if (token == null || token.isEmpty) {
+      errorMessage = '請先登入後再更新收據內容。';
+      notifyListeners();
+      return false;
+    }
+
+    receiptFooterSaving = true;
+    errorMessage = '';
+    notifyListeners();
+
+    try {
+      final settings = await _runWithApiFallback(
+        () => _authService.updateCurrentStoreReceiptSettings(
+          accessToken: token,
+          receiptFooterText: value,
+        ),
+      );
+      _storeReceiptFooterText = settings.receiptFooterText;
+      _replaceStoreReceiptFooterText(
+        storeCode: settings.storeCode,
+        receiptFooterText: settings.receiptFooterText,
+      );
+      return true;
+    } on ApiException catch (error) {
+      errorMessage = error.message;
+      return false;
+    } finally {
+      receiptFooterSaving = false;
+      notifyListeners();
+    }
   }
 
   Future<T> _runWithApiFallback<T>(Future<T> Function() action) async {
@@ -966,6 +1040,33 @@ class SessionController extends ChangeNotifier {
     }
 
     return null;
+  }
+
+  StoreSummary? _storeForCode(String? code) {
+    if (code == null || code.isEmpty) {
+      return null;
+    }
+    for (final store in availableStores) {
+      if (store.code == code) {
+        return store;
+      }
+    }
+    return null;
+  }
+
+  void _replaceStoreReceiptFooterText({
+    required String storeCode,
+    required String receiptFooterText,
+  }) {
+    availableStores = availableStores
+        .map((store) => store.code == storeCode
+            ? StoreSummary(
+                code: store.code,
+                name: store.name,
+                receiptFooterText: receiptFooterText,
+              )
+            : store)
+        .toList(growable: false);
   }
 
   List<PosCartSelection> _normalizeSelections(

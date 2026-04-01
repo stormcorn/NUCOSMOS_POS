@@ -17,6 +17,7 @@ import ProcurementView from "@/views/ProcurementView.vue";
 import ProductCategoriesView from "@/views/ProductCategoriesView.vue";
 import ProductsView from "@/views/ProductsView.vue";
 import RegisterView from "@/views/RegisterView.vue";
+import ReceiptFooterSettingsView from "@/views/ReceiptFooterSettingsView.vue";
 import ReportsView from "@/views/ReportsView.vue";
 import ReplenishmentView from "@/views/ReplenishmentView.vue";
 import RolePermissionsView from "@/views/RolePermissionsView.vue";
@@ -214,6 +215,16 @@ const router = createRouter({
         title: "Roles",
         requiresAuth: true,
         permissionKeys: [PERMISSIONS.ROLES_VIEW],
+      },
+    },
+    {
+      path: "/settings/receipt-footer",
+      name: "settings-receipt-footer",
+      component: ReceiptFooterSettingsView,
+      meta: {
+        title: "Receipt Footer",
+        requiresAuth: true,
+        permissionKeys: [PERMISSIONS.SETTINGS_VIEW],
       },
     },
     {

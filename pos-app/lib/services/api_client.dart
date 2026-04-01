@@ -40,6 +40,22 @@ class ApiClient {
     return _parseResponse(response);
   }
 
+  Future<Map<String, dynamic>> put(
+    String path, {
+    Map<String, dynamic>? body,
+    String? accessToken,
+  }) async {
+    final response = await http
+        .put(
+          Uri.parse('${baseUrl.trim()}$path'),
+          headers: _headers(accessToken: accessToken),
+          body: body == null ? null : jsonEncode(body),
+        )
+        .timeout(requestTimeout);
+
+    return _parseResponse(response);
+  }
+
   Map<String, String> _headers({String? accessToken}) {
     return {
       'Content-Type': 'application/json',

@@ -9,6 +9,8 @@ import com.nucosmos.pos.backend.common.exception.UnauthorizedException;
 import com.nucosmos.pos.backend.device.persistence.DeviceEntity;
 import com.nucosmos.pos.backend.device.repository.DeviceRepository;
 import com.nucosmos.pos.backend.store.StoreSummaryResponse;
+import com.nucosmos.pos.backend.store.StoreReceiptSettingsRequest;
+import com.nucosmos.pos.backend.store.StoreReceiptSettingsResponse;
 import com.nucosmos.pos.backend.store.persistence.StoreEntity;
 import com.nucosmos.pos.backend.store.repository.StoreRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -64,7 +66,8 @@ public class PinAuthService {
                         store.getName(),
                         store.getTimezone(),
                         store.getCurrencyCode(),
-                        store.getStatus()
+                        store.getStatus(),
+                        defaultString(store.getReceiptFooterText())
                 ))
                 .toList();
     }
@@ -98,7 +101,7 @@ public class PinAuthService {
                 jwtService.generateToken(matchedUser.getId().toString(), claims),
                 jwtService.calculateExpiresAt(),
                 device == null ? "" : device.getDeviceCode(),
-                new AuthStoreResponse(store.getCode(), store.getName()),
+                new AuthStoreResponse(store.getCode(), store.getName(), defaultString(store.getReceiptFooterText())),
                 new AuthStaffResponse(
                         matchedUser.getId(),
                         matchedUser.getEmployeeCode(),
@@ -120,6 +123,34 @@ public class PinAuthService {
                 user.roleCodes(),
                 user.permissionKeys(),
                 user.deviceCode()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public StoreReceiptSettingsResponse currentStoreReceiptSettings(AuthenticatedUser user) {
+        StoreEntity store = storeRepository.findByCodeAndStatus(user.storeCode(), ACTIVE_STATUS)
+                .orElseThrow(() -> new UnauthorizedException("Store is not available"));
+        return new StoreReceiptSettingsResponse(
+                store.getId(),
+                store.getCode(),
+                store.getName(),
+                defaultString(store.getReceiptFooterText())
+        );
+    }
+
+    @Transactional
+    public StoreReceiptSettingsResponse updateCurrentStoreReceiptSettings(
+            AuthenticatedUser user,
+            StoreReceiptSettingsRequest request
+    ) {
+        StoreEntity store = storeRepository.findByCodeAndStatus(user.storeCode(), ACTIVE_STATUS)
+                .orElseThrow(() -> new UnauthorizedException("Store is not available"));
+        store.setReceiptFooterText(normalizeReceiptFooterText(request.receiptFooterText()));
+        return new StoreReceiptSettingsResponse(
+                store.getId(),
+                store.getCode(),
+                store.getName(),
+                defaultString(store.getReceiptFooterText())
         );
     }
 
@@ -212,5 +243,16 @@ public class PinAuthService {
             return request.devicePlatform().trim().toUpperCase();
         }
         return "ANDROID";
+    }
+
+    private String normalizeReceiptFooterText(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "";
+        }
+        return value.replace("\r\n", "\n").trim();
+    }
+
+    private String defaultString(String value) {
+        return value == null ? "" : value;
     }
 }

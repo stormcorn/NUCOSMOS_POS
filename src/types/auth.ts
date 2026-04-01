@@ -41,6 +41,7 @@ export type RegistrationCompleteResponse = {
 export type AuthStore = {
   code: string;
   name: string;
+  receiptFooterText?: string;
 };
 
 export type AuthStaff = {

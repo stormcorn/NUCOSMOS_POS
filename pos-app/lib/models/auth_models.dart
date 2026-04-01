@@ -2,15 +2,38 @@ class StoreSummary {
   const StoreSummary({
     required this.code,
     required this.name,
+    this.receiptFooterText = '',
   });
 
   final String code;
   final String name;
+  final String receiptFooterText;
 
   factory StoreSummary.fromJson(Map<String, dynamic> json) {
     return StoreSummary(
       code: json['code'] as String? ?? '',
       name: json['name'] as String? ?? '',
+      receiptFooterText: json['receiptFooterText'] as String? ?? '',
+    );
+  }
+}
+
+class StoreReceiptSettings {
+  const StoreReceiptSettings({
+    required this.storeCode,
+    required this.storeName,
+    required this.receiptFooterText,
+  });
+
+  final String storeCode;
+  final String storeName;
+  final String receiptFooterText;
+
+  factory StoreReceiptSettings.fromJson(Map<String, dynamic> json) {
+    return StoreReceiptSettings(
+      storeCode: json['storeCode'] as String? ?? '',
+      storeName: json['storeName'] as String? ?? '',
+      receiptFooterText: json['receiptFooterText'] as String? ?? '',
     );
   }
 }

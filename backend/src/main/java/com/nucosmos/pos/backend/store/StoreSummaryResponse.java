@@ -8,6 +8,7 @@ public record StoreSummaryResponse(
         String name,
         String timezone,
         String currencyCode,
-        String status
+        String status,
+        String receiptFooterText
 ) {
 }

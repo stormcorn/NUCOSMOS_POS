@@ -5,4 +5,12 @@ export type StoreSummary = {
   timezone: string;
   currencyCode: string;
   status: string;
+  receiptFooterText: string;
+};
+
+export type StoreReceiptSettings = {
+  storeId: string;
+  storeCode: string;
+  storeName: string;
+  receiptFooterText: string;
 };

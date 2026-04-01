@@ -5,6 +5,8 @@ import com.nucosmos.pos.backend.common.exception.BadRequestException;
 import com.nucosmos.pos.backend.common.exception.UnauthorizedException;
 import com.nucosmos.pos.backend.device.persistence.DeviceEntity;
 import com.nucosmos.pos.backend.device.repository.DeviceRepository;
+import com.nucosmos.pos.backend.store.StoreReceiptSettingsRequest;
+import com.nucosmos.pos.backend.store.StoreReceiptSettingsResponse;
 import com.nucosmos.pos.backend.store.StoreSummaryResponse;
 import com.nucosmos.pos.backend.store.persistence.StoreEntity;
 import com.nucosmos.pos.backend.store.repository.StoreRepository;
@@ -37,9 +39,28 @@ public class StoreDeviceService {
                         store.getName(),
                         store.getTimezone(),
                         store.getCurrencyCode(),
-                        store.getStatus()
+                        store.getStatus(),
+                        defaultString(store.getReceiptFooterText())
                 ))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public StoreReceiptSettingsResponse getReceiptSettings(java.util.UUID storeId) {
+        StoreEntity store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new BadRequestException("Store not found"));
+        return toReceiptSettingsResponse(store);
+    }
+
+    @Transactional
+    public StoreReceiptSettingsResponse updateReceiptSettings(
+            java.util.UUID storeId,
+            StoreReceiptSettingsRequest request
+    ) {
+        StoreEntity store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new BadRequestException("Store not found"));
+        store.setReceiptFooterText(normalizeReceiptFooterText(request.receiptFooterText()));
+        return toReceiptSettingsResponse(store);
     }
 
     @Transactional(readOnly = true)
@@ -109,5 +130,25 @@ public class StoreDeviceService {
                 device.getStatus(),
                 device.getLastSeenAt()
         );
+    }
+
+    private StoreReceiptSettingsResponse toReceiptSettingsResponse(StoreEntity store) {
+        return new StoreReceiptSettingsResponse(
+                store.getId(),
+                store.getCode(),
+                store.getName(),
+                defaultString(store.getReceiptFooterText())
+        );
+    }
+
+    private String normalizeReceiptFooterText(String value) {
+        if (!StringUtils.hasText(value)) {
+            return "";
+        }
+        return value.replace("\r\n", "\n").trim();
+    }
+
+    private String defaultString(String value) {
+        return value == null ? "" : value;
     }
 }

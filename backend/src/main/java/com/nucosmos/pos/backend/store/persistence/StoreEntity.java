@@ -24,6 +24,9 @@ public class StoreEntity extends BaseEntity {
     @Column(nullable = false, length = 20)
     private String status;
 
+    @Column(name = "receipt_footer_text", length = 1000)
+    private String receiptFooterText;
+
     public String getCode() {
         return code;
     }
@@ -42,5 +45,13 @@ public class StoreEntity extends BaseEntity {
 
     public String getStatus() {
         return status;
+    }
+
+    public String getReceiptFooterText() {
+        return receiptFooterText;
+    }
+
+    public void setReceiptFooterText(String receiptFooterText) {
+        this.receiptFooterText = receiptFooterText;
     }
 }
