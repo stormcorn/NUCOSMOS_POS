@@ -251,6 +251,11 @@
               <div class="muted">兌獎網址：<span id="redeem-url"></span></div>
               <div>會員姓名：<span id="member-name">尚未綁定</span></div>
               <div>會員手機：<span id="member-phone">尚未綁定</span></div>
+              <div>目前點數：<span id="member-points">0</span></div>
+              <div>累積兌換：<span id="member-claims">0</span></div>
+              <div>本次回饋：<span id="reward-message">尚未兌換</span></div>
+              <div>優惠券代碼：<span id="reward-coupon-code">尚未發送</span></div>
+              <div>優惠券內容：<span id="reward-coupon-title">尚未發送</span></div>
             </div>
 
             <div id="claim-form" class="form-grid">
@@ -335,6 +340,14 @@
         document.getElementById("redeem-url").textContent = ticket.redeemUrl;
         document.getElementById("member-name").textContent = ticket.member?.displayName || "尚未綁定";
         document.getElementById("member-phone").textContent = ticket.member?.phoneNumber || "尚未綁定";
+        document.getElementById("member-points").textContent = String(ticket.member?.pointBalance ?? 0);
+        document.getElementById("member-claims").textContent = String(ticket.member?.totalClaims ?? 0);
+        document.getElementById("reward-message").textContent = ticket.rewards?.message || "尚未兌換";
+        document.getElementById("reward-coupon-code").textContent = ticket.rewards?.issuedCoupon?.code || "尚未發送";
+        document.getElementById("reward-coupon-title").textContent =
+          ticket.rewards?.issuedCoupon
+            ? `${ticket.rewards.issuedCoupon.title} (${ticket.rewards.issuedCoupon.discountAmount})`
+            : "尚未發送";
 
         claimCodeInput.value = ticket.claimCode || "";
         displayNameInput.value = ticket.member?.displayName || "";

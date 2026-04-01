@@ -102,6 +102,11 @@ class PublicRedeemControllerTest {
                 .andExpect(jsonPath("$.data.claimable").value(false))
                 .andExpect(jsonPath("$.data.claimedAt").isNotEmpty())
                 .andExpect(jsonPath("$.data.member.displayName").value("王小玉"))
-                .andExpect(jsonPath("$.data.member.phoneNumber").value("+886936993623"));
+                .andExpect(jsonPath("$.data.member.phoneNumber").value("+886936993623"))
+                .andExpect(jsonPath("$.data.member.pointBalance").value(1))
+                .andExpect(jsonPath("$.data.member.totalClaims").value(1))
+                .andExpect(jsonPath("$.data.rewards.awardedPoints").value(1))
+                .andExpect(jsonPath("$.data.rewards.pointsBalance").value(1))
+                .andExpect(jsonPath("$.data.rewards.issuedCoupon").doesNotExist());
     }
 }

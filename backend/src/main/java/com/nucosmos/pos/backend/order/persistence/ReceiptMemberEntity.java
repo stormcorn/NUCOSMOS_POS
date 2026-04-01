@@ -23,6 +23,12 @@ public class ReceiptMemberEntity extends BaseEntity {
     @Column
     private OffsetDateTime lastClaimedAt;
 
+    @Column(nullable = false)
+    private int pointBalance;
+
+    @Column(nullable = false)
+    private int totalClaims;
+
     protected ReceiptMemberEntity() {
     }
 
@@ -48,6 +54,14 @@ public class ReceiptMemberEntity extends BaseEntity {
         return lastClaimedAt;
     }
 
+    public int getPointBalance() {
+        return pointBalance;
+    }
+
+    public int getTotalClaims() {
+        return totalClaims;
+    }
+
     public void updateProfile(String displayName, String phoneNumber) {
         this.displayName = displayName;
         this.phoneNumber = phoneNumber;
@@ -55,5 +69,7 @@ public class ReceiptMemberEntity extends BaseEntity {
 
     public void markClaimed(OffsetDateTime claimedAt) {
         this.lastClaimedAt = claimedAt;
+        this.pointBalance += 1;
+        this.totalClaims += 1;
     }
 }

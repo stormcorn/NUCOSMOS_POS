@@ -43,6 +43,13 @@ Table: `receipt_members`
 - stores the public member profile collected from the redeem page
 - unique `phone_number`
 - reusable for future points, coupons, and campaign eligibility
+- tracks `point_balance` and `total_claims`
+
+Table: `receipt_coupons`
+
+- stores reward coupons generated from redeem milestones
+- linked to both member and source redemption
+- first MVP issues a coupon automatically when points reach a threshold
 
 ## Eligibility Rules
 
@@ -79,10 +86,17 @@ If a printer path cannot safely render the QR content, it must still print the U
 - allow token-based lookup from QR URL
 - allow manual redeem-code lookup
 - require member name and phone number before a receipt can be claimed
+- show current member points and any coupon issued from this redeem
 - show clear status:
   - ready to redeem
   - already redeemed
   - not eligible
+
+## Reward Rules (MVP v1)
+
+- each successful redeem adds `1` point
+- when a member reaches every `5` points, the system automatically issues one `NT$20` coupon
+- redeem remains one-time only per receipt
 
 ## Deployment Note
 

@@ -3,8 +3,10 @@ package com.nucosmos.pos.backend.order;
 import com.nucosmos.pos.backend.common.exception.NotFoundException;
 import com.nucosmos.pos.backend.common.exception.BadRequestException;
 import com.nucosmos.pos.backend.order.persistence.OrderEntity;
+import com.nucosmos.pos.backend.order.persistence.ReceiptCouponEntity;
 import com.nucosmos.pos.backend.order.persistence.ReceiptMemberEntity;
 import com.nucosmos.pos.backend.order.persistence.ReceiptRedemptionEntity;
+import com.nucosmos.pos.backend.order.repository.ReceiptCouponRepository;
 import com.nucosmos.pos.backend.order.repository.ReceiptMemberRepository;
 import com.nucosmos.pos.backend.order.repository.ReceiptRedemptionRepository;
 import org.springframework.stereotype.Service;
@@ -12,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.security.SecureRandom;
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Locale;
 import java.util.UUID;
@@ -20,21 +23,30 @@ import java.util.UUID;
 public class ReceiptRedemptionService {
 
     private static final char[] CLAIM_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".toCharArray();
+    private static final char[] COUPON_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".toCharArray();
     private static final int CLAIM_CODE_LENGTH = 8;
+    private static final int COUPON_CODE_LENGTH = 10;
     private static final String ACTIVE_STATUS = "ACTIVE";
+    private static final String COUPON_ACTIVE_STATUS = "ACTIVE";
+    private static final int POINTS_PER_CLAIM = 1;
+    private static final int COUPON_POINT_THRESHOLD = 5;
+    private static final BigDecimal COUPON_DISCOUNT_AMOUNT = new BigDecimal("20.00");
 
     private final ReceiptRedemptionRepository receiptRedemptionRepository;
     private final ReceiptMemberRepository receiptMemberRepository;
+    private final ReceiptCouponRepository receiptCouponRepository;
     private final RedeemProperties redeemProperties;
     private final SecureRandom secureRandom = new SecureRandom();
 
     public ReceiptRedemptionService(
             ReceiptRedemptionRepository receiptRedemptionRepository,
             ReceiptMemberRepository receiptMemberRepository,
+            ReceiptCouponRepository receiptCouponRepository,
             RedeemProperties redeemProperties
     ) {
         this.receiptRedemptionRepository = receiptRedemptionRepository;
         this.receiptMemberRepository = receiptMemberRepository;
+        this.receiptCouponRepository = receiptCouponRepository;
         this.redeemProperties = redeemProperties;
     }
 
@@ -90,6 +102,7 @@ public class ReceiptRedemptionService {
             OffsetDateTime claimedAt = OffsetDateTime.now();
             member.markClaimed(claimedAt);
             redemption.markClaimed(claimedAt, member);
+            ensureCouponForThreshold(redemption, member);
         }
 
         return toResponse(redemption);
@@ -134,7 +147,8 @@ public class ReceiptRedemptionService {
                 claimed,
                 claimable,
                 message,
-                toMemberSummary(redemption.getClaimedMember())
+                toMemberSummary(redemption.getClaimedMember()),
+                toRewardSummary(redemption)
         );
     }
 
@@ -160,7 +174,44 @@ public class ReceiptRedemptionService {
         if (member == null) {
             return null;
         }
-        return new ReceiptMemberSummary(member.getDisplayName(), member.getPhoneNumber());
+        return new ReceiptMemberSummary(
+                member.getDisplayName(),
+                member.getPhoneNumber(),
+                member.getPointBalance(),
+                member.getTotalClaims()
+        );
+    }
+
+    private ReceiptRewardSummary toRewardSummary(ReceiptRedemptionEntity redemption) {
+        ReceiptMemberEntity member = redemption.getClaimedMember();
+        if (member == null) {
+            return null;
+        }
+
+        ReceiptCouponSummary couponSummary = receiptCouponRepository.findBySourceRedemption_Id(redemption.getId())
+                .map(this::toCouponSummary)
+                .orElse(null);
+
+        String rewardMessage = couponSummary != null
+                ? "本次兌換已累積 1 點，並自動發送 NT$20 優惠券。"
+                : "本次兌換已累積 1 點。";
+
+        return new ReceiptRewardSummary(
+                POINTS_PER_CLAIM,
+                member.getPointBalance(),
+                couponSummary,
+                rewardMessage
+        );
+    }
+
+    private ReceiptCouponSummary toCouponSummary(ReceiptCouponEntity coupon) {
+        return new ReceiptCouponSummary(
+                coupon.getCouponCode(),
+                coupon.getTitle(),
+                coupon.getDiscountAmount(),
+                coupon.getStatus(),
+                coupon.getIssuedAt()
+        );
     }
 
     private boolean isEligible(OrderEntity order) {
@@ -194,6 +245,35 @@ public class ReceiptRedemptionService {
             code = builder.toString();
         } while (receiptRedemptionRepository.existsByClaimCodeIgnoreCase(code));
         return code;
+    }
+
+    private String generateUniqueCouponCode() {
+        String code;
+        do {
+            StringBuilder builder = new StringBuilder("NC");
+            while (builder.length() < COUPON_CODE_LENGTH + 2) {
+                builder.append(COUPON_CODE_ALPHABET[secureRandom.nextInt(COUPON_CODE_ALPHABET.length)]);
+            }
+            code = builder.toString();
+        } while (receiptCouponRepository.existsByCouponCode(code));
+        return code;
+    }
+
+    private ReceiptCouponEntity ensureCouponForThreshold(ReceiptRedemptionEntity redemption, ReceiptMemberEntity member) {
+        if (member.getPointBalance() <= 0 || member.getPointBalance() % COUPON_POINT_THRESHOLD != 0) {
+            return null;
+        }
+
+        return receiptCouponRepository.findBySourceRedemption_Id(redemption.getId())
+                .orElseGet(() -> receiptCouponRepository.save(new ReceiptCouponEntity(
+                        member,
+                        redemption,
+                        generateUniqueCouponCode(),
+                        "兌獎集點回饋券",
+                        COUPON_DISCOUNT_AMOUNT,
+                        COUPON_ACTIVE_STATUS,
+                        OffsetDateTime.now()
+                )));
     }
 
     private String normalizeToken(String token) {
