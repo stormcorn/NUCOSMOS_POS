@@ -129,6 +129,8 @@ class OrderReceipt {
     required this.paidAmount,
     required this.changeAmount,
     this.discountNote,
+    this.redeemCode,
+    this.redeemUrl,
   });
 
   final String id;
@@ -145,6 +147,8 @@ class OrderReceipt {
   final double paidAmount;
   final double changeAmount;
   final String? discountNote;
+  final String? redeemCode;
+  final String? redeemUrl;
 
   factory OrderReceipt.fromJson(Map<String, dynamic> json) {
     return OrderReceipt(
@@ -164,6 +168,8 @@ class OrderReceipt {
       paidAmount: (json['paidAmount'] as num?)?.toDouble() ?? 0,
       changeAmount: (json['changeAmount'] as num?)?.toDouble() ?? 0,
       discountNote: json['discountNote'] as String?,
+      redeemCode: json['redeemCode'] as String?,
+      redeemUrl: json['redeemUrl'] as String?,
     );
   }
 

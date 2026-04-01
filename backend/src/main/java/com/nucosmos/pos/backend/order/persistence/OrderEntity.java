@@ -12,6 +12,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
@@ -116,6 +117,9 @@ public class OrderEntity extends BaseEntity {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("refundedAt ASC")
     private List<RefundEntity> refunds = new ArrayList<>();
+
+    @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private ReceiptRedemptionEntity receiptRedemption;
 
     protected OrderEntity() {
     }
@@ -336,6 +340,14 @@ public class OrderEntity extends BaseEntity {
 
     public List<RefundEntity> getRefunds() {
         return refunds;
+    }
+
+    public ReceiptRedemptionEntity getReceiptRedemption() {
+        return receiptRedemption;
+    }
+
+    public void setReceiptRedemption(ReceiptRedemptionEntity receiptRedemption) {
+        this.receiptRedemption = receiptRedemption;
     }
 
     private void recalculateProfitMetrics() {

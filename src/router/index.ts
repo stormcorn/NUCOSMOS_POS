@@ -16,6 +16,7 @@ import PackagingInventoryView from "@/views/PackagingInventoryView.vue";
 import ProcurementView from "@/views/ProcurementView.vue";
 import ProductCategoriesView from "@/views/ProductCategoriesView.vue";
 import ProductsView from "@/views/ProductsView.vue";
+import PublicRedeemView from "@/views/PublicRedeemView.vue";
 import RegisterView from "@/views/RegisterView.vue";
 import ReceiptFooterSettingsView from "@/views/ReceiptFooterSettingsView.vue";
 import ReportsView from "@/views/ReportsView.vue";
@@ -40,6 +41,12 @@ const router = createRouter({
       name: "register",
       component: RegisterView,
       meta: { title: "Register", layout: "auth", requiresAuth: false },
+    },
+    {
+      path: "/redeem/:token?",
+      name: "public-redeem",
+      component: PublicRedeemView,
+      meta: { title: "Receipt Redeem", layout: "auth", requiresAuth: false },
     },
     {
       path: "/",

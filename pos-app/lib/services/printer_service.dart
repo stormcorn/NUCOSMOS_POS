@@ -441,6 +441,37 @@ class PrinterService {
         styles: const PosStyles(align: PosAlign.right, bold: true),
       ),
     ]));
+    final redeemCode = receipt.redeemCode?.trim();
+    final redeemUrl = receipt.redeemUrl?.trim();
+    if ((redeemCode?.isNotEmpty ?? false) || (redeemUrl?.isNotEmpty ?? false)) {
+      bytes.addAll(generator.hr());
+      bytes.addAll(generator.text(
+        'Redeem',
+        styles: const PosStyles(align: PosAlign.center, bold: true),
+      ));
+      if (redeemCode != null && redeemCode.isNotEmpty) {
+        bytes.addAll(generator.text('Code: ${_thermalSafe(redeemCode)}'));
+      }
+      if (redeemUrl != null && redeemUrl.isNotEmpty) {
+        bytes.addAll(
+          generator.text(
+            _thermalSafe(redeemUrl, fallback: ''),
+            styles: const PosStyles(align: PosAlign.center),
+          ),
+        );
+        bytes.addAll(generator.feed(1));
+        try {
+          bytes.addAll(generator.qrcode(redeemUrl));
+        } catch (_) {
+          bytes.addAll(
+            generator.text(
+              'Scan the redeem URL online.',
+              styles: const PosStyles(align: PosAlign.center),
+            ),
+          );
+        }
+      }
+    }
     bytes.addAll(generator.feed(1));
     bytes.addAll(generator.text(
       'Thank you for your order',
@@ -612,6 +643,18 @@ class PrinterService {
 
     if (receipt.changeAmount > 0) {
       buffer.writeln(_twoColumn('\u627e\u96f6', _currency(receipt.changeAmount), width));
+    }
+
+    if ((receipt.redeemCode?.trim().isNotEmpty ?? false) || (receipt.redeemUrl?.trim().isNotEmpty ?? false)) {
+      buffer
+        ..writeln('-' * width)
+        ..writeln(_centerText('\u5168\u7db2\u514c\u734e / \u6703\u54e1\u5165\u53e3', width));
+      if (receipt.redeemCode?.trim().isNotEmpty ?? false) {
+        buffer.writeln(_twoColumn('\u514c\u734e\u78bc', receipt.redeemCode!.trim(), width));
+      }
+      if (receipt.redeemUrl?.trim().isNotEmpty ?? false) {
+        buffer.writeln('URL: ${receipt.redeemUrl!.trim()}');
+      }
     }
 
     buffer

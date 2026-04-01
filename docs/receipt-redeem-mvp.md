@@ -1,0 +1,88 @@
+# Receipt Redeem MVP
+
+## Purpose
+
+Turn each printed receipt into a safe public redeem entry on `nucosmos.io`, so customers can:
+
+- scan a QR code or open a redeem URL from the receipt
+- verify the receipt is real
+- confirm whether it has already been claimed
+- complete a first-stage redeem action on the website
+
+This is the foundation for later member, points, coupon, or lucky-draw features.
+
+## Public Entry
+
+- Public page route: `/erp/redeem/:token`
+- Public API:
+  - `GET /api/v1/public/redeem/{token}`
+  - `GET /api/v1/public/redeem/search?code=<claimCode>`
+  - `POST /api/v1/public/redeem/{token}/claim`
+
+## Security Rules
+
+- Do not expose raw order IDs as the redeem credential.
+- Each order uses a unique, non-guessable `public_token`.
+- Each order also has a short `claim_code` for manual input fallback.
+- The public website may show receipt status, but only the token/code determines lookup.
+
+## Backend Data
+
+Table: `receipt_redemptions`
+
+- one row per order
+- `order_id` unique foreign key
+- `public_token` unique
+- `claim_code` unique
+- `claimed_at` nullable
+
+## Eligibility Rules
+
+An order is redeemable only when:
+
+- order is not `VOIDED`
+- payment status is one of:
+  - `PAID`
+  - `PARTIALLY_REFUNDED`
+  - `REFUNDED`
+
+An unpaid order must not be redeemable.
+
+## Receipt Requirements
+
+Both thermal receipts and Android system-print receipts should include:
+
+- redeem code
+- redeem URL
+- QR code when the printer path supports it safely
+
+If a printer path cannot safely render the QR content, it must still print the URL/code text.
+
+## POS / Web Responsibilities
+
+### POS
+
+- receive `redeemCode` and `redeemUrl` from order APIs
+- print them on the receipt
+- never generate redeem tokens locally
+
+### Web Public Page
+
+- allow token-based lookup from QR URL
+- allow manual redeem-code lookup
+- show clear status:
+  - ready to redeem
+  - already redeemed
+  - not eligible
+
+## Deployment Note
+
+Backend uses:
+
+- `PUBLIC_WEB_BASE_URL`
+
+Production value should be:
+
+- `https://nucosmos.io/erp`
+
+If omitted, backend falls back to that same default.

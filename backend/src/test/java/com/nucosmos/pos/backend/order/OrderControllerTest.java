@@ -99,6 +99,8 @@ class OrderControllerTest {
                 .andExpect(jsonPath("$.data.storeCode").value("TW001"))
                 .andExpect(jsonPath("$.data.deviceCode").value("POS-TABLET-001"))
                 .andExpect(jsonPath("$.data.createdByEmployeeCode").value("EMP-CASHIER-001"))
+                .andExpect(jsonPath("$.data.redeemCode").isString())
+                .andExpect(jsonPath("$.data.redeemUrl").value(org.hamcrest.Matchers.containsString("/redeem/")))
                 .andExpect(jsonPath("$.data.itemCount").value(3))
                 .andExpect(jsonPath("$.data.subtotalAmount").value(22.25))
                 .andExpect(jsonPath("$.data.totalAmount").value(22.25))
@@ -298,6 +300,8 @@ class OrderControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.id").value(orderId.toString()))
                 .andExpect(jsonPath("$.data.createdByEmployeeCode").value("EMP-MANAGER-001"))
+                .andExpect(jsonPath("$.data.redeemCode").isString())
+                .andExpect(jsonPath("$.data.redeemUrl").value(org.hamcrest.Matchers.containsString("/redeem/")))
                 .andExpect(jsonPath("$.data.items.length()").value(1))
                 .andExpect(jsonPath("$.data.items[0].productName").value("AI Lecture Pass"))
                 .andExpect(jsonPath("$.data.totalAmount").value(50.00));

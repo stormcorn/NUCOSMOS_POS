@@ -32,6 +32,8 @@ public record OrderResponse(
         OffsetDateTime closedAt,
         OffsetDateTime voidedAt,
         String voidNote,
+        String redeemCode,
+        String redeemUrl,
         List<OrderItemResponse> items,
         List<PaymentResponse> payments,
         List<RefundResponse> refunds

@@ -12,10 +12,12 @@ import com.nucosmos.pos.backend.order.persistence.OrderEntity;
 import com.nucosmos.pos.backend.order.persistence.OrderItemEntity;
 import com.nucosmos.pos.backend.order.persistence.OrderItemCustomizationEntity;
 import com.nucosmos.pos.backend.order.persistence.PaymentEntity;
+import com.nucosmos.pos.backend.order.persistence.ReceiptRedemptionEntity;
 import com.nucosmos.pos.backend.order.persistence.RefundEntity;
 import com.nucosmos.pos.backend.order.repository.OrderItemCustomizationRepository;
 import com.nucosmos.pos.backend.order.repository.OrderRepository;
 import com.nucosmos.pos.backend.order.repository.PaymentRepository;
+import com.nucosmos.pos.backend.order.repository.ReceiptRedemptionRepository;
 import com.nucosmos.pos.backend.order.repository.RefundItemRepository;
 import com.nucosmos.pos.backend.order.repository.RefundRepository;
 import com.nucosmos.pos.backend.product.ProductCustomizationSelectionMode;
@@ -63,10 +65,12 @@ public class OrderService {
     private final ProductCustomizationOptionRepository productCustomizationOptionRepository;
     private final OrderItemCustomizationRepository orderItemCustomizationRepository;
     private final PaymentRepository paymentRepository;
+    private final ReceiptRedemptionRepository receiptRedemptionRepository;
     private final RefundRepository refundRepository;
     private final RefundItemRepository refundItemRepository;
     private final CardTerminalService cardTerminalService;
     private final OrderInventoryWorkflowService orderInventoryWorkflowService;
+    private final ReceiptRedemptionService receiptRedemptionService;
 
     public OrderService(
             OrderRepository orderRepository,
@@ -78,10 +82,12 @@ public class OrderService {
             ProductCustomizationOptionRepository productCustomizationOptionRepository,
             OrderItemCustomizationRepository orderItemCustomizationRepository,
             PaymentRepository paymentRepository,
+            ReceiptRedemptionRepository receiptRedemptionRepository,
             RefundRepository refundRepository,
             RefundItemRepository refundItemRepository,
             CardTerminalService cardTerminalService,
-            OrderInventoryWorkflowService orderInventoryWorkflowService
+            OrderInventoryWorkflowService orderInventoryWorkflowService,
+            ReceiptRedemptionService receiptRedemptionService
     ) {
         this.orderRepository = orderRepository;
         this.storeRepository = storeRepository;
@@ -92,10 +98,12 @@ public class OrderService {
         this.productCustomizationOptionRepository = productCustomizationOptionRepository;
         this.orderItemCustomizationRepository = orderItemCustomizationRepository;
         this.paymentRepository = paymentRepository;
+        this.receiptRedemptionRepository = receiptRedemptionRepository;
         this.refundRepository = refundRepository;
         this.refundItemRepository = refundItemRepository;
         this.cardTerminalService = cardTerminalService;
         this.orderInventoryWorkflowService = orderInventoryWorkflowService;
+        this.receiptRedemptionService = receiptRedemptionService;
     }
 
     @Transactional
@@ -159,6 +167,7 @@ public class OrderService {
         if (!pendingCustomizations.isEmpty()) {
             orderItemCustomizationRepository.saveAll(pendingCustomizations);
         }
+        receiptRedemptionService.ensureForOrder(savedOrder);
 
         return toResponse(savedOrder);
     }
@@ -408,7 +417,7 @@ public class OrderService {
         return toResponse(order);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public OrderResponse getOrder(UUID orderId, AuthenticatedUser user) {
         return toResponse(getOrderForStore(orderId, user.storeCode()));
     }
@@ -526,6 +535,8 @@ public class OrderService {
                         )
                 ));
 
+        ReceiptRedemptionEntity receiptRedemption = resolveReceiptRedemption(order);
+
         return new OrderResponse(
                 order.getId(),
                 order.getOrderNumber(),
@@ -553,6 +564,8 @@ public class OrderService {
                 order.getClosedAt(),
                 order.getVoidedAt(),
                 order.getVoidNote(),
+                receiptRedemption.getClaimCode(),
+                receiptRedemptionService.buildRedeemUrl(receiptRedemption),
                 order.getItems().stream()
                         .map(item -> new OrderItemResponse(
                                 item.getId(),
@@ -619,6 +632,20 @@ public class OrderService {
                         ))
                         .toList()
         );
+    }
+
+    private ReceiptRedemptionEntity resolveReceiptRedemption(OrderEntity order) {
+        ReceiptRedemptionEntity existing = order.getReceiptRedemption();
+        if (existing != null) {
+            return existing;
+        }
+
+        return receiptRedemptionRepository.findByOrder_Id(order.getId())
+                .map(found -> {
+                    order.setReceiptRedemption(found);
+                    return found;
+                })
+                .orElseGet(() -> receiptRedemptionService.ensureForOrder(order));
     }
 
     private OrderSummaryResponse toSummaryResponse(OrderEntity order) {
