@@ -354,14 +354,14 @@ class PrinterService {
           styles: const PosStyles(align: PosAlign.right, bold: true),
         ),
       ]));
-      final discountTypeLabel = _discountTypeLabel(receipt.discountType);
+      final discountTypeLabel = _thermalDiscountTypeLabel(receipt.discountType);
       if (discountTypeLabel != null) {
         bytes.addAll(generator.text(
           '  Type: ${_thermalSafe(discountTypeLabel)}',
           styles: const PosStyles(align: PosAlign.left),
         ));
       }
-      final discountValueLabel = _discountValueLabel(receipt);
+      final discountValueLabel = _thermalDiscountValueLabel(receipt);
       if (discountValueLabel != null) {
         bytes.addAll(generator.text(
           '  Value: ${_thermalSafe(discountValueLabel)}',
@@ -675,6 +675,39 @@ class PrinterService {
         return _currency(receipt.discountValue!);
       case CheckoutDiscountType.complimentary:
         return '整筆招待';
+      case null:
+        return null;
+    }
+  }
+
+  String? _thermalDiscountTypeLabel(CheckoutDiscountType? type) {
+    switch (type) {
+      case CheckoutDiscountType.percentage:
+        return 'PERCENT';
+      case CheckoutDiscountType.amount:
+        return 'AMOUNT';
+      case CheckoutDiscountType.complimentary:
+        return 'COMPLIMENTARY';
+      case null:
+        return null;
+    }
+  }
+
+  String? _thermalDiscountValueLabel(OrderReceipt receipt) {
+    switch (receipt.discountType) {
+      case CheckoutDiscountType.percentage:
+        if (receipt.discountValue == null) {
+          return null;
+        }
+        final value = receipt.discountValue!;
+        return '${value.toStringAsFixed(value == value.roundToDouble() ? 0 : 2)}%';
+      case CheckoutDiscountType.amount:
+        if (receipt.discountValue == null) {
+          return null;
+        }
+        return _currency(receipt.discountValue!);
+      case CheckoutDiscountType.complimentary:
+        return 'FULL ORDER';
       case null:
         return null;
     }
