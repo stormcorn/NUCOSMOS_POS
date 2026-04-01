@@ -1,8 +1,9 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 
 import { ApiError } from "@/api/http";
 import { fetchStoreReceiptSettings, updateStoreReceiptSettings } from "@/api/store-settings";
+import { receiptFooterTemplates } from "@/config/receipt-footer-templates";
 import { PERMISSIONS } from "@/constants/permissions";
 import { useAuthStore } from "@/stores/auth";
 import { useStoreContextStore } from "@/stores/store-context";
@@ -24,6 +25,12 @@ const previewLines = computed(() =>
     .map((line) => line.trim())
     .filter((line) => line.length > 0),
 );
+
+function applyTemplate(text: string) {
+  receiptFooterText.value = text;
+  successMessage.value = "已套用預設模板，儲存後會同步到 POS 與列印收據。";
+  errorMessage.value = "";
+}
 
 async function loadSettings() {
   const store = selectedStore.value;
@@ -91,7 +98,7 @@ watch(
           <p class="text-xs uppercase tracking-[0.28em] text-brand-aqua/70">Receipt Custom Block</p>
           <h3 class="mt-2 text-2xl font-semibold text-white">收據自訂內容</h3>
           <p class="mt-2 text-sm text-slate-400">
-            可設定印在收據下方的固定備註，後台與 POS 會共用同一份門市內容。
+            可編輯收據最下方的補充內容，也可先套用多行模板後再微調，儲存後會同步到 POS 與列印收據。
           </p>
         </div>
         <button
@@ -110,8 +117,28 @@ watch(
             {{ selectedStore?.name || "尚未選擇門市" }}
           </p>
           <p class="mt-1 text-sm text-slate-400">
-            {{ selectedStore?.code || "請先在左上角選擇門市" }}
+            {{ selectedStore?.code || "請先從上方切換門市" }}
           </p>
+        </div>
+
+        <div class="rounded-[1.5rem] border border-white/8 bg-white/4 p-4">
+          <p class="text-sm font-semibold text-white">多行預設模板</p>
+          <p class="mt-2 text-sm text-slate-400">
+            點一下即可帶入整段內容，你也可以再自行修改成店內實際文案。
+          </p>
+          <div class="mt-4 grid gap-3 md:grid-cols-3">
+            <button
+              v-for="template in receiptFooterTemplates"
+              :key="template.id"
+              type="button"
+              class="rounded-[1.25rem] border border-white/10 bg-slate-900/70 p-4 text-left transition hover:border-brand-aqua/30 hover:bg-slate-900"
+              :disabled="loading || saving"
+              @click="applyTemplate(template.text)"
+            >
+              <p class="text-sm font-semibold text-white">{{ template.name }}</p>
+              <p class="mt-2 text-xs leading-6 text-slate-400">{{ template.description }}</p>
+            </button>
+          </div>
         </div>
 
         <label class="block">
@@ -121,13 +148,13 @@ watch(
             rows="8"
             maxlength="1000"
             class="w-full rounded-[1.5rem] border border-white/10 bg-slate-900/80 px-4 py-4 text-sm leading-7 text-white outline-none"
-            placeholder="例如：\n本店商品售出恕不退換\n營業時間 10:00 - 22:00"
+            placeholder="感謝您的光臨&#10;歡迎再次蒞臨&#10;門市營業時間 10:00 - 22:00"
             :disabled="loading || !selectedStore"
           />
         </label>
 
         <p class="text-xs text-slate-500">
-          會印在 Android 系統列印與熱感收據下方。熱感印表機若不支援中文，會自動轉成可列印字元。
+          熱感機與 Android 系統列印都會使用這段內容。建議以簡短多行為主，避免過長影響收據閱讀。
         </p>
 
         <p v-if="errorMessage" class="text-sm text-brand-coral">{{ errorMessage }}</p>
@@ -154,7 +181,7 @@ watch(
 
     <article class="rounded-[2rem] border border-white/10 bg-slate-950/55 p-6 shadow-soft shadow-black/20">
       <p class="text-xs uppercase tracking-[0.28em] text-brand-aqua/70">Receipt Preview</p>
-      <h3 class="mt-2 text-2xl font-semibold text-white">列印預覽</h3>
+      <h3 class="mt-2 text-2xl font-semibold text-white">預覽效果</h3>
       <div class="mt-6 rounded-[1.75rem] border border-white/8 bg-white/4 p-5">
         <p class="text-center text-sm font-semibold text-white">NUCOSMOS</p>
         <p class="mt-1 text-center text-xs text-slate-400">門市消費單據</p>
@@ -162,14 +189,14 @@ watch(
         <div class="space-y-2 text-sm text-slate-300">
           <p>訂單編號：ORD-20260401-001</p>
           <p>付款方式：現金</p>
-          <p>合計：$120.00</p>
+          <p>總計：120.00</p>
         </div>
         <div class="my-4 border-t border-dashed border-white/10" />
         <div v-if="previewLines.length > 0" class="space-y-1 text-center text-sm leading-7 text-slate-200">
           <p v-for="line in previewLines" :key="line">{{ line }}</p>
         </div>
         <p v-else class="text-center text-sm text-slate-500">
-          尚未設定自訂內容，收據將不會額外印出門市備註。
+          尚未設定收據自訂內容，套用模板或自行輸入後就會顯示在這裡。
         </p>
       </div>
     </article>

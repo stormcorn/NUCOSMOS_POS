@@ -8,6 +8,7 @@ import '../models/order_models.dart';
 import '../models/product_summary.dart';
 import '../models/pos_layout_profile.dart';
 import '../models/quick_receive_models.dart';
+import '../models/receipt_footer_template.dart';
 import '../state/printer_controller.dart';
 import '../state/session_controller.dart';
 import '../widgets/adaptive_scroll_body.dart';
@@ -2434,6 +2435,16 @@ class _PrinterPanelState extends State<_PrinterPanel>
     }
   }
 
+  void _applyReceiptFooterTemplate(ReceiptFooterTemplate template) {
+    _receiptFooterController.value = TextEditingValue(
+      text: template.text,
+      selection: TextSelection.collapsed(offset: template.text.length),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('已套用模板：${template.name}')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -2626,8 +2637,28 @@ class _PrinterPanelState extends State<_PrinterPanel>
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      '這段內容會印在熱感收據與 Android 系統列印單據下方，並與後台共用同一份門市設定。',
+                      '這段內容會印在熱感收據與 Android 系統列印單據下方，並與後台共用同一份門市設定。可先套用多行模板，再依門市需求微調。',
                       style: TextStyle(color: Colors.white60),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      '多行預設模板',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: receiptFooterTemplates
+                          .map(
+                            (template) => OutlinedButton(
+                              onPressed: sessionController.receiptFooterSaving
+                                  ? null
+                                  : () => _applyReceiptFooterTemplate(template),
+                              child: Text(template.name),
+                            ),
+                          )
+                          .toList(growable: false),
                     ),
                     const SizedBox(height: 12),
                     TextField(
@@ -2636,7 +2667,7 @@ class _PrinterPanelState extends State<_PrinterPanel>
                       maxLines: 6,
                       maxLength: 1000,
                       decoration: const InputDecoration(
-                        hintText: '例如：\\n歡迎再次光臨\\n營業時間 10:00 - 22:00',
+                        hintText: '感謝您的光臨\n歡迎再次蒞臨\n門市營業時間 10:00 - 22:00',
                       ),
                     ),
                     const SizedBox(height: 10),
