@@ -18,6 +18,7 @@ public record ReceiptRedeemResponse(
         boolean eligible,
         boolean claimed,
         boolean claimable,
-        String message
+        String message,
+        ReceiptMemberSummary member
 ) {
 }

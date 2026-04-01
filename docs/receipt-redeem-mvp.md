@@ -8,6 +8,7 @@ Turn each printed receipt into a safe public redeem entry on `nucosmos.io`, so c
 - verify the receipt is real
 - confirm whether it has already been claimed
 - complete a first-stage redeem action on the website
+- bind the receipt to a member profile using name and phone number
 
 This is the foundation for later member, points, coupon, or lucky-draw features.
 
@@ -35,6 +36,13 @@ Table: `receipt_redemptions`
 - `public_token` unique
 - `claim_code` unique
 - `claimed_at` nullable
+- `claimed_member_id` nullable
+
+Table: `receipt_members`
+
+- stores the public member profile collected from the redeem page
+- unique `phone_number`
+- reusable for future points, coupons, and campaign eligibility
 
 ## Eligibility Rules
 
@@ -70,6 +78,7 @@ If a printer path cannot safely render the QR content, it must still print the U
 
 - allow token-based lookup from QR URL
 - allow manual redeem-code lookup
+- require member name and phone number before a receipt can be claimed
 - show clear status:
   - ready to redeem
   - already redeemed

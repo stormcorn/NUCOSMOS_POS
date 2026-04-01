@@ -1,8 +1,10 @@
 package com.nucosmos.pos.backend.order;
 
 import com.nucosmos.pos.backend.common.api.ApiResponse;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,7 +36,10 @@ public class PublicRedeemController {
     }
 
     @PostMapping("/{token}/claim")
-    public ApiResponse<ReceiptRedeemResponse> claim(@PathVariable String token) {
-        return ApiResponse.ok(receiptRedemptionService.claimByToken(token));
+    public ApiResponse<ReceiptRedeemResponse> claim(
+            @PathVariable String token,
+            @Valid @RequestBody PublicRedeemClaimRequest request
+    ) {
+        return ApiResponse.ok(receiptRedemptionService.claimByToken(token, request));
     }
 }

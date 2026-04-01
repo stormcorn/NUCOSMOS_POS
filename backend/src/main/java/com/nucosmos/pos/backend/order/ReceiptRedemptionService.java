@@ -1,11 +1,15 @@
 package com.nucosmos.pos.backend.order;
 
 import com.nucosmos.pos.backend.common.exception.NotFoundException;
+import com.nucosmos.pos.backend.common.exception.BadRequestException;
 import com.nucosmos.pos.backend.order.persistence.OrderEntity;
+import com.nucosmos.pos.backend.order.persistence.ReceiptMemberEntity;
 import com.nucosmos.pos.backend.order.persistence.ReceiptRedemptionEntity;
+import com.nucosmos.pos.backend.order.repository.ReceiptMemberRepository;
 import com.nucosmos.pos.backend.order.repository.ReceiptRedemptionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.security.SecureRandom;
 import java.time.OffsetDateTime;
@@ -17,16 +21,20 @@ public class ReceiptRedemptionService {
 
     private static final char[] CLAIM_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".toCharArray();
     private static final int CLAIM_CODE_LENGTH = 8;
+    private static final String ACTIVE_STATUS = "ACTIVE";
 
     private final ReceiptRedemptionRepository receiptRedemptionRepository;
+    private final ReceiptMemberRepository receiptMemberRepository;
     private final RedeemProperties redeemProperties;
     private final SecureRandom secureRandom = new SecureRandom();
 
     public ReceiptRedemptionService(
             ReceiptRedemptionRepository receiptRedemptionRepository,
+            ReceiptMemberRepository receiptMemberRepository,
             RedeemProperties redeemProperties
     ) {
         this.receiptRedemptionRepository = receiptRedemptionRepository;
+        this.receiptMemberRepository = receiptMemberRepository;
         this.redeemProperties = redeemProperties;
     }
 
@@ -69,7 +77,7 @@ public class ReceiptRedemptionService {
     }
 
     @Transactional
-    public ReceiptRedeemResponse claimByToken(String token) {
+    public ReceiptRedeemResponse claimByToken(String token, PublicRedeemClaimRequest request) {
         ReceiptRedemptionEntity redemption = receiptRedemptionRepository.findByPublicToken(normalizeToken(token))
                 .orElseThrow(() -> new NotFoundException("Redeem ticket not found"));
 
@@ -78,7 +86,10 @@ public class ReceiptRedemptionService {
         }
 
         if (!redemption.isClaimed()) {
-            redemption.markClaimed(OffsetDateTime.now());
+            ReceiptMemberEntity member = upsertMember(request);
+            OffsetDateTime claimedAt = OffsetDateTime.now();
+            member.markClaimed(claimedAt);
+            redemption.markClaimed(claimedAt, member);
         }
 
         return toResponse(redemption);
@@ -122,8 +133,34 @@ public class ReceiptRedemptionService {
                 eligible,
                 claimed,
                 claimable,
-                message
+                message,
+                toMemberSummary(redemption.getClaimedMember())
         );
+    }
+
+    private ReceiptMemberEntity upsertMember(PublicRedeemClaimRequest request) {
+        if (request == null) {
+            throw new BadRequestException("Member profile is required");
+        }
+
+        String displayName = normalizeDisplayName(request.displayName());
+        String phoneNumber = normalizePhoneNumber(request.phoneNumber());
+
+        return receiptMemberRepository.findByPhoneNumber(phoneNumber)
+                .map(existing -> {
+                    existing.updateProfile(displayName, phoneNumber);
+                    return existing;
+                })
+                .orElseGet(() -> receiptMemberRepository.save(
+                        new ReceiptMemberEntity(displayName, phoneNumber, ACTIVE_STATUS)
+                ));
+    }
+
+    private ReceiptMemberSummary toMemberSummary(ReceiptMemberEntity member) {
+        if (member == null) {
+            return null;
+        }
+        return new ReceiptMemberSummary(member.getDisplayName(), member.getPhoneNumber());
     }
 
     private boolean isEligible(OrderEntity order) {
@@ -165,5 +202,27 @@ public class ReceiptRedemptionService {
 
     private String normalizeClaimCode(String claimCode) {
         return claimCode == null ? "" : claimCode.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private String normalizeDisplayName(String rawValue) {
+        String value = rawValue == null ? "" : rawValue.trim();
+        if (!StringUtils.hasText(value)) {
+            throw new BadRequestException("Display name is required");
+        }
+        return value;
+    }
+
+    private String normalizePhoneNumber(String rawValue) {
+        String normalized = rawValue == null ? "" : rawValue.replaceAll("[\\s\\-()]", "").trim();
+        if (normalized.matches("^09\\d{8}$")) {
+            return "+886" + normalized.substring(1);
+        }
+        if (normalized.matches("^\\d{10,15}$")) {
+            return "+" + normalized;
+        }
+        if (!normalized.matches("^\\+\\d{10,15}$")) {
+            throw new BadRequestException("Phone number format is invalid");
+        }
+        return normalized;
     }
 }

@@ -81,17 +81,27 @@ class PublicRedeemControllerTest {
                 .andExpect(jsonPath("$.data.claimCode").value(redeemCode))
                 .andExpect(jsonPath("$.data.claimed").value(false))
                 .andExpect(jsonPath("$.data.claimable").value(true))
-                .andExpect(jsonPath("$.data.redeemUrl").value(containsString("/redeem/")));
+                .andExpect(jsonPath("$.data.redeemUrl").value(containsString("/redeem/")))
+                .andExpect(jsonPath("$.data.member").doesNotExist());
 
         mockMvc.perform(get("/api/v1/public/redeem/search").param("code", redeemCode))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.token").value(redeemToken))
                 .andExpect(jsonPath("$.data.claimCode").value(redeemCode));
 
-        mockMvc.perform(post("/api/v1/public/redeem/{token}/claim", redeemToken))
+        mockMvc.perform(post("/api/v1/public/redeem/{token}/claim", redeemToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "displayName": "王小玉",
+                                  "phoneNumber": "0936993623"
+                                }
+                                """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.claimed").value(true))
                 .andExpect(jsonPath("$.data.claimable").value(false))
-                .andExpect(jsonPath("$.data.claimedAt").isNotEmpty());
+                .andExpect(jsonPath("$.data.claimedAt").isNotEmpty())
+                .andExpect(jsonPath("$.data.member.displayName").value("王小玉"))
+                .andExpect(jsonPath("$.data.member.phoneNumber").value("+886936993623"));
     }
 }

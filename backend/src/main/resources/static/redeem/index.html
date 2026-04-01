@@ -181,6 +181,17 @@
         line-height: 1.8;
         padding: 24px;
       }
+      .form-grid {
+        display: grid;
+        gap: 12px;
+        margin-top: 18px;
+      }
+      .hint {
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.7;
+      }
     </style>
   </head>
   <body>
@@ -238,6 +249,20 @@
               <div>兌換時間：<span id="claimed-at"></span></div>
               <div>兌獎碼：<span id="claim-code-view"></span></div>
               <div class="muted">兌獎網址：<span id="redeem-url"></span></div>
+              <div>會員姓名：<span id="member-name">尚未綁定</span></div>
+              <div>會員手機：<span id="member-phone">尚未綁定</span></div>
+            </div>
+
+            <div id="claim-form" class="form-grid">
+              <label class="label" for="display-name">會員姓名</label>
+              <input id="display-name" type="text" placeholder="請輸入您的姓名" />
+
+              <label class="label" for="phone-number">手機號碼</label>
+              <input id="phone-number" type="tel" placeholder="0912345678 或 +886912345678" />
+
+              <p class="hint">
+                完成兌換時，會將本次收據與您的會員資料綁定，作為後續活動、集點或兌獎資格的基礎資料。
+              </p>
             </div>
 
             <button id="claim-button" class="primary" style="margin-top: 18px; width: 100%;">確認兌換</button>
@@ -254,10 +279,13 @@
       const claimCodeInput = document.getElementById("claim-code");
       const lookupButton = document.getElementById("lookup-button");
       const claimButton = document.getElementById("claim-button");
+      const displayNameInput = document.getElementById("display-name");
+      const phoneNumberInput = document.getElementById("phone-number");
       const statusMessage = document.getElementById("status-message");
       const errorMessage = document.getElementById("error-message");
       const ticketCard = document.getElementById("ticket-card");
       const placeholderCard = document.getElementById("placeholder-card");
+      const claimForm = document.getElementById("claim-form");
 
       let currentTicket = null;
 
@@ -305,8 +333,13 @@
         document.getElementById("claimed-at").textContent = formatDateTime(ticket.claimedAt);
         document.getElementById("claim-code-view").textContent = ticket.claimCode;
         document.getElementById("redeem-url").textContent = ticket.redeemUrl;
+        document.getElementById("member-name").textContent = ticket.member?.displayName || "尚未綁定";
+        document.getElementById("member-phone").textContent = ticket.member?.phoneNumber || "尚未綁定";
 
         claimCodeInput.value = ticket.claimCode || "";
+        displayNameInput.value = ticket.member?.displayName || "";
+        phoneNumberInput.value = ticket.member?.phoneNumber || "";
+        claimForm.style.display = ticket.claimed ? "none" : "grid";
         claimButton.disabled = !ticket.claimable;
         claimButton.textContent = ticket.claimed ? "已兌換完成" : "確認兌換";
       }
@@ -358,10 +391,28 @@
           return;
         }
 
+        const displayName = displayNameInput.value.trim();
+        const phoneNumber = phoneNumberInput.value.trim();
+        if (!displayName) {
+          setError("請先輸入會員姓名。");
+          return;
+        }
+        if (!phoneNumber) {
+          setError("請先輸入手機號碼。");
+          return;
+        }
+
         setError("");
         setMessage("正在送出兌換...");
         const ticket = await requestJson(`/api/v1/public/redeem/${encodeURIComponent(currentTicket.token)}/claim`, {
           method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            displayName,
+            phoneNumber,
+          }),
         });
         renderTicket(ticket);
         setMessage(ticket.claimed

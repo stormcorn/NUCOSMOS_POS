@@ -5,6 +5,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
@@ -26,6 +27,10 @@ public class ReceiptRedemptionEntity extends BaseEntity {
 
     @Column
     private OffsetDateTime claimedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "claimed_member_id")
+    private ReceiptMemberEntity claimedMember;
 
     protected ReceiptRedemptionEntity() {
     }
@@ -52,11 +57,16 @@ public class ReceiptRedemptionEntity extends BaseEntity {
         return claimedAt;
     }
 
+    public ReceiptMemberEntity getClaimedMember() {
+        return claimedMember;
+    }
+
     public boolean isClaimed() {
         return claimedAt != null;
     }
 
-    public void markClaimed(OffsetDateTime claimedAt) {
+    public void markClaimed(OffsetDateTime claimedAt, ReceiptMemberEntity claimedMember) {
         this.claimedAt = claimedAt;
+        this.claimedMember = claimedMember;
     }
 }
