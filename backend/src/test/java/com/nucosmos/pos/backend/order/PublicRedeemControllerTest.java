@@ -3,6 +3,8 @@ package com.nucosmos.pos.backend.order;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nucosmos.pos.backend.auth.TestLoginSupport;
+import com.nucosmos.pos.backend.order.persistence.ReceiptPrizeEntity;
+import com.nucosmos.pos.backend.order.repository.ReceiptPrizeRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -12,6 +14,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
@@ -30,9 +33,89 @@ class PublicRedeemControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private ReceiptPrizeRepository receiptPrizeRepository;
+
     @Test
-    void shouldLookupAndClaimReceiptByToken() throws Exception {
-        String token = TestLoginSupport.loginAndExtractToken(mockMvc, """
+    void shouldLookupAndClaimReceiptByTokenAsLoseFlow() throws Exception {
+        String token = cashierToken();
+        RedeemTicket ticket = createPaidOrder(token);
+
+        mockMvc.perform(get("/api/v1/public/redeem/{token}", ticket.token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.claimCode").value(ticket.claimCode()))
+                .andExpect(jsonPath("$.data.claimed").value(false))
+                .andExpect(jsonPath("$.data.claimable").value(true))
+                .andExpect(jsonPath("$.data.redeemUrl").value(containsString("/redeem/")))
+                .andExpect(jsonPath("$.data.member").doesNotExist())
+                .andExpect(jsonPath("$.data.availablePrizes").isArray())
+                .andExpect(jsonPath("$.data.shareCouponHint").isNotEmpty());
+
+        mockMvc.perform(get("/api/v1/public/redeem/search").param("code", ticket.claimCode()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.token").value(ticket.token()))
+                .andExpect(jsonPath("$.data.claimCode").value(ticket.claimCode()));
+
+        mockMvc.perform(post("/api/v1/public/redeem/{token}/claim", ticket.token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "displayName": "王小美",
+                                  "phoneNumber": "0936993623"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.claimed").value(true))
+                .andExpect(jsonPath("$.data.claimable").value(false))
+                .andExpect(jsonPath("$.data.claimedAt").isNotEmpty())
+                .andExpect(jsonPath("$.data.member.displayName").value("王小美"))
+                .andExpect(jsonPath("$.data.member.phoneNumber").value("+886936993623"))
+                .andExpect(jsonPath("$.data.member.pointBalance").value(1))
+                .andExpect(jsonPath("$.data.member.totalClaims").value(1))
+                .andExpect(jsonPath("$.data.rewards.awardedPoints").value(1))
+                .andExpect(jsonPath("$.data.rewards.pointsBalance").value(1))
+                .andExpect(jsonPath("$.data.rewards.nextCouponThreshold").value(5))
+                .andExpect(jsonPath("$.data.rewards.nextCouponAmount").value(50.00))
+                .andExpect(jsonPath("$.data.rewards.issuedCoupon").doesNotExist())
+                .andExpect(jsonPath("$.data.draw.outcome").value("LOSE"))
+                .andExpect(jsonPath("$.data.draw.won").value(false))
+                .andExpect(jsonPath("$.data.draw.title").value("銘謝惠顧，再接再厲"))
+                .andExpect(jsonPath("$.data.draw.prize").doesNotExist());
+    }
+
+    @Test
+    void shouldAwardPrizeWhenProbabilityGuaranteesWin() throws Exception {
+        receiptPrizeRepository.save(new ReceiptPrizeEntity(
+                "免費升級大杯",
+                "請向店員出示中獎畫面兌領",
+                new BigDecimal("100.00"),
+                3,
+                true,
+                0
+        ));
+
+        String token = cashierToken();
+        RedeemTicket ticket = createPaidOrder(token);
+
+        mockMvc.perform(post("/api/v1/public/redeem/{token}/claim", ticket.token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "displayName": "王小美",
+                                  "phoneNumber": "0936993623"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.claimed").value(true))
+                .andExpect(jsonPath("$.data.member.pointBalance").value(0))
+                .andExpect(jsonPath("$.data.rewards.awardedPoints").value(0))
+                .andExpect(jsonPath("$.data.draw.outcome").value("WIN"))
+                .andExpect(jsonPath("$.data.draw.won").value(true))
+                .andExpect(jsonPath("$.data.draw.prize.name").value("免費升級大杯"));
+    }
+
+    private String cashierToken() throws Exception {
+        return TestLoginSupport.loginAndExtractToken(mockMvc, """
                 {
                   "storeCode": "TW001",
                   "roleCode": "CASHIER",
@@ -40,7 +123,9 @@ class PublicRedeemControllerTest {
                   "deviceCode": "POS-TABLET-001"
                 }
                 """);
+    }
 
+    private RedeemTicket createPaidOrder(String token) throws Exception {
         MvcResult createOrder = mockMvc.perform(post("/api/v1/orders")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -76,37 +161,9 @@ class PublicRedeemControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.paymentStatus").value("PAID"));
 
-        mockMvc.perform(get("/api/v1/public/redeem/{token}", redeemToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.claimCode").value(redeemCode))
-                .andExpect(jsonPath("$.data.claimed").value(false))
-                .andExpect(jsonPath("$.data.claimable").value(true))
-                .andExpect(jsonPath("$.data.redeemUrl").value(containsString("/redeem/")))
-                .andExpect(jsonPath("$.data.member").doesNotExist());
+        return new RedeemTicket(redeemToken, redeemCode);
+    }
 
-        mockMvc.perform(get("/api/v1/public/redeem/search").param("code", redeemCode))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.token").value(redeemToken))
-                .andExpect(jsonPath("$.data.claimCode").value(redeemCode));
-
-        mockMvc.perform(post("/api/v1/public/redeem/{token}/claim", redeemToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "displayName": "王小玉",
-                                  "phoneNumber": "0936993623"
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.claimed").value(true))
-                .andExpect(jsonPath("$.data.claimable").value(false))
-                .andExpect(jsonPath("$.data.claimedAt").isNotEmpty())
-                .andExpect(jsonPath("$.data.member.displayName").value("王小玉"))
-                .andExpect(jsonPath("$.data.member.phoneNumber").value("+886936993623"))
-                .andExpect(jsonPath("$.data.member.pointBalance").value(1))
-                .andExpect(jsonPath("$.data.member.totalClaims").value(1))
-                .andExpect(jsonPath("$.data.rewards.awardedPoints").value(1))
-                .andExpect(jsonPath("$.data.rewards.pointsBalance").value(1))
-                .andExpect(jsonPath("$.data.rewards.issuedCoupon").doesNotExist());
+    private record RedeemTicket(String token, String claimCode) {
     }
 }

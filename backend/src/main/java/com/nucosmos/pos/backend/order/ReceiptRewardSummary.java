@@ -4,6 +4,8 @@ public record ReceiptRewardSummary(
         int awardedPoints,
         int pointsBalance,
         ReceiptCouponSummary issuedCoupon,
-        String message
+        String message,
+        int nextCouponThreshold,
+        java.math.BigDecimal nextCouponAmount
 ) {
 }

@@ -1,184 +1,93 @@
-# 會員與兌獎規則
-
-## 目的
-
-本文件用來確認目前 `nucosmos.io` 官網兌獎頁、收據兌獎流程、會員綁定、點數與優惠券回饋的正式規則。
-
-目前這一版屬於第一階段 MVP，重點是：
-
-- 客人可用收據上的 QR Code 或兌獎碼到官網查詢
-- 客人可在官網完成會員綁定與兌換
-- 系統會自動累積點數
-- 系統會依固定門檻自動發券
+# 會員與收據兌獎規則
 
 ## 公開入口
 
-- 客戶公開頁路徑：`/redeem/{token}`
-- 不可讓客戶看到 `/erp`
-- 收據上應印出：
+- 客戶公開入口固定為 `https://nucosmos.io/redeem/{token}`
+- 不可暴露 `/erp`
+- 收據上可列印：
   - `redeemCode`
   - `redeemUrl`
   - QR Code
 
-正式站預設公開網址基底：
+## 基本流程
 
-- `https://nucosmos.io`
+1. 客戶每次結帳後拿到收據。
+2. 客戶用手機掃描收據上的 QR Code。
+3. QR Code 開啟 `nucosmos.io` 的兌獎頁。
+4. 客戶輸入姓名與手機號碼後完成兌換。
+5. 系統立即顯示本次抽獎結果、中獎獎項或未中獎訊息。
 
-所以收據上的完整網址格式為：
+## 兌獎資格
 
-- `https://nucosmos.io/redeem/{token}`
-
-## 收據兌獎資料
-
-每張訂單都會建立一筆兌獎資料：
-
-- `receipt_redemptions`
-
-主要欄位概念：
-
-- `public_token`
-  - 給 QR Code / 公開網址使用
-  - 不可猜測
-- `claim_code`
-  - 給手動輸入查詢使用
-- `claimed_at`
-  - 是否已完成兌換
-- `claimed_member_id`
-  - 這張收據最後綁定到哪位會員
-
-## 會員資料
-
-官網兌獎頁目前會要求客人輸入：
-
-- 姓名
-- 手機號碼
-
-會員資料存放於：
-
-- `receipt_members`
-
-目前規則：
-
-- 以手機號碼作為會員唯一識別
-- 若手機已存在，就更新會員姓名並沿用既有會員資料
-- 若手機不存在，就建立新會員
-
-手機號碼正規化規則：
-
-- `09xxxxxxxx` 會轉成 `+8869xxxxxxxx`
-- 純數字 `886...` 會補成 `+886...`
-- 最終統一儲存為國際格式
-
-## 兌換資格
-
-一張收據可兌換的前提：
-
-- 訂單狀態不是 `VOIDED`
-- 付款狀態必須是下列其一：
+- 訂單狀態不可為 `VOIDED`
+- 付款狀態需為：
   - `PAID`
   - `PARTIALLY_REFUNDED`
   - `REFUNDED`
-
-不可兌換情況：
-
-- 未付款
-- 已作廢
-- 已兌換過
-
-## 兌換規則
-
-目前規則：
-
 - 每張收據只能成功兌換一次
-- 成功兌換時，必須同時綁定會員資料
-- 一旦 `claimed_at` 已有值，該收據不可再次兌換
 
-## 點數規則
+## 會員綁定規則
 
-目前 MVP 固定規則如下：
+- 兌換時必須輸入：
+  - 姓名
+  - 手機號碼
+- 手機號碼正規化規則：
+  - `09xxxxxxxx` 轉為 `+8869xxxxxxxx`
+  - `886...` 轉為 `+886...`
+  - `+886...` 直接使用
 
-- 每成功兌換 `1` 張收據，會員增加 `1` 點
-- 每次成功兌換，同時增加：
-  - `point_balance`
-  - `total_claims`
+## 抽獎規則
 
-目前沒有做：
+- 每次成功兌換都會進行一次抽獎
+- 中獎時：
+  - 顯示 `恭喜您中獎了！`
+  - 顯示中獎獎項名稱
+  - 扣減該獎項剩餘數量
+- 未中獎時：
+  - 顯示 `銘謝惠顧，再接再厲`
+  - 顯示未中獎說明
+  - 贈送 `1` 點會員點數
 
-- 點數扣回
-- 點數過期
-- 不同活動倍數點
+## 點數與抵用券規則
 
-## 優惠券規則
+- 只有未中獎時會獲得點數
+- 每次未中獎獲得 `1` 點
+- 每累積 `5` 點，自動發出 `50 元抵用券`
+- 抵用券目前為系統自動發放，不需人工建立
 
-目前 MVP 固定規則如下：
+## 額外活動提示
 
-- 當會員點數累積到每 `5` 點時，自動發一張優惠券
-- 優惠券面額固定為：
-  - `NT$20`
+兌獎頁需固定顯示以下文案：
 
-優惠券資料存放於：
+`在店內五星好評、分享到任意社群、或分享 LINE 好友後出示給老闆看，可直接獲得 50 元抵用券。`
 
-- `receipt_coupons`
+目前這段為公開活動提示文案，尚未自動核發。
 
-目前欄位概念：
+## 獎項管理規則
 
-- `coupon_code`
-- `title`
-- `discount_amount`
-- `status`
-- `issued_at`
-- `source_redemption_id`
+後台需提供抽獎獎項管理，至少包含：
 
-目前第一版發券規則：
+- 獎項名稱
+- 獎項說明
+- 中獎機率
+- 剩餘數量
+- 啟用狀態
+- 顯示順序
 
-- 第 `5`、`10`、`15`... 點時，各發一張
-- 每次達門檻只發一張
-- 券的來源會綁到觸發該次門檻的那一筆兌換紀錄
+限制：
 
-## 官網頁面顯示規則
+- 啟用中的獎項機率總和不可超過 `100%`
+- 公開兌獎頁需顯示：
+  - 各獎項機率
+  - 各獎項剩餘數量
 
-官網兌獎頁目前應顯示：
+## 已完成範圍
 
-- 訂單編號
-- 門市
-- 消費金額
-- 品項數量
-- 付款狀態
-- 兌換狀態
-- 兌獎碼
-- 兌獎網址
-- 會員姓名
-- 會員手機
-- 目前點數
-- 累積兌換次數
-- 本次回饋訊息
-- 若有自動發券，顯示券碼與券內容
-
-## 現階段限制
-
-目前已完成：
-
-- 收據兌獎入口
-- 官網公開查詢
-- 會員綁定
-- 自動累積點數
-- 固定門檻自動發券
-
-目前尚未完成：
-
-- 後台可調整點數門檻
-- 後台可設定優惠券面額
-- 優惠券核銷流程
-- POS 端輸入會員後直接累點
-- LINE / 簡訊 / Email 會員整合
-- 完整會員中心
-
-## 正式規則來源
-
-目前規則的主要實作來源：
-
-- [ReceiptRedemptionService.java](/c:/NUCOSMOS_POS/backend/src/main/java/com/nucosmos/pos/backend/order/ReceiptRedemptionService.java)
-- [PublicRedeemController.java](/c:/NUCOSMOS_POS/backend/src/main/java/com/nucosmos/pos/backend/order/PublicRedeemController.java)
-- [index.html](/c:/NUCOSMOS_POS/backend/src/main/resources/static/redeem/index.html)
-- [V37__create_receipt_members.sql](/c:/NUCOSMOS_POS/backend/src/main/resources/db/migration/V37__create_receipt_members.sql)
-- [V38__add_receipt_member_rewards.sql](/c:/NUCOSMOS_POS/backend/src/main/resources/db/migration/V38__add_receipt_member_rewards.sql)
+- 收據建立 `redeemCode` / `redeemUrl`
+- 公開兌獎頁 `https://nucosmos.io/redeem/{token}`
+- 會員姓名與手機綁定
+- 抽獎中獎 / 未中獎結果
+- 未中獎加點
+- 每 5 點自動發 50 元抵用券
+- 後台抽獎獎項管理
+- 公開頁顯示獎項機率與剩餘數量

@@ -67,9 +67,9 @@ public class ReceiptMemberEntity extends BaseEntity {
         this.phoneNumber = phoneNumber;
     }
 
-    public void markClaimed(OffsetDateTime claimedAt) {
+    public void markClaimed(OffsetDateTime claimedAt, int awardedPoints) {
         this.lastClaimedAt = claimedAt;
-        this.pointBalance += 1;
+        this.pointBalance += Math.max(awardedPoints, 0);
         this.totalClaims += 1;
     }
 }

@@ -1,21 +1,25 @@
 package com.nucosmos.pos.backend.order;
 
-import com.nucosmos.pos.backend.common.exception.NotFoundException;
 import com.nucosmos.pos.backend.common.exception.BadRequestException;
+import com.nucosmos.pos.backend.common.exception.NotFoundException;
 import com.nucosmos.pos.backend.order.persistence.OrderEntity;
 import com.nucosmos.pos.backend.order.persistence.ReceiptCouponEntity;
 import com.nucosmos.pos.backend.order.persistence.ReceiptMemberEntity;
+import com.nucosmos.pos.backend.order.persistence.ReceiptPrizeEntity;
 import com.nucosmos.pos.backend.order.persistence.ReceiptRedemptionEntity;
 import com.nucosmos.pos.backend.order.repository.ReceiptCouponRepository;
 import com.nucosmos.pos.backend.order.repository.ReceiptMemberRepository;
+import com.nucosmos.pos.backend.order.repository.ReceiptPrizeRepository;
 import com.nucosmos.pos.backend.order.repository.ReceiptRedemptionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.security.SecureRandom;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.security.SecureRandom;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -28,13 +32,18 @@ public class ReceiptRedemptionService {
     private static final int COUPON_CODE_LENGTH = 10;
     private static final String ACTIVE_STATUS = "ACTIVE";
     private static final String COUPON_ACTIVE_STATUS = "ACTIVE";
-    private static final int POINTS_PER_CLAIM = 1;
+    private static final int POINTS_PER_LOSS = 1;
     private static final int COUPON_POINT_THRESHOLD = 5;
-    private static final BigDecimal COUPON_DISCOUNT_AMOUNT = new BigDecimal("20.00");
+    private static final BigDecimal COUPON_DISCOUNT_AMOUNT = new BigDecimal("50.00");
+    private static final BigDecimal HUNDRED = new BigDecimal("100.00");
+    private static final String DRAW_OUTCOME_WIN = "WIN";
+    private static final String DRAW_OUTCOME_LOSE = "LOSE";
+    private static final String SHARE_COUPON_HINT = "在店內五星好評、分享到任意社群、或分享 LINE 好友後出示給老闆看，可直接獲得 50 元抵用券。";
 
     private final ReceiptRedemptionRepository receiptRedemptionRepository;
     private final ReceiptMemberRepository receiptMemberRepository;
     private final ReceiptCouponRepository receiptCouponRepository;
+    private final ReceiptPrizeRepository receiptPrizeRepository;
     private final RedeemProperties redeemProperties;
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -42,11 +51,13 @@ public class ReceiptRedemptionService {
             ReceiptRedemptionRepository receiptRedemptionRepository,
             ReceiptMemberRepository receiptMemberRepository,
             ReceiptCouponRepository receiptCouponRepository,
+            ReceiptPrizeRepository receiptPrizeRepository,
             RedeemProperties redeemProperties
     ) {
         this.receiptRedemptionRepository = receiptRedemptionRepository;
         this.receiptMemberRepository = receiptMemberRepository;
         this.receiptCouponRepository = receiptCouponRepository;
+        this.receiptPrizeRepository = receiptPrizeRepository;
         this.redeemProperties = redeemProperties;
     }
 
@@ -100,9 +111,12 @@ public class ReceiptRedemptionService {
         if (!redemption.isClaimed()) {
             ReceiptMemberEntity member = upsertMember(request);
             OffsetDateTime claimedAt = OffsetDateTime.now();
-            member.markClaimed(claimedAt);
-            redemption.markClaimed(claimedAt, member);
-            ensureCouponForThreshold(redemption, member);
+            DrawResult drawResult = drawPrize();
+            int awardedPoints = drawResult.won() ? 0 : POINTS_PER_LOSS;
+
+            member.markClaimed(claimedAt, awardedPoints);
+            redemption.markClaimed(claimedAt, member, drawResult.outcome(), awardedPoints, drawResult.prize());
+            ensureCouponForThreshold(redemption, member, awardedPoints);
         }
 
         return toResponse(redemption);
@@ -124,11 +138,11 @@ public class ReceiptRedemptionService {
 
         String message;
         if (claimed) {
-            message = "This receipt has already been redeemed.";
+            message = "這張收據已完成兌換。";
         } else if (!eligible) {
-            message = "This receipt is not eligible for redemption.";
+            message = "這張收據目前不符合兌獎資格。";
         } else {
-            message = "This receipt is ready to redeem.";
+            message = "這張收據可參加本次抽獎活動。";
         }
 
         return new ReceiptRedeemResponse(
@@ -148,7 +162,10 @@ public class ReceiptRedemptionService {
                 claimable,
                 message,
                 toMemberSummary(redemption.getClaimedMember()),
-                toRewardSummary(redemption)
+                toRewardSummary(redemption),
+                toDrawSummary(redemption),
+                listPrizeSummaries(),
+                SHARE_COUPON_HINT
         );
     }
 
@@ -192,15 +209,48 @@ public class ReceiptRedemptionService {
                 .map(this::toCouponSummary)
                 .orElse(null);
 
-        String rewardMessage = couponSummary != null
-                ? "本次兌換已累積 1 點，並自動發送 NT$20 優惠券。"
-                : "本次兌換已累積 1 點。";
+        String rewardMessage;
+        if (couponSummary != null) {
+            rewardMessage = "未中獎，但已累積點數並獲得 50 元抵用券。";
+        } else if (redemption.getAwardedPoints() > 0) {
+            rewardMessage = "未中獎，本次已獲得 1 點。";
+        } else if (DRAW_OUTCOME_WIN.equalsIgnoreCase(redemption.getDrawOutcome())) {
+            rewardMessage = "恭喜中獎，本次不另外累積點數。";
+        } else {
+            rewardMessage = "尚未兌換。";
+        }
 
         return new ReceiptRewardSummary(
-                POINTS_PER_CLAIM,
+                redemption.getAwardedPoints(),
                 member.getPointBalance(),
                 couponSummary,
-                rewardMessage
+                rewardMessage,
+                COUPON_POINT_THRESHOLD,
+                COUPON_DISCOUNT_AMOUNT
+        );
+    }
+
+    private ReceiptDrawSummary toDrawSummary(ReceiptRedemptionEntity redemption) {
+        if (!redemption.isClaimed()) {
+            return null;
+        }
+
+        if (DRAW_OUTCOME_WIN.equalsIgnoreCase(redemption.getDrawOutcome()) && redemption.getPrize() != null) {
+            return new ReceiptDrawSummary(
+                    DRAW_OUTCOME_WIN,
+                    true,
+                    "恭喜您中獎了！",
+                    "本次抽中「" + redemption.getPrize().getName() + "」。",
+                    toPrizeSummary(redemption.getPrize())
+            );
+        }
+
+        return new ReceiptDrawSummary(
+                DRAW_OUTCOME_LOSE,
+                false,
+                "銘謝惠顧，再接再厲",
+                "本次未中獎，已獲得 1 點；每累積 5 點可獲得 50 元抵用券。",
+                null
         );
     }
 
@@ -212,6 +262,83 @@ public class ReceiptRedemptionService {
                 coupon.getStatus(),
                 coupon.getIssuedAt()
         );
+    }
+
+    private List<ReceiptPrizeSummary> listPrizeSummaries() {
+        return receiptPrizeRepository.findByActiveTrueOrderByDisplayOrderAscCreatedAtAsc().stream()
+                .map(this::toPrizeSummary)
+                .toList();
+    }
+
+    private ReceiptPrizeSummary toPrizeSummary(ReceiptPrizeEntity prize) {
+        return new ReceiptPrizeSummary(
+                prize.getId(),
+                prize.getName(),
+                prize.getDescription(),
+                prize.getProbabilityPercent(),
+                prize.getRemainingQuantity(),
+                prize.isActive(),
+                prize.getDisplayOrder()
+        );
+    }
+
+    private DrawResult drawPrize() {
+        List<ReceiptPrizeEntity> prizes = receiptPrizeRepository.findByActiveTrueOrderByDisplayOrderAscCreatedAtAsc().stream()
+                .filter(ReceiptPrizeEntity::canDraw)
+                .toList();
+
+        BigDecimal totalProbability = prizes.stream()
+                .map(ReceiptPrizeEntity::getProbabilityPercent)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (prizes.isEmpty() || totalProbability.compareTo(BigDecimal.ZERO) <= 0) {
+            return DrawResult.lose();
+        }
+
+        BigDecimal clampedProbability = totalProbability.min(HUNDRED);
+        BigDecimal drawValue = BigDecimal.valueOf(secureRandom.nextDouble())
+                .multiply(HUNDRED)
+                .setScale(6, RoundingMode.HALF_UP);
+
+        if (drawValue.compareTo(clampedProbability) >= 0) {
+            return DrawResult.lose();
+        }
+
+        BigDecimal cursor = BigDecimal.ZERO;
+        for (ReceiptPrizeEntity prize : prizes) {
+            cursor = cursor.add(prize.getProbabilityPercent());
+            if (drawValue.compareTo(cursor) < 0) {
+                prize.decrementQuantity();
+                return DrawResult.win(prize);
+            }
+        }
+
+        return DrawResult.lose();
+    }
+
+    private ReceiptCouponEntity ensureCouponForThreshold(
+            ReceiptRedemptionEntity redemption,
+            ReceiptMemberEntity member,
+            int awardedPoints
+    ) {
+        if (awardedPoints <= 0) {
+            return null;
+        }
+
+        if (member.getPointBalance() <= 0 || member.getPointBalance() % COUPON_POINT_THRESHOLD != 0) {
+            return null;
+        }
+
+        return receiptCouponRepository.findBySourceRedemption_Id(redemption.getId())
+                .orElseGet(() -> receiptCouponRepository.save(new ReceiptCouponEntity(
+                        member,
+                        redemption,
+                        generateUniqueCouponCode(),
+                        "會員集點 50 元抵用券",
+                        COUPON_DISCOUNT_AMOUNT,
+                        COUPON_ACTIVE_STATUS,
+                        OffsetDateTime.now()
+                )));
     }
 
     private boolean isEligible(OrderEntity order) {
@@ -259,23 +386,6 @@ public class ReceiptRedemptionService {
         return code;
     }
 
-    private ReceiptCouponEntity ensureCouponForThreshold(ReceiptRedemptionEntity redemption, ReceiptMemberEntity member) {
-        if (member.getPointBalance() <= 0 || member.getPointBalance() % COUPON_POINT_THRESHOLD != 0) {
-            return null;
-        }
-
-        return receiptCouponRepository.findBySourceRedemption_Id(redemption.getId())
-                .orElseGet(() -> receiptCouponRepository.save(new ReceiptCouponEntity(
-                        member,
-                        redemption,
-                        generateUniqueCouponCode(),
-                        "兌獎集點回饋券",
-                        COUPON_DISCOUNT_AMOUNT,
-                        COUPON_ACTIVE_STATUS,
-                        OffsetDateTime.now()
-                )));
-    }
-
     private String normalizeToken(String token) {
         return token == null ? "" : token.trim();
     }
@@ -304,5 +414,20 @@ public class ReceiptRedemptionService {
             throw new BadRequestException("Phone number format is invalid");
         }
         return normalized;
+    }
+
+    private record DrawResult(String outcome, ReceiptPrizeEntity prize) {
+
+        static DrawResult win(ReceiptPrizeEntity prize) {
+            return new DrawResult(DRAW_OUTCOME_WIN, prize);
+        }
+
+        static DrawResult lose() {
+            return new DrawResult(DRAW_OUTCOME_LOSE, null);
+        }
+
+        boolean won() {
+            return prize != null;
+        }
     }
 }

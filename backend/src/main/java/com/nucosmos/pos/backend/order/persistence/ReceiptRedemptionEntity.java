@@ -32,6 +32,16 @@ public class ReceiptRedemptionEntity extends BaseEntity {
     @JoinColumn(name = "claimed_member_id")
     private ReceiptMemberEntity claimedMember;
 
+    @Column(length = 20)
+    private String drawOutcome;
+
+    @Column(nullable = false)
+    private int awardedPoints;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "prize_id")
+    private ReceiptPrizeEntity prize;
+
     protected ReceiptRedemptionEntity() {
     }
 
@@ -61,12 +71,33 @@ public class ReceiptRedemptionEntity extends BaseEntity {
         return claimedMember;
     }
 
+    public String getDrawOutcome() {
+        return drawOutcome;
+    }
+
+    public int getAwardedPoints() {
+        return awardedPoints;
+    }
+
+    public ReceiptPrizeEntity getPrize() {
+        return prize;
+    }
+
     public boolean isClaimed() {
         return claimedAt != null;
     }
 
-    public void markClaimed(OffsetDateTime claimedAt, ReceiptMemberEntity claimedMember) {
+    public void markClaimed(
+            OffsetDateTime claimedAt,
+            ReceiptMemberEntity claimedMember,
+            String drawOutcome,
+            int awardedPoints,
+            ReceiptPrizeEntity prize
+    ) {
         this.claimedAt = claimedAt;
         this.claimedMember = claimedMember;
+        this.drawOutcome = drawOutcome;
+        this.awardedPoints = awardedPoints;
+        this.prize = prize;
     }
 }

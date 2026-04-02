@@ -2,6 +2,7 @@ package com.nucosmos.pos.backend.order;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 public record ReceiptRedeemResponse(
         String token,
@@ -20,6 +21,9 @@ public record ReceiptRedeemResponse(
         boolean claimable,
         String message,
         ReceiptMemberSummary member,
-        ReceiptRewardSummary rewards
+        ReceiptRewardSummary rewards,
+        ReceiptDrawSummary draw,
+        List<ReceiptPrizeSummary> availablePrizes,
+        String shareCouponHint
 ) {
 }

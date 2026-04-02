@@ -17,6 +17,7 @@ import PackagingInventoryView from "@/views/PackagingInventoryView.vue";
 import ProcurementView from "@/views/ProcurementView.vue";
 import ProductCategoriesView from "@/views/ProductCategoriesView.vue";
 import ProductsView from "@/views/ProductsView.vue";
+import RedeemPrizeSettingsView from "@/views/RedeemPrizeSettingsView.vue";
 import ReceiptFooterSettingsView from "@/views/ReceiptFooterSettingsView.vue";
 import RegisterView from "@/views/RegisterView.vue";
 import ReportsView from "@/views/ReportsView.vue";
@@ -223,6 +224,16 @@ const router = createRouter({
       component: ReceiptFooterSettingsView,
       meta: {
         title: "Receipt Footer",
+        requiresAuth: true,
+        permissionKeys: [PERMISSIONS.SETTINGS_VIEW],
+      },
+    },
+    {
+      path: "/settings/redeem-prizes",
+      name: "settings-redeem-prizes",
+      component: RedeemPrizeSettingsView,
+      meta: {
+        title: "Redeem Prizes",
         requiresAuth: true,
         permissionKeys: [PERMISSIONS.SETTINGS_VIEW],
       },
