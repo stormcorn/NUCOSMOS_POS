@@ -419,17 +419,6 @@
           </section>
 
           <section class="panel">
-            <h2>查詢收據</h2>
-            <div class="row" style="margin-top: 14px;">
-              <input id="claim-code" type="text" placeholder="請輸入收據上的兌獎碼，例如 ABCD2345" />
-              <button id="lookup-button" class="primary">查詢兌獎</button>
-            </div>
-            <p class="lead" style="margin-top: 14px; font-size: 13px;">
-              如果你是掃描收據上的 QR Code 進來，系統會自動載入這張收據。
-            </p>
-          </section>
-
-          <section class="panel">
             <div class="row" style="justify-content: space-between; align-items: center;">
               <div>
                 <p class="eyebrow">Member Login</p>
@@ -456,27 +445,44 @@
             </div>
           </section>
 
-          <div id="share-hint" class="hint-card banner hidden"></div>
           <div id="status-message" class="message hidden"></div>
           <div id="error-message" class="error hidden"></div>
 
-          <section class="meta">
-            <div>兌獎規則</div>
-            <div class="muted">1. 先完成手機簡訊登入，再點擊兌獎。</div>
-            <div class="muted">2. 每張收據只能兌獎一次。</div>
-            <div class="muted">3. 未中獎會顯示「銘謝惠顧，再接再厲」，並獲得 1 點。</div>
-            <div class="muted">4. 累積 5 點可獲得 50 元抵用券。</div>
-            <div class="muted">5. 在店內五星好評、分享到任意社群、或分享 LINE 好友並出示給店主，也可以獲得 50 元抵用券。</div>
-          </section>
         </section>
-
         <section class="panel">
           <div id="ticket-card" class="ticket">
             <p class="eyebrow">Receipt Ticket</p>
+
+            <div class="stack" style="margin-top: 14px;">
+              <div id="ticket-claim-banner" class="banner hidden"></div>
+              <div id="ticket-login-banner" class="message hidden"></div>
+              <div id="draw-banner" class="banner hidden"></div>
+            </div>
+
+            <div id="claim-actions" class="stack" style="margin-top: 18px;">
+              <div class="member-card">
+                <div id="claim-member-line">請先完成手機簡訊登入，才能參加抽獎。</div>
+              </div>
+              <button id="claim-button" class="primary">參加抽獎</button>
+            </div>
+
+            <section class="meta" style="margin-top: 18px;">
+              <div>兌獎規則</div>
+              <div class="muted">1. 每次結帳拿到收據後，掃描 QR Code 或輸入兌獎碼，即可參加抽獎。</div>
+              <div class="muted">2. 沒中獎會顯示「銷謝惠顧，再接再燈」，並獲得 1 點。</div>
+              <div class="muted">3. 累積 5 點可獲得 50 元抵用券。</div>
+              <div class="muted">4. 中獎時會直接顯示獎品名稱與內容。</div>
+            </section>
+
+            <div class="prize-list" style="margin-top: 18px;">
+              <h3>目前獎項與機率</h3>
+              <div id="prize-list"></div>
+            </div>
+
+            <div class="divider"></div>
+
             <h2 id="order-number" class="title" style="font-size: 30px;"></h2>
             <p id="store-line" class="lead" style="margin-top: 10px;"></p>
-
-            <div id="draw-banner" class="banner hidden" style="margin-top: 18px;"></div>
 
             <div class="stats">
               <div class="stat">
@@ -510,20 +516,6 @@
               <div>優惠券代碼：<span id="reward-coupon-code">尚未發券</span></div>
               <div>優惠券名稱：<span id="reward-coupon-title">尚未發券</span></div>
             </div>
-
-            <div class="divider"></div>
-
-            <div id="claim-actions" class="stack">
-              <div class="member-card">
-                <div id="claim-member-line">請先完成手機簡訊登入，才能參加抽獎。</div>
-              </div>
-              <button id="claim-button" class="primary">參加抽獎</button>
-            </div>
-
-            <div class="prize-list" style="margin-top: 18px;">
-              <h3>目前獎項與機率</h3>
-              <div id="prize-list"></div>
-            </div>
           </div>
 
           <div id="placeholder-card" class="placeholder">
@@ -541,8 +533,6 @@
         signInWithPhoneNumber,
       } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
-      const claimCodeInput = document.getElementById("claim-code");
-      const lookupButton = document.getElementById("lookup-button");
       const logoutButton = document.getElementById("logout-button");
       const refreshSessionButton = document.getElementById("refresh-session-button");
       const sendCodeButton = document.getElementById("send-code-button");
@@ -555,13 +545,13 @@
       const loginVerificationCodeInput = document.getElementById("login-verification-code");
       const statusMessage = document.getElementById("status-message");
       const errorMessage = document.getElementById("error-message");
-      const shareHint = document.getElementById("share-hint");
+      const ticketClaimBanner = document.getElementById("ticket-claim-banner");
+      const ticketLoginBanner = document.getElementById("ticket-login-banner");
       const ticketCard = document.getElementById("ticket-card");
       const placeholderCard = document.getElementById("placeholder-card");
       const drawBanner = document.getElementById("draw-banner");
       const prizeList = document.getElementById("prize-list");
       const claimMemberLine = document.getElementById("claim-member-line");
-
       let currentTicket = null;
       let currentSession = null;
       let firebaseConfig = null;
@@ -609,9 +599,27 @@
         errorMessage.classList.toggle("hidden", !text);
       }
 
-      function setShareHint(text) {
-        shareHint.textContent = text || "";
-        shareHint.classList.toggle("hidden", !text);
+      function refreshTicketIntroBanners() {
+        if (!ticketClaimBanner || !ticketLoginBanner) {
+          return;
+        }
+
+        if (!currentTicket) {
+          ticketClaimBanner.classList.add("hidden");
+          ticketLoginBanner.classList.add("hidden");
+          return;
+        }
+
+        ticketClaimBanner.textContent = currentTicket.claimable
+          ? "這張收據可參加本次抽獎。"
+          : "這張收據目前不可參加抽獎。";
+        ticketClaimBanner.classList.remove("hidden");
+
+        const authenticated = Boolean(currentSession?.authenticated && currentSession.member);
+        ticketLoginBanner.textContent = authenticated
+          ? "您已完成手機簡訊登入，可以直接參加抽獎。"
+          : "請先完成手機簡訊登入，才能參加抽獎。";
+        ticketLoginBanner.classList.remove("hidden");
       }
 
       function resetDrawBanner() {
@@ -696,30 +704,33 @@
           memberSessionCard.innerHTML = "";
           claimMemberLine.textContent = "請先完成手機簡訊登入，才能參加抽獎。";
         }
+
+        refreshTicketIntroBanners();
       }
 
       function renderTicket(ticket) {
         currentTicket = ticket;
         placeholderCard.classList.add("hidden");
         ticketCard.classList.add("active");
+        refreshTicketIntroBanners();
 
-        document.getElementById("order-number").textContent = ticket.orderNumber || "未提供訂單編號";
+        document.getElementById("order-number").textContent = ticket.orderNumber || "???????";
         document.getElementById("store-line").textContent = `${ticket.storeCode} | ${ticket.storeName}`;
         document.getElementById("total-amount").textContent = formatCurrency(ticket.totalAmount);
         document.getElementById("item-count").textContent = String(ticket.itemCount || 0);
         document.getElementById("payment-status").textContent = ticket.paymentStatus || "-";
-        document.getElementById("claim-status").textContent = ticket.claimed ? "已兌獎" : ticket.claimable ? "可參加抽獎" : "不可兌獎";
+        document.getElementById("claim-status").textContent = ticket.claimed ? "???" : ticket.claimable ? "?????" : "????";
         document.getElementById("ordered-at").textContent = formatDateTime(ticket.orderedAt);
         document.getElementById("claimed-at").textContent = formatDateTime(ticket.claimedAt);
         document.getElementById("claim-code-view").textContent = ticket.claimCode || "-";
         document.getElementById("redeem-url").textContent = ticket.redeemUrl || "-";
-        document.getElementById("member-name").textContent = ticket.member?.displayName || "尚未兌獎";
-        document.getElementById("member-phone").textContent = ticket.member?.phoneNumber || "尚未兌獎";
+        document.getElementById("member-name").textContent = ticket.member?.displayName || "????";
+        document.getElementById("member-phone").textContent = ticket.member?.phoneNumber || "????";
         document.getElementById("member-points").textContent = String(ticket.member?.pointBalance ?? 0);
         document.getElementById("member-claims").textContent = String(ticket.member?.totalClaims ?? 0);
-        document.getElementById("reward-message").textContent = ticket.rewards?.message || "尚未兌獎";
-        document.getElementById("reward-coupon-code").textContent = ticket.rewards?.issuedCoupon?.code || "尚未發券";
-        document.getElementById("reward-coupon-title").textContent = ticket.rewards?.issuedCoupon?.title || "尚未發券";
+        document.getElementById("reward-message").textContent = ticket.rewards?.message || "????";
+        document.getElementById("reward-coupon-code").textContent = ticket.rewards?.issuedCoupon?.code || "????";
+        document.getElementById("reward-coupon-title").textContent = ticket.rewards?.issuedCoupon?.title || "????";
 
         resetDrawBanner();
         if (ticket.draw) {
@@ -730,7 +741,6 @@
 
         claimButton.disabled = !ticket.claimable;
         claimButton.textContent = ticket.claimed ? "這張收據已完成兌獎" : "參加抽獎";
-        setShareHint(ticket.shareCouponHint || "");
         renderPrizeList(ticket.availablePrizes || []);
         renderSession(currentSession);
       }
@@ -740,26 +750,6 @@
         renderTicket(ticket);
         setMessage(ticket.message || "收據資訊已載入。");
         setError("");
-      }
-
-      async function lookupByCode() {
-        const code = claimCodeInput.value.trim();
-        if (!code) {
-          setError("請先輸入收據上的兌獎碼。");
-          return;
-        }
-
-        try {
-          setMessage("查詢兌獎碼中...");
-          const ticket = await requestJson(`/api/v1/public/redeem/search?code=${encodeURIComponent(code)}`);
-          renderTicket(ticket);
-          setMessage(ticket.message || "收據資訊已載入。");
-          setError("");
-          history.replaceState({}, "", `/redeem/${ticket.token}`);
-        } catch (error) {
-          setError(error instanceof Error ? error.message : "查詢兌獎碼失敗。");
-          setMessage("");
-        }
       }
 
       async function claimTicket() {
@@ -916,7 +906,6 @@
         }
       }
 
-      lookupButton.addEventListener("click", lookupByCode);
       claimButton.addEventListener("click", claimTicket);
       sendCodeButton.addEventListener("click", sendLoginCode);
       verifyLoginButton.addEventListener("click", verifyLogin);
@@ -926,13 +915,6 @@
         setError("");
       });
       logoutButton.addEventListener("click", logout);
-
-      claimCodeInput.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          lookupByCode();
-        }
-      });
 
       const currentPath = window.location.pathname.replace(/\/+$/, "");
       const token = currentPath.split("/").pop();
