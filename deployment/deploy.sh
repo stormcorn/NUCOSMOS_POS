@@ -38,6 +38,19 @@ if [ -n "$APACHE_VHOST_TARGET" ] && [ -f "$APACHE_VHOST_SOURCE" ]; then
   echo "[deploy] syncing apache vhost: $APACHE_VHOST_SOURCE -> $APACHE_VHOST_TARGET"
   mkdir -p "$(dirname "$APACHE_VHOST_TARGET")"
   cp "$APACHE_VHOST_SOURCE" "$APACHE_VHOST_TARGET"
+
+  if command -v apachectl >/dev/null 2>&1; then
+    echo "[deploy] validating apache config..."
+    apachectl -t
+  fi
+
+  if [ -x /usr/local/cpanel/scripts/restartsrv_httpd ]; then
+    echo "[deploy] reloading apache via cPanel..."
+    /usr/local/cpanel/scripts/restartsrv_httpd
+  elif command -v systemctl >/dev/null 2>&1; then
+    echo "[deploy] reloading apache via systemd..."
+    systemctl reload httpd
+  fi
 fi
 
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" pull || true

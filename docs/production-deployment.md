@@ -53,7 +53,7 @@ The currently verified production routing on the VPS is:
 
 - Apache serves the landing page from `/var/www/nucosmos-cover`
 - Repo-managed landing assets live in `deployment/public-site/` and are synced by `deployment/deploy.sh`
-- Repo-managed Apache vhost can be synced by `deployment/deploy.sh` when `.env.prod` sets `APACHE_VHOST_TARGET`
+- Repo-managed Apache vhost can be synced and reloaded by `deployment/deploy.sh` when `.env.prod` sets `APACHE_VHOST_TARGET`
 - Apache proxies `/erp/` to `127.0.0.1:8080`
 - Apache proxies `/api/` to `127.0.0.1:8080/api/`
 - Apache proxies `/redeem/` to `127.0.0.1:8081/redeem/`

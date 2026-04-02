@@ -77,7 +77,7 @@ APACHE_VHOST_TARGET=/etc/apache2/conf.d/includes/post_virtualhost_global.conf
 Set `ADMIN_WEB_PORT=8080` because host Apache will reverse proxy traffic from ports `80/443`.
 `deployment/deploy.sh` will also sync `deployment/public-site/` into `/var/www/nucosmos-cover`.
 On the current cPanel/EA4 VPS, set `APACHE_VHOST_TARGET=/etc/apache2/conf.d/includes/post_virtualhost_global.conf`
-so `deployment/deploy.sh` also refreshes the live Apache vhost file.
+so `deployment/deploy.sh` also refreshes the live Apache vhost file and reloads Apache.
 
 ## 5. Deploy
 
