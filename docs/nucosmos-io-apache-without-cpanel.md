@@ -112,7 +112,9 @@ The currently verified stable setup is:
 - Apache serves `https://nucosmos.io/` directly from `/var/www/nucosmos-cover`
 - Apache proxies `/erp/` to `http://127.0.0.1:8080/`
 - Apache proxies `/api/` to `http://127.0.0.1:8080/api/`
+- Apache proxies `/redeem/` to `http://127.0.0.1:8080/redeem/`
 - container Nginx inside `admin-web` proxies `/api/` onward to `backend:8081`
+- container Nginx inside `admin-web` proxies `/redeem/` onward to `backend:8081/redeem/`
 
 Even though the backend can also be exposed on `127.0.0.1:8081`, the `8080 -> nginx -> backend`
 chain is the version currently validated in production and should be preferred unless you are

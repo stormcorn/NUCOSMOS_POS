@@ -56,8 +56,9 @@ The currently verified production routing on the VPS is:
 - Repo-managed Apache vhost can be synced and reloaded by `deployment/deploy.sh` when `.env.prod` sets `APACHE_VHOST_TARGET`
 - Apache proxies `/erp/` to `127.0.0.1:8080`
 - Apache proxies `/api/` to `127.0.0.1:8080/api/`
-- Apache proxies `/redeem/` to `127.0.0.1:8081/redeem/`
+- Apache proxies `/redeem/` to `127.0.0.1:8080/redeem/`
 - container Nginx then forwards `/api/` to the backend container
+- container Nginx forwards `/redeem/` to the backend container
 
 This is the path that was validated after VPS recovery and should be treated as the canonical
 reference unless a future deployment intentionally changes it.
