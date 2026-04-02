@@ -9,7 +9,7 @@ This document assumes:
 
 Final URL layout:
 
-- `https://nucosmos.io` -> Vue admin web
+- `https://nucosmos.io` -> public landing page with member login / redeem entry
 - `https://nucosmos.io/api` -> Spring Boot backend
 
 ## 1. DNS
@@ -74,6 +74,7 @@ ADMIN_WEB_PORT=8080
 ```
 
 Set `ADMIN_WEB_PORT=8080` because host Apache will reverse proxy traffic from ports `80/443`.
+`deployment/deploy.sh` will also sync `deployment/public-site/` into `/var/www/nucosmos-cover`.
 
 ## 5. Deploy
 

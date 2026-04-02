@@ -22,7 +22,7 @@ Recommended target:
 
 ## Recommended URL structure
 
-- `https://nucosmos.io` -> temporary landing page
+- `https://nucosmos.io` -> public landing page with member login / redeem entry
 - `https://nucosmos.io/erp` -> admin web
 - `https://nucosmos.io/api` -> backend API
 
@@ -52,6 +52,7 @@ Before real deployment, you still need:
 The currently verified production routing on the VPS is:
 
 - Apache serves the landing page from `/var/www/nucosmos-cover`
+- Repo-managed landing assets live in `deployment/public-site/` and are synced by `deployment/deploy.sh`
 - Apache proxies `/erp/` to `127.0.0.1:8080`
 - Apache proxies `/api/` to `127.0.0.1:8080/api/`
 - container Nginx then forwards `/api/` to the backend container
