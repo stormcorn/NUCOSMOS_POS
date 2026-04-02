@@ -33,6 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PublicMemberAuthControllerTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final String TRUSTED_DEVICE_TOKEN = "trusted-device-token-001";
 
     @Autowired
     private MockMvc mockMvc;
@@ -49,60 +50,97 @@ class PublicMemberAuthControllerTest {
         )).thenReturn(new PhoneVerificationResult("+886936993623", "firebase-member-001"));
 
         MvcResult loginResult = mockMvc.perform(post("/api/v1/public/member/login/sms")
+                        .header("X-Nucosmos-Device-Token", TRUSTED_DEVICE_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "displayName": "測試會員",
-                                  "firebaseIdToken": "firebase-token"
+                                  "displayName": "王小明",
+                                  "firebaseIdToken": "firebase-token",
+                                  "rememberDevice": true
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("nucosmos_member_session=")))
                 .andExpect(jsonPath("$.data.authenticated").value(true))
-                .andExpect(jsonPath("$.data.member.displayName").value("測試會員"))
+                .andExpect(jsonPath("$.data.member.displayName").value("王小明"))
                 .andExpect(jsonPath("$.data.member.phoneNumber").value("+886936993623"))
+                .andExpect(jsonPath("$.data.deviceTrusted").value(true))
                 .andReturn();
 
         String cookie = loginResult.getResponse().getHeader(HttpHeaders.SET_COOKIE);
 
         mockMvc.perform(get("/api/v1/public/member/session")
-                        .header(HttpHeaders.COOKIE, cookie))
+                        .header(HttpHeaders.COOKIE, cookie)
+                        .header("X-Nucosmos-Device-Token", TRUSTED_DEVICE_TOKEN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.authenticated").value(true))
-                .andExpect(jsonPath("$.data.member.displayName").value("測試會員"))
-                .andExpect(jsonPath("$.data.member.phoneNumber").value("+886936993623"));
+                .andExpect(jsonPath("$.data.member.displayName").value("王小明"))
+                .andExpect(jsonPath("$.data.member.phoneNumber").value("+886936993623"))
+                .andExpect(jsonPath("$.data.deviceTrusted").value(true));
     }
 
     @Test
-    void shouldClaimReceiptUsingLoggedInMemberSession() throws Exception {
+    void shouldRestoreTrustedDeviceSessionWithoutCookie() throws Exception {
         when(phoneVerificationService.verifyPhoneNumber(
                 ArgumentMatchers.anyString(),
                 ArgumentMatchers.anyString(),
                 ArgumentMatchers.anyString()
         )).thenReturn(new PhoneVerificationResult("+886936993623", "firebase-member-002"));
 
-        MvcResult loginResult = mockMvc.perform(post("/api/v1/public/member/login/sms")
+        mockMvc.perform(post("/api/v1/public/member/login/sms")
+                        .header("X-Nucosmos-Device-Token", TRUSTED_DEVICE_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "displayName": "會員小玉",
-                                  "firebaseIdToken": "firebase-token"
+                                  "displayName": "林小姐",
+                                  "firebaseIdToken": "firebase-token",
+                                  "rememberDevice": true
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        String cookie = loginResult.getResponse().getHeader(HttpHeaders.SET_COOKIE);
+        mockMvc.perform(get("/api/v1/public/member/session")
+                        .header("X-Nucosmos-Device-Token", TRUSTED_DEVICE_TOKEN))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("nucosmos_member_session=")))
+                .andExpect(jsonPath("$.data.authenticated").value(true))
+                .andExpect(jsonPath("$.data.member.displayName").value("林小姐"))
+                .andExpect(jsonPath("$.data.member.phoneNumber").value("+886936993623"))
+                .andExpect(jsonPath("$.data.deviceTrusted").value(true));
+    }
+
+    @Test
+    void shouldClaimReceiptUsingTrustedDeviceWithoutSessionCookie() throws Exception {
+        when(phoneVerificationService.verifyPhoneNumber(
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyString(),
+                ArgumentMatchers.anyString()
+        )).thenReturn(new PhoneVerificationResult("+886936993623", "firebase-member-003"));
+
+        mockMvc.perform(post("/api/v1/public/member/login/sms")
+                        .header("X-Nucosmos-Device-Token", TRUSTED_DEVICE_TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "displayName": "陳先生",
+                                  "firebaseIdToken": "firebase-token",
+                                  "rememberDevice": true
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+
         String token = cashierToken();
         RedeemTicket ticket = createPaidOrder(token);
 
         mockMvc.perform(post("/api/v1/public/redeem/{token}/claim", ticket.token())
-                        .header(HttpHeaders.COOKIE, cookie)
+                        .header("X-Nucosmos-Device-Token", TRUSTED_DEVICE_TOKEN)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.claimed").value(true))
-                .andExpect(jsonPath("$.data.member.displayName").value("會員小玉"))
+                .andExpect(jsonPath("$.data.member.displayName").value("陳先生"))
                 .andExpect(jsonPath("$.data.member.phoneNumber").value("+886936993623"));
     }
 

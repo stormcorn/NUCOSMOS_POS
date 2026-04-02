@@ -7,6 +7,7 @@ public record PublicMemberLoginRequest(
         @Size(max = 80)
         String displayName,
         @NotBlank
-        String firebaseIdToken
+        String firebaseIdToken,
+        boolean rememberDevice
 ) {
 }

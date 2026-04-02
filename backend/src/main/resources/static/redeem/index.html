@@ -1,9 +1,9 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-Hant">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NUCOSMOS 會員兌獎</title>
+    <title>NUCOSMOS ???</title>
     <style>
       :root {
         color-scheme: dark;
@@ -411,36 +411,37 @@
         <section class="stack">
           <section class="panel">
             <p class="eyebrow">Redeem & Lucky Draw</p>
-            <h1 class="title">會員登入後參加抽獎</h1>
+            <h1 class="title">??餃敺????/h1>
             <p class="lead">
-              每次結帳拿到收據後，掃描 QR Code 或輸入兌獎碼，就可以到 NUCOSMOS 官網參加抽獎。
-              沒中獎可獲得 1 點，累積 5 點自動發 50 元抵用券。
-            </p>
+              瘥活蝯董?踹?嗆?敺??? QR Code ?撓?亙??Ⅳ嚗停?臭誑??NUCOSMOS 摰雯???賜???              瘝葉??脣? 1 暺?蝝舐? 5 暺? 50 ??典??            </p>
           </section>
 
           <section class="panel">
             <div class="row" style="justify-content: space-between; align-items: center;">
               <div>
                 <p class="eyebrow">Member Login</p>
-                <h2 style="margin-top: 10px;">手機簡訊登入會員</h2>
+                <h2 style="margin-top: 10px;">??蝪∟??餃?</h2>
               </div>
-              <button id="logout-button" class="secondary hidden">登出會員</button>
+              <button id="logout-button" class="secondary hidden">?餃?</button>
             </div>
 
             <div id="member-session-card" class="member-card hidden" style="margin-top: 18px;"></div>
 
             <div id="login-form" class="stack" style="margin-top: 18px;">
-              <input id="login-display-name" type="text" placeholder="首次登入請輸入姓名" />
-              <input id="login-phone" type="tel" placeholder="請輸入手機號碼，例如 0912345678" />
+              <input id="login-display-name" type="text" placeholder="擐活?餃隢撓?亙??? />
+              <input id="login-phone" type="tel" placeholder="隢撓?交?璈?蝣潘?靘? 0912345678" />
+              <label class="checkbox" style="display:flex; gap:10px; align-items:flex-start; line-height:1.7; color: var(--muted);">
+                <input id="remember-device" type="checkbox" style="width:18px; height:18px; margin-top:4px; flex:none;" />
+                <span>閮??鋆蔭嚗?甈∪?湔?餃</span>
+              </label>
               <div class="row">
-                <button id="send-code-button" class="primary">發送驗證碼</button>
-                <button id="refresh-session-button" class="secondary">重新整理會員狀態</button>
+                <button id="send-code-button" class="primary">?潮?霅Ⅳ</button>
+                <button id="refresh-session-button" class="secondary">??渡?????/button>
               </div>
-              <input id="login-verification-code" type="text" maxlength="6" placeholder="請輸入簡訊驗證碼" />
-              <button id="verify-login-button" class="secondary">完成登入</button>
+              <input id="login-verification-code" type="text" maxlength="6" placeholder="隢撓?亦陛閮?霅Ⅳ" />
+              <button id="verify-login-button" class="secondary">摰??餃</button>
               <p class="muted" style="font-size: 13px; line-height: 1.8;">
-                若是第一次登入，請先填寫姓名。完成登入後，兌獎頁會自動帶入會員資料。
-              </p>
+                ?交蝚砌?甈∠?伐?隢?憛怠神憪?????亙?嚗?????葆?交??∟???              </p>
               <div id="recaptcha-container"></div>
             </div>
           </section>
@@ -461,21 +462,21 @@
 
             <div id="claim-actions" class="stack" style="margin-top: 18px;">
               <div class="member-card">
-                <div id="claim-member-line">請先完成手機簡訊登入，才能參加抽獎。</div>
+                <div id="claim-member-line">隢?摰???蝪∟??餃嚗??賢????/div>
               </div>
-              <button id="claim-button" class="primary">參加抽獎</button>
+              <button id="claim-button" class="primary">???賜?</button>
             </div>
 
             <section class="meta" style="margin-top: 18px;">
-              <div>兌獎規則</div>
-              <div class="muted">1. 每次結帳拿到收據後，掃描 QR Code 或輸入兌獎碼，即可參加抽獎。</div>
-              <div class="muted">2. 沒中獎會顯示「銷謝惠顧，再接再燈」，並獲得 1 點。</div>
-              <div class="muted">3. 累積 5 點可獲得 50 元抵用券。</div>
-              <div class="muted">4. 中獎時會直接顯示獎品名稱與內容。</div>
+              <div>??閬?</div>
+              <div class="muted">1. 瘥活蝯董?踹?嗆?敺??? QR Code ?撓?亙??Ⅳ嚗?臬????/div>
+              <div class="muted">2. 瘝葉??憿舐內?雓?憿改??????銝衣敺?1 暺?/div>
+              <div class="muted">3. 蝝舐? 5 暺?脣? 50 ??典??/div>
+              <div class="muted">4. 銝剔????湔憿舐內???迂?摰嫘?/div>
             </section>
 
             <div class="prize-list" style="margin-top: 18px;">
-              <h3>目前獎項與機率</h3>
+              <h3>?桀???????/h3>
               <div id="prize-list"></div>
             </div>
 
@@ -486,41 +487,40 @@
 
             <div class="stats">
               <div class="stat">
-                <small>訂單金額</small>
+                <small>閮??</small>
                 <strong id="total-amount"></strong>
               </div>
               <div class="stat">
-                <small>品項數量</small>
+                <small>???賊?</small>
                 <strong id="item-count"></strong>
               </div>
               <div class="stat">
-                <small>付款狀態</small>
+                <small>隞狡???/small>
                 <strong id="payment-status"></strong>
               </div>
               <div class="stat">
-                <small>兌獎狀態</small>
+                <small>?????/small>
                 <strong id="claim-status"></strong>
               </div>
             </div>
 
             <div class="meta" style="margin-top: 18px;">
-              <div>訂單時間：<span id="ordered-at"></span></div>
-              <div>兌獎時間：<span id="claimed-at"></span></div>
-              <div>兌獎碼：<span id="claim-code-view"></span></div>
-              <div class="muted">兌獎網址：<span id="redeem-url"></span></div>
-              <div>已綁定會員：<span id="member-name">尚未兌獎</span></div>
-              <div>會員手機：<span id="member-phone">尚未兌獎</span></div>
-              <div>目前點數：<span id="member-points">0</span></div>
-              <div>歷史兌獎次數：<span id="member-claims">0</span></div>
-              <div>本次回饋：<span id="reward-message">尚未兌獎</span></div>
-              <div>優惠券代碼：<span id="reward-coupon-code">尚未發券</span></div>
-              <div>優惠券名稱：<span id="reward-coupon-title">尚未發券</span></div>
+              <div>閮??嚗?span id="ordered-at"></span></div>
+              <div>????嚗?span id="claimed-at"></span></div>
+              <div>??蝣潘?<span id="claim-code-view"></span></div>
+              <div class="muted">??蝬脣?嚗?span id="redeem-url"></span></div>
+              <div>撌脩?摰??∴?<span id="member-name">撠??</span></div>
+              <div>???嚗?span id="member-phone">撠??</span></div>
+              <div>?桀?暺嚗?span id="member-points">0</span></div>
+              <div>甇瑕??甈⊥嚗?span id="member-claims">0</span></div>
+              <div>?祆活??嚗?span id="reward-message">撠??</span></div>
+              <div>?芣??訾誨蝣潘?<span id="reward-coupon-code">撠?澆</span></div>
+              <div>?芣??詨?蝔梧?<span id="reward-coupon-title">撠?澆</span></div>
             </div>
           </div>
 
           <div id="placeholder-card" class="placeholder">
-            請輸入收據上的兌獎碼，或直接掃描收據上的 QR Code。
-          </div>
+            隢撓?交?????Ⅳ嚗??湔???嗆?銝? QR Code??          </div>
         </section>
       </div>
     </main>
@@ -542,6 +542,7 @@
       const memberSessionCard = document.getElementById("member-session-card");
       const loginDisplayNameInput = document.getElementById("login-display-name");
       const loginPhoneInput = document.getElementById("login-phone");
+      const rememberDeviceInput = document.getElementById("remember-device");
       const loginVerificationCodeInput = document.getElementById("login-verification-code");
       const statusMessage = document.getElementById("status-message");
       const errorMessage = document.getElementById("error-message");
@@ -558,6 +559,38 @@
       let auth = null;
       let recaptchaVerifier = null;
       let confirmationResult = null;
+      const deviceTokenStorageKey = "nucosmos_redeem_device_token";
+      const deviceLabelStorageKey = "nucosmos_redeem_device_label";
+
+      function getOrCreateDeviceToken() {
+        let token = localStorage.getItem(deviceTokenStorageKey);
+        if (!token) {
+          const bytes = new Uint8Array(32);
+          crypto.getRandomValues(bytes);
+          token = Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+          localStorage.setItem(deviceTokenStorageKey, token);
+        }
+        return token;
+      }
+
+      function getOrCreateDeviceLabel() {
+        let label = localStorage.getItem(deviceLabelStorageKey);
+        if (!label) {
+          label = navigator.userAgent || "Redeem Browser";
+          if (label.length > 180) {
+            label = label.slice(0, 180);
+          }
+          localStorage.setItem(deviceLabelStorageKey, label);
+        }
+        return label;
+      }
+
+      function buildDeviceHeaders() {
+        return {
+          "X-Nucosmos-Device-Token": getOrCreateDeviceToken(),
+          "X-Nucosmos-Device-Label": getOrCreateDeviceLabel(),
+        };
+      }
 
       function formatCurrency(value) {
         return new Intl.NumberFormat("zh-TW", {
@@ -570,7 +603,7 @@
 
       function formatDateTime(value) {
         if (!value) {
-          return "尚未發生";
+          return "撠?潛?";
         }
         return new Intl.DateTimeFormat("zh-TW", {
           dateStyle: "medium",
@@ -611,14 +644,14 @@
         }
 
         ticketClaimBanner.textContent = currentTicket.claimable
-          ? "這張收據可參加本次抽獎。"
-          : "這張收據目前不可參加抽獎。";
+          ? "?撐?嗆??臬??甈⊥??
+          : "?撐?嗆??桀?銝???賜???;
         ticketClaimBanner.classList.remove("hidden");
 
         const authenticated = Boolean(currentSession?.authenticated && currentSession.member);
         ticketLoginBanner.textContent = authenticated
-          ? "您已完成手機簡訊登入，可以直接參加抽獎。"
-          : "請先完成手機簡訊登入，才能參加抽獎。";
+          ? "?典歇摰???蝪∟??餃嚗隞亦?亙????
+          : "隢?摰???蝪∟??餃嚗??賢????;
         ticketLoginBanner.classList.remove("hidden");
       }
 
@@ -638,6 +671,7 @@
           credentials: "same-origin",
           headers: {
             "Content-Type": "application/json",
+            ...buildDeviceHeaders(),
             ...(options.headers || {}),
           },
         });
@@ -659,7 +693,7 @@
       function renderPrizeList(prizes) {
         prizeList.innerHTML = "";
         if (!Array.isArray(prizes) || prizes.length === 0) {
-          prizeList.innerHTML = '<div class="meta muted">目前尚未設定可抽獎的獎項。</div>';
+          prizeList.innerHTML = '<div class="meta muted">?桀?撠閮剖??舀??????/div>';
           return;
         }
 
@@ -670,21 +704,21 @@
             <div class="top">
               <div>
                 <p style="font-weight:700;">${prize.name}</p>
-                <p class="muted" style="margin-top:6px;">${prize.description || "請依門市活動公告為準。"}</p>
+                <p class="muted" style="margin-top:6px;">${prize.description || "隢??撣暑??皞?}</p>
               </div>
               <span class="pill ${prize.remainingQuantity <= 0 ? "sold-out" : ""}">
-                ${prize.remainingQuantity <= 0 ? "已抽完" : `剩餘 ${prize.remainingQuantity}`}
+                ${prize.remainingQuantity <= 0 ? "撌脫摰? : `?拚? ${prize.remainingQuantity}`}
               </span>
             </div>
             <div class="muted" style="margin-top:12px;">
-              中獎機率：${Number(prize.probabilityPercent || 0).toFixed(2)}%
+              銝剔?璈?嚗?{Number(prize.probabilityPercent || 0).toFixed(2)}%
             </div>
           `;
           prizeList.appendChild(item);
         });
       }
 
-      function renderSession(session) {
+            function renderSession(session) {
         currentSession = session;
         const authenticated = Boolean(session?.authenticated && session.member);
 
@@ -698,6 +732,7 @@
             <div class="muted">手機：${session.member.phoneNumber}</div>
             <div class="muted">目前點數：${session.member.pointBalance}</div>
             <div class="muted">累積兌獎次數：${session.member.totalClaims}</div>
+            <div class="muted">裝置狀態：${session.deviceTrusted ? "已信任，可直接登入" : "尚未信任，仍需簡訊驗證"}</div>
           `;
           claimMemberLine.textContent = `將以會員 ${session.member.displayName}（${session.member.phoneNumber}）參加這張收據的抽獎。`;
         } else {
@@ -740,7 +775,7 @@
         }
 
         claimButton.disabled = !ticket.claimable;
-        claimButton.textContent = ticket.claimed ? "這張收據已完成兌獎" : "參加抽獎";
+        claimButton.textContent = ticket.claimed ? "?撐?嗆?撌脣????? : "???賜?";
         renderPrizeList(ticket.availablePrizes || []);
         renderSession(currentSession);
       }
@@ -748,43 +783,43 @@
       async function lookupByToken(token) {
         const ticket = await requestJson(`/api/v1/public/redeem/${encodeURIComponent(token)}`);
         renderTicket(ticket);
-        setMessage(ticket.message || "收據資訊已載入。");
+        setMessage(ticket.message || "?嗆?鞈?撌脰??乓?);
         setError("");
       }
 
       async function claimTicket() {
         if (!currentTicket?.token) {
-          setError("請先查詢一張可兌獎的收據。");
+          setError("隢??亥岷銝撘萄?????);
           return;
         }
         if (!currentSession?.authenticated) {
-          setError("請先完成手機簡訊登入，再參加抽獎。");
+          setError("隢?摰???蝪∟??餃嚗????賜???);
           return;
         }
 
         try {
-          setBusy(claimButton, true, "兌獎中...", "參加抽獎");
-          setMessage("正在進行抽獎...");
+          setBusy(claimButton, true, "??銝?..", "???賜?");
+          setMessage("甇??脰??賜?...");
           const ticket = await requestJson(`/api/v1/public/redeem/${encodeURIComponent(currentTicket.token)}/claim`, {
             method: "POST",
             body: JSON.stringify({}),
           });
           renderTicket(ticket);
           await refreshSession();
-          setMessage(ticket.draw?.title || ticket.message || "兌獎完成。");
+          setMessage(ticket.draw?.title || ticket.message || "??摰???);
           setError("");
         } catch (error) {
-          setError(error instanceof Error ? error.message : "兌獎失敗。");
+          setError(error instanceof Error ? error.message : "??憭望???);
           setMessage("");
         } finally {
-          setBusy(claimButton, false, "兌獎中...", currentTicket?.claimed ? "這張收據已完成兌獎" : "參加抽獎");
+          setBusy(claimButton, false, "??銝?..", currentTicket?.claimed ? "?撐?嗆?撌脣????? : "???賜?");
         }
       }
 
       async function loadFirebaseConfig() {
         firebaseConfig = await requestJson("/api/v1/public/member/firebase-config");
         if (!firebaseConfig?.configured) {
-          setError("會員手機簡訊登入尚未啟用，請稍後再試或聯繫店家。");
+          setError("???蝪∟??餃撠?嚗?蝔??岫?蝜怠?摰嗚?);
           sendCodeButton.disabled = true;
           verifyLoginButton.disabled = true;
           return;
@@ -824,47 +859,47 @@
 
       async function sendLoginCode() {
         try {
-          setBusy(sendCodeButton, true, "發送中...", "發送驗證碼");
+          setBusy(sendCodeButton, true, "?潮葉...", "?潮?霅Ⅳ");
           setError("");
-          setMessage("正在準備簡訊驗證...");
+          setMessage("甇?皞?蝪∟?撽?...");
 
           const authClient = ensureFirebaseAuth();
           const verifier = await ensureRecaptcha();
           const normalizedPhone = normalizePhoneNumber(loginPhoneInput.value);
           if (!/^\+\d{10,15}$/.test(normalizedPhone)) {
-            throw new Error("請輸入有效手機號碼，例如 0912345678。");
+            throw new Error("隢撓?交???璈?蝣潘?靘? 0912345678??);
           }
 
           confirmationResult = await signInWithPhoneNumber(authClient, normalizedPhone, verifier);
-          setMessage(`驗證碼已發送到 ${normalizedPhone}，請輸入簡訊驗證碼。`);
+          setMessage(`撽?蝣澆歇?潮 ${normalizedPhone}嚗?頛詨蝪∟?撽?蝣潦);
         } catch (error) {
-          setError(error instanceof Error ? error.message : "發送驗證碼失敗。");
+          setError(error instanceof Error ? error.message : "?潮?霅Ⅳ憭望???);
           setMessage("");
           if (recaptchaVerifier) {
             recaptchaVerifier.clear();
             recaptchaVerifier = null;
           }
         } finally {
-          setBusy(sendCodeButton, false, "發送中...", "發送驗證碼");
+          setBusy(sendCodeButton, false, "?潮葉...", "?潮?霅Ⅳ");
         }
       }
 
       async function verifyLogin() {
         if (!confirmationResult) {
-          setError("請先發送簡訊驗證碼。");
+          setError("隢??潮陛閮?霅Ⅳ??);
           return;
         }
 
         const verificationCode = loginVerificationCodeInput.value.trim();
         if (!/^\d{6}$/.test(verificationCode)) {
-          setError("請輸入 6 位數簡訊驗證碼。");
+          setError("隢撓??6 雿蝪∟?撽?蝣潦?);
           return;
         }
 
         try {
-          setBusy(verifyLoginButton, true, "登入中...", "完成登入");
+          setBusy(verifyLoginButton, true, "?餃銝?..", "摰??餃");
           setError("");
-          setMessage("正在驗證手機登入...");
+          setMessage("甇?撽????餃...");
 
           const confirmation = await confirmationResult.confirm(verificationCode);
           const firebaseIdToken = await confirmation.user.getIdToken();
@@ -873,17 +908,18 @@
             body: JSON.stringify({
               displayName: loginDisplayNameInput.value.trim(),
               firebaseIdToken,
+              rememberDevice: rememberDeviceInput.checked,
             }),
           });
           confirmationResult = null;
           loginVerificationCodeInput.value = "";
           await refreshSession();
-          setMessage("會員登入成功，現在可以直接參加抽獎。");
+          setMessage("??餃??嚗?典隞亦?亙????);
         } catch (error) {
-          setError(error instanceof Error ? error.message : "會員登入失敗。");
+          setError(error instanceof Error ? error.message : "??餃憭望???);
           setMessage("");
         } finally {
-          setBusy(verifyLoginButton, false, "登入中...", "完成登入");
+          setBusy(verifyLoginButton, false, "?餃銝?..", "摰??餃");
         }
       }
 
@@ -899,10 +935,10 @@
             body: JSON.stringify({}),
           });
           renderSession({ authenticated: false, member: null });
-          setMessage("會員已登出。");
+          setMessage("?撌脩?箝?);
           setError("");
         } catch (error) {
-          setError(error instanceof Error ? error.message : "會員登出失敗。");
+          setError(error instanceof Error ? error.message : "??餃憭望???);
         }
       }
 
@@ -911,7 +947,7 @@
       verifyLoginButton.addEventListener("click", verifyLogin);
       refreshSessionButton.addEventListener("click", async () => {
         await refreshSession();
-        setMessage("會員狀態已更新。");
+        setMessage("???歇?湔??);
         setError("");
       });
       logoutButton.addEventListener("click", logout);
@@ -926,9 +962,9 @@
             await lookupByToken(token);
           }
         } catch (error) {
-          setError(error instanceof Error ? error.message : "初始化兌獎頁失敗。");
+          setError(error instanceof Error ? error.message : "??????憭望???);
         }
       })();
     </script>
   </body>
-</html>
+</html>`r`n
