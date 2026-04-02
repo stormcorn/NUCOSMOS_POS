@@ -57,23 +57,31 @@ Copy this template:
 
 - [deployment/apache/nucosmos.io.conf](/c:/NUCOSMOS_POS/deployment/apache/nucosmos.io.conf)
 
-Suggested target path on the VPS:
+Suggested target path on the current cPanel/EA4 VPS:
 
 ```bash
-/etc/httpd/conf.d/nucosmos.io.conf
+/etc/apache2/conf.d/includes/post_virtualhost_global.conf
 ```
 
 Example:
 
 ```bash
-cp /srv/nucosmos-pos/deployment/apache/nucosmos.io.conf /etc/httpd/conf.d/nucosmos.io.conf
+cp /srv/nucosmos-pos/deployment/apache/nucosmos.io.conf /etc/apache2/conf.d/includes/post_virtualhost_global.conf
 ```
+
+Important:
+
+- the current VPS does not use `/etc/httpd/conf.d/` for this site
+- `nucosmos.io` must be bound explicitly on:
+  - `63.250.42.132:80 127.0.0.1:80`
+  - `63.250.42.132:443 127.0.0.1:443`
+- wildcard `*:443` caused traffic to fall through to other SSL vhosts on this server
 
 ## 4. Test and reload Apache
 
 ```bash
-httpd -t
-systemctl reload httpd
+apachectl -t
+/usr/local/cpanel/scripts/restartsrv_httpd
 ```
 
 If reload fails, inspect:
@@ -85,15 +93,17 @@ journalctl -u httpd -n 100 --no-pager
 ## 5. Verify HTTP routing
 
 ```bash
-curl -H "Host: nucosmos.io" http://127.0.0.1/
-curl -H "Host: nucosmos.io" http://127.0.0.1/api/v1/health
+curl -i -H "Host: nucosmos.io" http://127.0.0.1/
+curl -i -H "Host: nucosmos.io" http://127.0.0.1/api/v1/health
+echo | openssl s_client -connect nucosmos.io:443 -servername nucosmos.io 2>/dev/null | openssl x509 -noout -subject -issuer -ext subjectAltName
 ```
 
 Expected:
 
-- `/` returns the landing page HTML
+- `/` returns the landing page HTML or the HTTPS redirect
 - `/erp/` returns the Vue app HTML
 - `/api/v1/health` returns `status=UP`
+- the presented certificate contains `DNS:nucosmos.io`
 
 ## 6. Current stable reverse proxy shape
 
@@ -174,7 +184,7 @@ For the fastest path, you can:
 If you need to revert:
 
 ```bash
-rm -f /etc/httpd/conf.d/nucosmos.io.conf
-httpd -t
-systemctl reload httpd
+rm -f /etc/apache2/conf.d/includes/post_virtualhost_global.conf
+apachectl -t
+/usr/local/cpanel/scripts/restartsrv_httpd
 ```

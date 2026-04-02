@@ -71,10 +71,13 @@ JWT_ACCESS_TOKEN_MINUTES=480
 FRONTEND_ORIGIN=https://nucosmos.io
 VITE_API_BASE_URL=
 ADMIN_WEB_PORT=8080
+APACHE_VHOST_TARGET=/etc/apache2/conf.d/includes/post_virtualhost_global.conf
 ```
 
 Set `ADMIN_WEB_PORT=8080` because host Apache will reverse proxy traffic from ports `80/443`.
 `deployment/deploy.sh` will also sync `deployment/public-site/` into `/var/www/nucosmos-cover`.
+On the current cPanel/EA4 VPS, set `APACHE_VHOST_TARGET=/etc/apache2/conf.d/includes/post_virtualhost_global.conf`
+so `deployment/deploy.sh` also refreshes the live Apache vhost file.
 
 ## 5. Deploy
 
@@ -91,6 +94,25 @@ If `nucosmos.io` will **not** be added as a cPanel-managed domain, use:
 - [nucosmos-io-apache-without-cpanel.md](/c:/NUCOSMOS_POS/docs/nucosmos-io-apache-without-cpanel.md)
 
 ### Option A: WHM/cPanel Apache reverse proxy
+
+On the current VPS, `nucosmos.io` is being served by:
+
+```text
+/etc/apache2/conf.d/includes/post_virtualhost_global.conf
+```
+
+That file should be treated as the live Apache vhost target for `nucosmos.io`.
+The repo-managed source is:
+
+- [nucosmos.io.conf](/c:/NUCOSMOS_POS/deployment/apache/nucosmos.io.conf)
+
+It now uses explicit bindings:
+
+- `63.250.42.132:80 127.0.0.1:80`
+- `63.250.42.132:443 127.0.0.1:443`
+
+This avoids cPanel/EA4 falling through to the `vtuberonline.com` or `server1.vtuberonline.com`
+SSL vhost when `nucosmos.io` traffic is matched.
 
 Find the cPanel account that owns `nucosmos.io`:
 
@@ -150,6 +172,15 @@ After deployment:
 docker compose --env-file /srv/nucosmos-pos/deployment/.env.prod -f /srv/nucosmos-pos/deployment/docker-compose.prod.yml ps
 curl http://127.0.0.1:8080
 curl http://127.0.0.1:8080/actuator/health
+curl -I http://127.0.0.1
+curl -k -I https://127.0.0.1
+```
+
+For `nucosmos.io` specifically, also verify the served certificate and redeem route:
+
+```bash
+echo | openssl s_client -connect nucosmos.io:443 -servername nucosmos.io 2>/dev/null | openssl x509 -noout -subject -issuer -ext subjectAltName
+curl -k -I --max-time 10 https://nucosmos.io/redeem/
 ```
 
 ## 10. Reboot ownership check

@@ -146,3 +146,5 @@ Notes:
 - Docker container nginx inside `admin-web` is allowed and expected
 - cPanel jailed-shell `virtfs` can hold old Docker overlay mounts open after container removal
 - When redeploy fails with `overlay2 ... device or resource busy`, check `virtfs` mounts before assuming the app image is broken
+- On this cPanel/EA4 VPS, `nucosmos.io` Apache vhosts should be synced to `/etc/apache2/conf.d/includes/post_virtualhost_global.conf`
+- `nucosmos.io` should bind explicitly to `63.250.42.132` and `127.0.0.1` on `80/443`; wildcard SSL bindings can fall through to other hosted vhosts

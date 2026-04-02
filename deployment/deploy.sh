@@ -7,6 +7,8 @@ ENV_FILE="${ENV_FILE:-$DEPLOY_DIR/.env.prod}"
 COMPOSE_FILE="${COMPOSE_FILE:-$DEPLOY_DIR/docker-compose.prod.yml}"
 PUBLIC_SITE_SOURCE="${PUBLIC_SITE_SOURCE:-$DEPLOY_DIR/public-site}"
 PUBLIC_SITE_ROOT="${PUBLIC_SITE_ROOT:-/var/www/nucosmos-cover}"
+APACHE_VHOST_SOURCE="${APACHE_VHOST_SOURCE:-$DEPLOY_DIR/apache/nucosmos.io.conf}"
+APACHE_VHOST_TARGET="${APACHE_VHOST_TARGET:-}"
 
 echo "[deploy] app root: $APP_ROOT"
 echo "[deploy] env file: $ENV_FILE"
@@ -30,6 +32,12 @@ if [ -d "$PUBLIC_SITE_SOURCE" ]; then
   echo "[deploy] syncing public site: $PUBLIC_SITE_SOURCE -> $PUBLIC_SITE_ROOT"
   mkdir -p "$PUBLIC_SITE_ROOT"
   cp -R "$PUBLIC_SITE_SOURCE"/. "$PUBLIC_SITE_ROOT"/
+fi
+
+if [ -n "$APACHE_VHOST_TARGET" ] && [ -f "$APACHE_VHOST_SOURCE" ]; then
+  echo "[deploy] syncing apache vhost: $APACHE_VHOST_SOURCE -> $APACHE_VHOST_TARGET"
+  mkdir -p "$(dirname "$APACHE_VHOST_TARGET")"
+  cp "$APACHE_VHOST_SOURCE" "$APACHE_VHOST_TARGET"
 fi
 
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" pull || true

@@ -53,12 +53,24 @@ The currently verified production routing on the VPS is:
 
 - Apache serves the landing page from `/var/www/nucosmos-cover`
 - Repo-managed landing assets live in `deployment/public-site/` and are synced by `deployment/deploy.sh`
+- Repo-managed Apache vhost can be synced by `deployment/deploy.sh` when `.env.prod` sets `APACHE_VHOST_TARGET`
 - Apache proxies `/erp/` to `127.0.0.1:8080`
 - Apache proxies `/api/` to `127.0.0.1:8080/api/`
+- Apache proxies `/redeem/` to `127.0.0.1:8081/redeem/`
 - container Nginx then forwards `/api/` to the backend container
 
 This is the path that was validated after VPS recovery and should be treated as the canonical
 reference unless a future deployment intentionally changes it.
+
+For the current cPanel/EA4 VPS:
+
+- live Apache include path: `/etc/apache2/conf.d/includes/post_virtualhost_global.conf`
+- repo source: [nucosmos.io.conf](/c:/NUCOSMOS_POS/deployment/apache/nucosmos.io.conf)
+- recommended `.env.prod` setting:
+
+```env
+APACHE_VHOST_TARGET=/etc/apache2/conf.d/includes/post_virtualhost_global.conf
+```
 
 ## Apache-only production rule
 
