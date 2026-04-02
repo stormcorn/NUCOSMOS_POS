@@ -3,21 +3,26 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NUCOSMOS 收據兌獎</title>
+    <title>NUCOSMOS 會員兌獎</title>
     <style>
       :root {
         color-scheme: dark;
         --bg: #04111f;
-        --panel: rgba(15, 23, 42, 0.86);
+        --panel: rgba(15, 23, 42, 0.88);
         --panel-soft: rgba(255, 255, 255, 0.04);
         --border: rgba(255, 255, 255, 0.1);
         --text: #e2e8f0;
         --muted: #94a3b8;
         --accent: #4fe0c6;
+        --accent-strong: #22d3ee;
         --danger: #fb7185;
         --warn: #fbbf24;
       }
-      * { box-sizing: border-box; }
+
+      * {
+        box-sizing: border-box;
+      }
+
       body {
         margin: 0;
         min-height: 100vh;
@@ -27,134 +32,163 @@
           radial-gradient(circle at top, rgba(79, 224, 198, 0.18), transparent 32%),
           linear-gradient(180deg, #07111b, #020617);
       }
+
       .wrap {
-        width: min(1120px, calc(100vw - 32px));
-        margin: 40px auto;
+        width: min(1160px, calc(100vw - 32px));
+        margin: 36px auto;
         padding: 28px;
-        border: 1px solid var(--border);
         border-radius: 28px;
+        border: 1px solid var(--border);
         background: var(--panel);
         box-shadow: 0 24px 80px rgba(0, 0, 0, 0.38);
       }
+
       .grid {
         display: grid;
         gap: 24px;
       }
+
       @media (min-width: 980px) {
         .grid {
-          grid-template-columns: 1.05fr 0.95fr;
+          grid-template-columns: 1fr 1fr;
         }
       }
-      h1, h2, h3, p { margin: 0; }
+
+      h1, h2, h3, p {
+        margin: 0;
+      }
+
       .eyebrow {
-        color: rgba(79, 224, 198, 0.86);
+        color: rgba(79, 224, 198, 0.88);
         font-size: 12px;
         letter-spacing: 0.32em;
         text-transform: uppercase;
       }
+
       .title {
         margin-top: 12px;
         font-size: clamp(28px, 4vw, 40px);
         line-height: 1.1;
       }
+
       .lead {
         margin-top: 16px;
         color: var(--muted);
         line-height: 1.8;
         font-size: 15px;
       }
+
       .panel {
         border: 1px solid var(--border);
         border-radius: 24px;
         background: var(--panel-soft);
         padding: 20px;
       }
-      .search-row, .button-row {
+
+      .stack {
+        display: grid;
+        gap: 20px;
+      }
+
+      .row {
         display: flex;
         flex-direction: column;
         gap: 12px;
       }
+
       @media (min-width: 620px) {
-        .search-row, .button-row {
+        .row {
           flex-direction: row;
         }
       }
+
       input, button {
-        border-radius: 16px;
-        border: 1px solid var(--border);
         font: inherit;
+        border-radius: 16px;
       }
-      input, textarea {
+
+      input {
         width: 100%;
         min-width: 0;
         padding: 14px 16px;
         color: var(--text);
         background: rgba(15, 23, 42, 0.85);
-        border-radius: 16px;
         border: 1px solid var(--border);
-        font: inherit;
       }
+
       button {
         padding: 14px 18px;
-        cursor: pointer;
         font-weight: 700;
+        border: 1px solid var(--border);
+        cursor: pointer;
         transition: 160ms ease;
       }
-      .primary {
-        color: #04111f;
-        background: var(--accent);
-        border-color: transparent;
-      }
-      .secondary {
-        color: var(--text);
-        background: rgba(255, 255, 255, 0.04);
-      }
+
       button:disabled {
         cursor: not-allowed;
         opacity: 0.55;
       }
+
+      .primary {
+        background: var(--accent);
+        border-color: transparent;
+        color: #04111f;
+      }
+
+      .secondary {
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+      }
+
       .message, .error, .banner, .hint-card {
-        margin-top: 16px;
         padding: 14px 16px;
         border-radius: 16px;
         font-size: 14px;
         line-height: 1.8;
       }
+
       .message {
         color: var(--accent);
         background: rgba(79, 224, 198, 0.1);
         border: 1px solid rgba(79, 224, 198, 0.2);
       }
+
       .error {
         color: var(--danger);
         background: rgba(251, 113, 133, 0.1);
         border: 1px solid rgba(251, 113, 133, 0.2);
       }
+
       .banner {
         border: 1px solid rgba(79, 224, 198, 0.2);
         background: rgba(79, 224, 198, 0.1);
       }
+
       .banner.win {
         border-color: rgba(251, 191, 36, 0.24);
         background: rgba(251, 191, 36, 0.12);
         color: #fde68a;
       }
+
       .banner.lose {
         border-color: rgba(148, 163, 184, 0.24);
         background: rgba(148, 163, 184, 0.1);
       }
+
       .stats {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 12px;
         margin-top: 16px;
       }
-      .stat {
+
+      .stat, .meta, .prize-list, .member-card {
         border: 1px solid var(--border);
         border-radius: 18px;
         background: rgba(15, 23, 42, 0.5);
         padding: 16px;
       }
+
       .stat small {
         display: block;
         color: var(--muted);
@@ -162,26 +196,22 @@
         letter-spacing: 0.18em;
         text-transform: uppercase;
       }
+
       .stat strong {
         display: block;
         margin-top: 10px;
         font-size: 20px;
       }
-      .meta, .ticket, .prize-list {
-        margin-top: 16px;
-        border: 1px solid var(--border);
-        border-radius: 20px;
-        background: rgba(15, 23, 42, 0.52);
-        padding: 18px;
-      }
-      .meta {
+
+      .meta, .member-card {
         font-size: 14px;
         line-height: 1.8;
       }
-      .meta .muted, .ticket .muted {
+
+      .muted {
         color: var(--muted);
-        word-break: break-all;
       }
+
       .placeholder {
         display: grid;
         place-items: center;
@@ -193,27 +223,34 @@
         line-height: 1.8;
         padding: 24px;
       }
-      .form-grid {
-        display: grid;
-        gap: 12px;
-        margin-top: 18px;
+
+      .ticket {
+        display: none;
       }
+
+      .ticket.active {
+        display: block;
+      }
+
       .prize-list {
         display: grid;
         gap: 12px;
       }
+
       .prize-item {
         border: 1px solid var(--border);
         border-radius: 18px;
         background: rgba(255, 255, 255, 0.04);
         padding: 16px;
       }
+
       .prize-item .top {
         display: flex;
         justify-content: space-between;
         gap: 16px;
         align-items: center;
       }
+
       .pill {
         display: inline-flex;
         padding: 6px 10px;
@@ -223,55 +260,86 @@
         font-size: 12px;
         font-weight: 700;
       }
+
       .pill.sold-out {
         background: rgba(251, 113, 133, 0.12);
         color: var(--danger);
       }
-      .ticket {
-        display: none;
+
+      .divider {
+        height: 1px;
+        background: var(--border);
+        margin: 16px 0;
       }
-      .ticket.active {
-        display: block;
-      }
-      .inline-grid {
-        display: grid;
-        gap: 10px;
+
+      .hidden {
+        display: none !important;
       }
     </style>
   </head>
   <body>
     <main class="wrap">
       <div class="grid">
-        <section class="panel">
-          <p class="eyebrow">Redeem & Lucky Draw</p>
-          <h1 class="title">收據抽獎 / 兌獎入口</h1>
-          <p class="lead">
-            每次結帳拿到收據後，都可以掃描 QR Code 進入抽獎頁面。系統會顯示本次是否中獎；如果沒中獎，仍可獲得 1 點，
-            每累積 5 點自動發一張 50 元抵用券。
-          </p>
+        <section class="stack">
+          <section class="panel">
+            <p class="eyebrow">Redeem & Lucky Draw</p>
+            <h1 class="title">會員登入後參加抽獎</h1>
+            <p class="lead">
+              每次結帳拿到收據後，掃描 QR Code 或輸入兌獎碼，就可以到 NUCOSMOS 官網參加抽獎。
+              沒中獎可獲得 1 點，累積 5 點自動發 50 元抵用券。
+            </p>
+          </section>
 
-          <div class="panel" style="margin-top: 28px;">
-            <label for="claim-code" class="lead" style="margin-top:0;">收據兌獎碼</label>
-            <div class="search-row" style="margin-top: 14px;">
-              <input id="claim-code" type="text" placeholder="例如：ABCD2345" />
-              <button id="lookup-button" class="primary">查詢收據</button>
+          <section class="panel">
+            <h2>查詢收據</h2>
+            <div class="row" style="margin-top: 14px;">
+              <input id="claim-code" type="text" placeholder="請輸入收據上的兌獎碼，例如 ABCD2345" />
+              <button id="lookup-button" class="primary">查詢兌獎</button>
             </div>
             <p class="lead" style="margin-top: 14px; font-size: 13px;">
-              你也可以直接掃描收據上的 QR Code。若已開啟本頁，輸入兌獎碼後也能查詢同一張收據。
+              如果你是掃描收據上的 QR Code 進來，系統會自動載入這張收據。
             </p>
-          </div>
+          </section>
 
-          <div class="hint-card banner" id="share-hint" style="display:none;"></div>
-          <div id="status-message" class="message" style="display:none;"></div>
-          <div id="error-message" class="error" style="display:none;"></div>
+          <section class="panel">
+            <div class="row" style="justify-content: space-between; align-items: center;">
+              <div>
+                <p class="eyebrow">Member Login</p>
+                <h2 style="margin-top: 10px;">手機簡訊登入會員</h2>
+              </div>
+              <button id="logout-button" class="secondary hidden">登出會員</button>
+            </div>
 
-          <div class="meta" style="margin-top: 20px;">
-            <div>活動規則</div>
-            <div class="muted">1. 掃描收據 QR Code 參加抽獎。</div>
-            <div class="muted">2. 若未中獎，顯示「銘謝惠顧，再接再厲」，並獲得 1 點。</div>
-            <div class="muted">3. 每累積 5 點，可獲得 50 元抵用券。</div>
-            <div class="muted">4. 五星好評、社群分享或分享 LINE 好友後出示給老闆，可直接獲得 50 元抵用券。</div>
-          </div>
+            <div id="member-session-card" class="member-card hidden" style="margin-top: 18px;"></div>
+
+            <div id="login-form" class="stack" style="margin-top: 18px;">
+              <input id="login-display-name" type="text" placeholder="首次登入請輸入姓名" />
+              <input id="login-phone" type="tel" placeholder="請輸入手機號碼，例如 0912345678" />
+              <div class="row">
+                <button id="send-code-button" class="primary">發送驗證碼</button>
+                <button id="refresh-session-button" class="secondary">重新整理會員狀態</button>
+              </div>
+              <input id="login-verification-code" type="text" maxlength="6" placeholder="請輸入簡訊驗證碼" />
+              <button id="verify-login-button" class="secondary">完成登入</button>
+              <p class="muted" style="font-size: 13px; line-height: 1.8;">
+                若是第一次登入，請先填寫姓名。完成登入後，兌獎頁會自動帶入會員資料。
+              </p>
+              <div id="recaptcha-container"></div>
+            </div>
+          </section>
+
+          <div id="share-hint" class="hint-card banner hidden"></div>
+          <div id="status-message" class="message hidden"></div>
+          <div id="error-message" class="error hidden"></div>
+
+          <section class="meta">
+            <div>兌獎規則</div>
+            <div class="muted">1. 先完成手機簡訊登入，再點擊兌獎。</div>
+            <div class="muted">2. 每張收據只能兌獎一次。</div>
+            <div class="muted">3. 未中獎會顯示「銘謝惠顧，再接再厲」，並獲得 1 點。</div>
+            <div class="muted">4. 累積 5 點可獲得 50 元抵用券。</div>
+            <div class="muted">5. 在店內五星好評、分享到任意社群、或分享 LINE 好友並出示給店主，也可以獲得 50 元抵用券。</div>
+          </section>
         </section>
 
         <section class="panel">
@@ -280,15 +348,15 @@
             <h2 id="order-number" class="title" style="font-size: 30px;"></h2>
             <p id="store-line" class="lead" style="margin-top: 10px;"></p>
 
-            <div id="draw-banner" class="banner" style="display:none;"></div>
+            <div id="draw-banner" class="banner hidden" style="margin-top: 18px;"></div>
 
             <div class="stats">
               <div class="stat">
-                <small>消費金額</small>
+                <small>訂單金額</small>
                 <strong id="total-amount"></strong>
               </div>
               <div class="stat">
-                <small>商品數量</small>
+                <small>品項數量</small>
                 <strong id="item-count"></strong>
               </div>
               <div class="stat">
@@ -301,55 +369,77 @@
               </div>
             </div>
 
-            <div class="meta">
-              <div>下單時間：<span id="ordered-at"></span></div>
-              <div>兌換時間：<span id="claimed-at"></span></div>
+            <div class="meta" style="margin-top: 18px;">
+              <div>訂單時間：<span id="ordered-at"></span></div>
+              <div>兌獎時間：<span id="claimed-at"></span></div>
               <div>兌獎碼：<span id="claim-code-view"></span></div>
               <div class="muted">兌獎網址：<span id="redeem-url"></span></div>
-              <div>會員姓名：<span id="member-name">尚未綁定</span></div>
-              <div>手機號碼：<span id="member-phone">尚未綁定</span></div>
+              <div>已綁定會員：<span id="member-name">尚未兌獎</span></div>
+              <div>會員手機：<span id="member-phone">尚未兌獎</span></div>
               <div>目前點數：<span id="member-points">0</span></div>
-              <div>累積參加次數：<span id="member-claims">0</span></div>
-              <div>本次回饋：<span id="reward-message">尚未兌換</span></div>
-              <div>本次發券：<span id="reward-coupon-code">尚未發放</span></div>
-              <div>優惠券名稱：<span id="reward-coupon-title">尚未發放</span></div>
+              <div>歷史兌獎次數：<span id="member-claims">0</span></div>
+              <div>本次回饋：<span id="reward-message">尚未兌獎</span></div>
+              <div>優惠券代碼：<span id="reward-coupon-code">尚未發券</span></div>
+              <div>優惠券名稱：<span id="reward-coupon-title">尚未發券</span></div>
             </div>
 
-            <div id="claim-form" class="form-grid">
-              <input id="display-name" type="text" placeholder="請輸入姓名" />
-              <input id="phone-number" type="tel" placeholder="請輸入手機號碼，例如 0912345678" />
-              <button id="claim-button" class="primary">確認參加抽獎</button>
+            <div class="divider"></div>
+
+            <div id="claim-actions" class="stack">
+              <div class="member-card">
+                <div id="claim-member-line">請先完成手機簡訊登入，才能參加抽獎。</div>
+              </div>
+              <button id="claim-button" class="primary">參加抽獎</button>
             </div>
 
             <div class="prize-list" style="margin-top: 18px;">
-              <h3>本期獎項與機率</h3>
+              <h3>目前獎項與機率</h3>
               <div id="prize-list"></div>
             </div>
           </div>
 
           <div id="placeholder-card" class="placeholder">
-            請先掃描收據上的 QR Code，或輸入兌獎碼後查詢。查到收據後，這裡會顯示抽獎資格、獎項清單與中獎結果。
+            請輸入收據上的兌獎碼，或直接掃描收據上的 QR Code。
           </div>
         </section>
       </div>
     </main>
 
-    <script>
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+      import {
+        getAuth,
+        RecaptchaVerifier,
+        signInWithPhoneNumber,
+      } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+
       const claimCodeInput = document.getElementById("claim-code");
       const lookupButton = document.getElementById("lookup-button");
+      const logoutButton = document.getElementById("logout-button");
+      const refreshSessionButton = document.getElementById("refresh-session-button");
+      const sendCodeButton = document.getElementById("send-code-button");
+      const verifyLoginButton = document.getElementById("verify-login-button");
       const claimButton = document.getElementById("claim-button");
-      const displayNameInput = document.getElementById("display-name");
-      const phoneNumberInput = document.getElementById("phone-number");
+      const loginForm = document.getElementById("login-form");
+      const memberSessionCard = document.getElementById("member-session-card");
+      const loginDisplayNameInput = document.getElementById("login-display-name");
+      const loginPhoneInput = document.getElementById("login-phone");
+      const loginVerificationCodeInput = document.getElementById("login-verification-code");
       const statusMessage = document.getElementById("status-message");
       const errorMessage = document.getElementById("error-message");
       const shareHint = document.getElementById("share-hint");
       const ticketCard = document.getElementById("ticket-card");
       const placeholderCard = document.getElementById("placeholder-card");
-      const claimForm = document.getElementById("claim-form");
       const drawBanner = document.getElementById("draw-banner");
       const prizeList = document.getElementById("prize-list");
+      const claimMemberLine = document.getElementById("claim-member-line");
 
       let currentTicket = null;
+      let currentSession = null;
+      let firebaseConfig = null;
+      let auth = null;
+      let recaptchaVerifier = null;
+      let confirmationResult = null;
 
       function formatCurrency(value) {
         return new Intl.NumberFormat("zh-TW", {
@@ -362,7 +452,7 @@
 
       function formatDateTime(value) {
         if (!value) {
-          return "尚未兌換";
+          return "尚未發生";
         }
         return new Intl.DateTimeFormat("zh-TW", {
           dateStyle: "medium",
@@ -370,94 +460,46 @@
         }).format(new Date(value));
       }
 
+      function normalizePhoneNumber(rawValue) {
+        const normalized = (rawValue || "").replace(/[\s\-()]/g, "").trim();
+        if (/^09\d{8}$/.test(normalized)) {
+          return `+886${normalized.slice(1)}`;
+        }
+        if (/^\d{10,15}$/.test(normalized)) {
+          return `+${normalized}`;
+        }
+        return normalized;
+      }
+
       function setMessage(text) {
         statusMessage.textContent = text || "";
-        statusMessage.style.display = text ? "block" : "none";
+        statusMessage.classList.toggle("hidden", !text);
       }
 
       function setError(text) {
         errorMessage.textContent = text || "";
-        errorMessage.style.display = text ? "block" : "none";
+        errorMessage.classList.toggle("hidden", !text);
       }
 
       function setShareHint(text) {
         shareHint.textContent = text || "";
-        shareHint.style.display = text ? "block" : "none";
+        shareHint.classList.toggle("hidden", !text);
       }
 
-      function resetResultBanner() {
+      function resetDrawBanner() {
         drawBanner.textContent = "";
-        drawBanner.className = "banner";
-        drawBanner.style.display = "none";
+        drawBanner.className = "banner hidden";
       }
 
-      function renderPrizeList(prizes) {
-        prizeList.innerHTML = "";
-        if (!Array.isArray(prizes) || prizes.length === 0) {
-          prizeList.innerHTML = '<div class="meta muted">目前尚未設定公開抽獎獎項。</div>';
-          return;
-        }
-
-        prizes.forEach((prize) => {
-          const item = document.createElement("article");
-          item.className = "prize-item";
-          item.innerHTML = `
-            <div class="top">
-              <div>
-                <p style="font-weight:700;">${prize.name}</p>
-                <p class="muted" style="margin-top:6px;">${prize.description || "中獎後請向店員出示畫面兌領。"}</p>
-              </div>
-              <span class="pill ${prize.remainingQuantity <= 0 ? "sold-out" : ""}">
-                ${prize.remainingQuantity <= 0 ? "已抽完" : `剩餘 ${prize.remainingQuantity}`}
-              </span>
-            </div>
-            <div class="inline-grid" style="margin-top:12px; color: var(--muted);">
-              <span>中獎機率：${Number(prize.probabilityPercent || 0).toFixed(2)}%</span>
-              <span>顯示順序：${prize.displayOrder}</span>
-            </div>
-          `;
-          prizeList.appendChild(item);
-        });
-      }
-
-      function renderTicket(ticket) {
-        currentTicket = ticket;
-        placeholderCard.style.display = "none";
-        ticketCard.classList.add("active");
-
-        document.getElementById("order-number").textContent = ticket.orderNumber || "未提供訂單編號";
-        document.getElementById("store-line").textContent = `${ticket.storeCode} | ${ticket.storeName}`;
-        document.getElementById("total-amount").textContent = formatCurrency(ticket.totalAmount);
-        document.getElementById("item-count").textContent = String(ticket.itemCount || 0);
-        document.getElementById("payment-status").textContent = ticket.paymentStatus || "-";
-        document.getElementById("claim-status").textContent = ticket.claimed ? "已兌換" : ticket.claimable ? "可抽獎" : "不可兌換";
-        document.getElementById("ordered-at").textContent = formatDateTime(ticket.orderedAt);
-        document.getElementById("claimed-at").textContent = formatDateTime(ticket.claimedAt);
-        document.getElementById("claim-code-view").textContent = ticket.claimCode || "-";
-        document.getElementById("redeem-url").textContent = ticket.redeemUrl || "-";
-        document.getElementById("member-name").textContent = ticket.member?.displayName || "尚未綁定";
-        document.getElementById("member-phone").textContent = ticket.member?.phoneNumber || "尚未綁定";
-        document.getElementById("member-points").textContent = String(ticket.member?.pointBalance ?? 0);
-        document.getElementById("member-claims").textContent = String(ticket.member?.totalClaims ?? 0);
-        document.getElementById("reward-message").textContent = ticket.rewards?.message || "尚未兌換";
-        document.getElementById("reward-coupon-code").textContent = ticket.rewards?.issuedCoupon?.code || "尚未發放";
-        document.getElementById("reward-coupon-title").textContent = ticket.rewards?.issuedCoupon?.title || "尚未發放";
-
-        resetResultBanner();
-        if (ticket.draw) {
-          drawBanner.textContent = `${ticket.draw.title} ${ticket.draw.message}`;
-          drawBanner.classList.add(ticket.draw.won ? "win" : "lose");
-          drawBanner.style.display = "block";
-        }
-
-        claimForm.style.display = ticket.claimable ? "grid" : "none";
-        setShareHint(ticket.shareCouponHint || "");
-        renderPrizeList(ticket.availablePrizes || []);
+      function setBusy(button, busy, busyLabel, idleLabel) {
+        button.disabled = busy;
+        button.textContent = busy ? busyLabel : idleLabel;
       }
 
       async function requestJson(url, options = {}) {
         const response = await fetch(url, {
           ...options,
+          credentials: "same-origin",
           headers: {
             "Content-Type": "application/json",
             ...(options.headers || {}),
@@ -478,10 +520,97 @@
         return payload?.data ?? null;
       }
 
+      function renderPrizeList(prizes) {
+        prizeList.innerHTML = "";
+        if (!Array.isArray(prizes) || prizes.length === 0) {
+          prizeList.innerHTML = '<div class="meta muted">目前尚未設定可抽獎的獎項。</div>';
+          return;
+        }
+
+        prizes.forEach((prize) => {
+          const item = document.createElement("article");
+          item.className = "prize-item";
+          item.innerHTML = `
+            <div class="top">
+              <div>
+                <p style="font-weight:700;">${prize.name}</p>
+                <p class="muted" style="margin-top:6px;">${prize.description || "請依門市活動公告為準。"}</p>
+              </div>
+              <span class="pill ${prize.remainingQuantity <= 0 ? "sold-out" : ""}">
+                ${prize.remainingQuantity <= 0 ? "已抽完" : `剩餘 ${prize.remainingQuantity}`}
+              </span>
+            </div>
+            <div class="muted" style="margin-top:12px;">
+              中獎機率：${Number(prize.probabilityPercent || 0).toFixed(2)}%
+            </div>
+          `;
+          prizeList.appendChild(item);
+        });
+      }
+
+      function renderSession(session) {
+        currentSession = session;
+        const authenticated = Boolean(session?.authenticated && session.member);
+
+        loginForm.classList.toggle("hidden", authenticated);
+        logoutButton.classList.toggle("hidden", !authenticated);
+        memberSessionCard.classList.toggle("hidden", !authenticated);
+
+        if (authenticated) {
+          memberSessionCard.innerHTML = `
+            <div style="font-weight:700;">已登入會員：${session.member.displayName}</div>
+            <div class="muted">手機：${session.member.phoneNumber}</div>
+            <div class="muted">目前點數：${session.member.pointBalance}</div>
+            <div class="muted">累積兌獎次數：${session.member.totalClaims}</div>
+          `;
+          claimMemberLine.textContent = `將以會員 ${session.member.displayName}（${session.member.phoneNumber}）參加這張收據的抽獎。`;
+        } else {
+          memberSessionCard.innerHTML = "";
+          claimMemberLine.textContent = "請先完成手機簡訊登入，才能參加抽獎。";
+        }
+      }
+
+      function renderTicket(ticket) {
+        currentTicket = ticket;
+        placeholderCard.classList.add("hidden");
+        ticketCard.classList.add("active");
+
+        document.getElementById("order-number").textContent = ticket.orderNumber || "未提供訂單編號";
+        document.getElementById("store-line").textContent = `${ticket.storeCode} | ${ticket.storeName}`;
+        document.getElementById("total-amount").textContent = formatCurrency(ticket.totalAmount);
+        document.getElementById("item-count").textContent = String(ticket.itemCount || 0);
+        document.getElementById("payment-status").textContent = ticket.paymentStatus || "-";
+        document.getElementById("claim-status").textContent = ticket.claimed ? "已兌獎" : ticket.claimable ? "可參加抽獎" : "不可兌獎";
+        document.getElementById("ordered-at").textContent = formatDateTime(ticket.orderedAt);
+        document.getElementById("claimed-at").textContent = formatDateTime(ticket.claimedAt);
+        document.getElementById("claim-code-view").textContent = ticket.claimCode || "-";
+        document.getElementById("redeem-url").textContent = ticket.redeemUrl || "-";
+        document.getElementById("member-name").textContent = ticket.member?.displayName || "尚未兌獎";
+        document.getElementById("member-phone").textContent = ticket.member?.phoneNumber || "尚未兌獎";
+        document.getElementById("member-points").textContent = String(ticket.member?.pointBalance ?? 0);
+        document.getElementById("member-claims").textContent = String(ticket.member?.totalClaims ?? 0);
+        document.getElementById("reward-message").textContent = ticket.rewards?.message || "尚未兌獎";
+        document.getElementById("reward-coupon-code").textContent = ticket.rewards?.issuedCoupon?.code || "尚未發券";
+        document.getElementById("reward-coupon-title").textContent = ticket.rewards?.issuedCoupon?.title || "尚未發券";
+
+        resetDrawBanner();
+        if (ticket.draw) {
+          drawBanner.textContent = `${ticket.draw.title} ${ticket.draw.message}`;
+          drawBanner.classList.remove("hidden");
+          drawBanner.classList.add(ticket.draw.won ? "win" : "lose");
+        }
+
+        claimButton.disabled = !ticket.claimable;
+        claimButton.textContent = ticket.claimed ? "這張收據已完成兌獎" : "參加抽獎";
+        setShareHint(ticket.shareCouponHint || "");
+        renderPrizeList(ticket.availablePrizes || []);
+        renderSession(currentSession);
+      }
+
       async function lookupByToken(token) {
         const ticket = await requestJson(`/api/v1/public/redeem/${encodeURIComponent(token)}`);
         renderTicket(ticket);
-        setMessage(ticket.message || "已載入收據資料。");
+        setMessage(ticket.message || "收據資訊已載入。");
         setError("");
       }
 
@@ -493,52 +622,183 @@
         }
 
         try {
-          setMessage("查詢中...");
+          setMessage("查詢兌獎碼中...");
           const ticket = await requestJson(`/api/v1/public/redeem/search?code=${encodeURIComponent(code)}`);
           renderTicket(ticket);
-          setMessage(ticket.message || "已載入收據資料。");
+          setMessage(ticket.message || "收據資訊已載入。");
           setError("");
           history.replaceState({}, "", `/redeem/${ticket.token}`);
         } catch (error) {
-          setError(error instanceof Error ? error.message : "查詢收據失敗。");
+          setError(error instanceof Error ? error.message : "查詢兌獎碼失敗。");
           setMessage("");
         }
       }
 
       async function claimTicket() {
         if (!currentTicket?.token) {
-          setError("請先查詢有效收據。");
+          setError("請先查詢一張可兌獎的收據。");
           return;
         }
-
-        const displayName = displayNameInput.value.trim();
-        const phoneNumber = phoneNumberInput.value.trim();
-
-        if (!displayName || !phoneNumber) {
-          setError("請先完整填寫姓名與手機號碼。");
+        if (!currentSession?.authenticated) {
+          setError("請先完成手機簡訊登入，再參加抽獎。");
           return;
         }
 
         try {
-          claimButton.disabled = true;
-          setMessage("抽獎中...");
+          setBusy(claimButton, true, "兌獎中...", "參加抽獎");
+          setMessage("正在進行抽獎...");
           const ticket = await requestJson(`/api/v1/public/redeem/${encodeURIComponent(currentTicket.token)}/claim`, {
             method: "POST",
-            body: JSON.stringify({ displayName, phoneNumber }),
+            body: JSON.stringify({}),
           });
           renderTicket(ticket);
+          await refreshSession();
           setMessage(ticket.draw?.title || ticket.message || "兌獎完成。");
           setError("");
         } catch (error) {
           setError(error instanceof Error ? error.message : "兌獎失敗。");
           setMessage("");
         } finally {
-          claimButton.disabled = false;
+          setBusy(claimButton, false, "兌獎中...", currentTicket?.claimed ? "這張收據已完成兌獎" : "參加抽獎");
+        }
+      }
+
+      async function loadFirebaseConfig() {
+        firebaseConfig = await requestJson("/api/v1/public/member/firebase-config");
+        if (!firebaseConfig?.configured) {
+          setError("會員手機簡訊登入尚未啟用，請稍後再試或聯繫店家。");
+          sendCodeButton.disabled = true;
+          verifyLoginButton.disabled = true;
+          return;
+        }
+      }
+
+      function ensureFirebaseAuth() {
+        if (!firebaseConfig?.configured) {
+          throw new Error("Firebase web auth is not configured.");
+        }
+        if (!auth) {
+          const app = initializeApp({
+            apiKey: firebaseConfig.apiKey,
+            authDomain: firebaseConfig.authDomain,
+            projectId: firebaseConfig.projectId,
+            storageBucket: firebaseConfig.storageBucket,
+            messagingSenderId: firebaseConfig.messagingSenderId,
+            appId: firebaseConfig.appId,
+            measurementId: firebaseConfig.measurementId,
+          });
+          auth = getAuth(app);
+          auth.languageCode = "zh-TW";
+        }
+        return auth;
+      }
+
+      async function ensureRecaptcha() {
+        const authClient = ensureFirebaseAuth();
+        if (!recaptchaVerifier) {
+          recaptchaVerifier = new RecaptchaVerifier(authClient, "recaptcha-container", {
+            size: "invisible",
+          });
+          await recaptchaVerifier.render();
+        }
+        return recaptchaVerifier;
+      }
+
+      async function sendLoginCode() {
+        try {
+          setBusy(sendCodeButton, true, "發送中...", "發送驗證碼");
+          setError("");
+          setMessage("正在準備簡訊驗證...");
+
+          const authClient = ensureFirebaseAuth();
+          const verifier = await ensureRecaptcha();
+          const normalizedPhone = normalizePhoneNumber(loginPhoneInput.value);
+          if (!/^\+\d{10,15}$/.test(normalizedPhone)) {
+            throw new Error("請輸入有效手機號碼，例如 0912345678。");
+          }
+
+          confirmationResult = await signInWithPhoneNumber(authClient, normalizedPhone, verifier);
+          setMessage(`驗證碼已發送到 ${normalizedPhone}，請輸入簡訊驗證碼。`);
+        } catch (error) {
+          setError(error instanceof Error ? error.message : "發送驗證碼失敗。");
+          setMessage("");
+          if (recaptchaVerifier) {
+            recaptchaVerifier.clear();
+            recaptchaVerifier = null;
+          }
+        } finally {
+          setBusy(sendCodeButton, false, "發送中...", "發送驗證碼");
+        }
+      }
+
+      async function verifyLogin() {
+        if (!confirmationResult) {
+          setError("請先發送簡訊驗證碼。");
+          return;
+        }
+
+        const verificationCode = loginVerificationCodeInput.value.trim();
+        if (!/^\d{6}$/.test(verificationCode)) {
+          setError("請輸入 6 位數簡訊驗證碼。");
+          return;
+        }
+
+        try {
+          setBusy(verifyLoginButton, true, "登入中...", "完成登入");
+          setError("");
+          setMessage("正在驗證手機登入...");
+
+          const confirmation = await confirmationResult.confirm(verificationCode);
+          const firebaseIdToken = await confirmation.user.getIdToken();
+          await requestJson("/api/v1/public/member/login/sms", {
+            method: "POST",
+            body: JSON.stringify({
+              displayName: loginDisplayNameInput.value.trim(),
+              firebaseIdToken,
+            }),
+          });
+          confirmationResult = null;
+          loginVerificationCodeInput.value = "";
+          await refreshSession();
+          setMessage("會員登入成功，現在可以直接參加抽獎。");
+        } catch (error) {
+          setError(error instanceof Error ? error.message : "會員登入失敗。");
+          setMessage("");
+        } finally {
+          setBusy(verifyLoginButton, false, "登入中...", "完成登入");
+        }
+      }
+
+      async function refreshSession() {
+        const session = await requestJson("/api/v1/public/member/session");
+        renderSession(session);
+      }
+
+      async function logout() {
+        try {
+          await requestJson("/api/v1/public/member/logout", {
+            method: "POST",
+            body: JSON.stringify({}),
+          });
+          renderSession({ authenticated: false, member: null });
+          setMessage("會員已登出。");
+          setError("");
+        } catch (error) {
+          setError(error instanceof Error ? error.message : "會員登出失敗。");
         }
       }
 
       lookupButton.addEventListener("click", lookupByCode);
       claimButton.addEventListener("click", claimTicket);
+      sendCodeButton.addEventListener("click", sendLoginCode);
+      verifyLoginButton.addEventListener("click", verifyLogin);
+      refreshSessionButton.addEventListener("click", async () => {
+        await refreshSession();
+        setMessage("會員狀態已更新。");
+        setError("");
+      });
+      logoutButton.addEventListener("click", logout);
+
       claimCodeInput.addEventListener("keydown", (event) => {
         if (event.key === "Enter") {
           event.preventDefault();
@@ -548,11 +808,17 @@
 
       const currentPath = window.location.pathname.replace(/\/+$/, "");
       const token = currentPath.split("/").pop();
-      if (token && token !== "redeem") {
-        lookupByToken(token).catch((error) => {
-          setError(error instanceof Error ? error.message : "載入兌獎資訊失敗。");
-        });
-      }
+
+      (async () => {
+        try {
+          await Promise.all([loadFirebaseConfig(), refreshSession()]);
+          if (token && token !== "redeem") {
+            await lookupByToken(token);
+          }
+        } catch (error) {
+          setError(error instanceof Error ? error.message : "初始化兌獎頁失敗。");
+        }
+      })();
     </script>
   </body>
 </html>

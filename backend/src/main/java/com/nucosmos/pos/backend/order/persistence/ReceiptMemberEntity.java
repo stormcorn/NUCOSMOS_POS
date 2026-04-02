@@ -17,6 +17,9 @@ public class ReceiptMemberEntity extends BaseEntity {
     @Column(nullable = false, unique = true, length = 30)
     private String phoneNumber;
 
+    @Column(unique = true, length = 128)
+    private String firebaseUid;
+
     @Column(nullable = false, length = 20)
     private String status;
 
@@ -50,6 +53,10 @@ public class ReceiptMemberEntity extends BaseEntity {
         return status;
     }
 
+    public String getFirebaseUid() {
+        return firebaseUid;
+    }
+
     public OffsetDateTime getLastClaimedAt() {
         return lastClaimedAt;
     }
@@ -65,6 +72,10 @@ public class ReceiptMemberEntity extends BaseEntity {
     public void updateProfile(String displayName, String phoneNumber) {
         this.displayName = displayName;
         this.phoneNumber = phoneNumber;
+    }
+
+    public void bindFirebaseUid(String firebaseUid) {
+        this.firebaseUid = firebaseUid;
     }
 
     public void markClaimed(OffsetDateTime claimedAt, int awardedPoints) {

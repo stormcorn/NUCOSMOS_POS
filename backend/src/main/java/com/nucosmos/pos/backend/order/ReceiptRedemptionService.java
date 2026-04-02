@@ -100,7 +100,11 @@ public class ReceiptRedemptionService {
     }
 
     @Transactional
-    public ReceiptRedeemResponse claimByToken(String token, PublicRedeemClaimRequest request) {
+    public ReceiptRedeemResponse claimByToken(
+            String token,
+            PublicRedeemClaimRequest request,
+            ReceiptMemberEntity authenticatedMember
+    ) {
         ReceiptRedemptionEntity redemption = receiptRedemptionRepository.findByPublicToken(normalizeToken(token))
                 .orElseThrow(() -> new NotFoundException("Redeem ticket not found"));
 
@@ -109,7 +113,9 @@ public class ReceiptRedemptionService {
         }
 
         if (!redemption.isClaimed()) {
-            ReceiptMemberEntity member = upsertMember(request);
+            ReceiptMemberEntity member = authenticatedMember != null
+                    ? receiptMemberRepository.getReferenceById(authenticatedMember.getId())
+                    : upsertMember(request);
             OffsetDateTime claimedAt = OffsetDateTime.now();
             DrawResult drawResult = drawPrize();
             int awardedPoints = drawResult.won() ? 0 : POINTS_PER_LOSS;

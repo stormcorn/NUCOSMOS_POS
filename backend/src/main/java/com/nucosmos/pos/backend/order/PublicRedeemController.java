@@ -1,8 +1,10 @@
 package com.nucosmos.pos.backend.order;
 
 import com.nucosmos.pos.backend.common.api.ApiResponse;
+import com.nucosmos.pos.backend.order.persistence.ReceiptMemberEntity;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,9 +20,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class PublicRedeemController {
 
     private final ReceiptRedemptionService receiptRedemptionService;
+    private final PublicMemberAuthService publicMemberAuthService;
 
-    public PublicRedeemController(ReceiptRedemptionService receiptRedemptionService) {
+    public PublicRedeemController(
+            ReceiptRedemptionService receiptRedemptionService,
+            PublicMemberAuthService publicMemberAuthService
+    ) {
         this.receiptRedemptionService = receiptRedemptionService;
+        this.publicMemberAuthService = publicMemberAuthService;
     }
 
     @GetMapping("/{token}")
@@ -38,8 +45,11 @@ public class PublicRedeemController {
     @PostMapping("/{token}/claim")
     public ApiResponse<ReceiptRedeemResponse> claim(
             @PathVariable String token,
-            @Valid @RequestBody PublicRedeemClaimRequest request
+            @Valid @RequestBody(required = false) PublicRedeemClaimRequest request,
+            @CookieValue(value = PublicMemberAuthService.SESSION_COOKIE_NAME, required = false) String sessionToken
     ) {
-        return ApiResponse.ok(receiptRedemptionService.claimByToken(token, request));
+        ReceiptMemberEntity authenticatedMember = publicMemberAuthService.findActiveMember(sessionToken)
+                .orElse(null);
+        return ApiResponse.ok(receiptRedemptionService.claimByToken(token, request, authenticatedMember));
     }
 }
