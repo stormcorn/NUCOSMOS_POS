@@ -20,6 +20,7 @@ import java.util.UUID;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -35,6 +36,14 @@ class PublicRedeemControllerTest {
 
     @Autowired
     private ReceiptPrizeRepository receiptPrizeRepository;
+
+    @Test
+    void shouldServePublicRedeemEntryPage() throws Exception {
+        mockMvc.perform(get("/redeem/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("<!doctype html>")))
+                .andExpect(content().string(containsString("requestJson")));
+    }
 
     @Test
     void shouldLookupAndClaimReceiptByTokenAsLoseFlow() throws Exception {
