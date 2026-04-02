@@ -1,5 +1,8 @@
 # Receipt Redeem MVP
 
+> 規則總覽請同步參考：
+> [member-redeem-rules.md](/c:/NUCOSMOS_POS/docs/member-redeem-rules.md)
+
 ## Purpose
 
 Turn each printed receipt into a safe public redeem entry on `nucosmos.io`, so customers can:
