@@ -90,6 +90,7 @@ class PrinterService {
     String? storeCode,
     String? staffName,
     String? receiptFooterText,
+    bool includeStoreCopy = false,
   }) async {
     final bytes = await _buildOrderReceiptBytes(
       receipt: receipt,
@@ -97,6 +98,7 @@ class PrinterService {
       storeCode: storeCode,
       staffName: staffName,
       receiptFooterText: receiptFooterText,
+      includeStoreCopy: includeStoreCopy,
     );
     await _printClassicBytes(device, bytes);
   }
@@ -118,6 +120,7 @@ class PrinterService {
     String? storeCode,
     String? staffName,
     String? receiptFooterText,
+    bool includeStoreCopy = false,
   }) async {
     await _androidPrintChannel.invokeMethod(
       'printSystemDocument',
@@ -129,6 +132,7 @@ class PrinterService {
           storeCode: storeCode,
           staffName: staffName,
           receiptFooterText: receiptFooterText,
+          includeStoreCopy: includeStoreCopy,
         ),
       },
     );
@@ -164,6 +168,7 @@ class PrinterService {
     String? storeCode,
     String? staffName,
     String? receiptFooterText,
+    bool includeStoreCopy = false,
   }) async {
     final bytes = await _buildOrderReceiptBytes(
       receipt: receipt,
@@ -171,6 +176,7 @@ class PrinterService {
       storeCode: storeCode,
       staffName: staffName,
       receiptFooterText: receiptFooterText,
+      includeStoreCopy: includeStoreCopy,
     );
     await _plugin.printData(printer, bytes, longData: true);
   }
@@ -231,9 +237,47 @@ class PrinterService {
     String? storeCode,
     String? staffName,
     String? receiptFooterText,
+    bool includeStoreCopy = false,
   }) async {
     final profile = await CapabilityProfile.load();
     final generator = Generator(PaperSize.mm80, profile);
+    final bytes = <int>[];
+    bytes.addAll(
+      _buildThermalOrderCopyBytes(
+        generator: generator,
+        copyLabel: 'CUSTOMER COPY',
+        receipt: receipt,
+        lines: lines,
+        storeCode: storeCode,
+        staffName: staffName,
+        receiptFooterText: receiptFooterText,
+      ),
+    );
+    if (includeStoreCopy) {
+      bytes.addAll(
+        _buildThermalOrderCopyBytes(
+          generator: generator,
+          copyLabel: 'STORE COPY',
+          receipt: receipt,
+          lines: lines,
+          storeCode: storeCode,
+          staffName: staffName,
+          receiptFooterText: receiptFooterText,
+        ),
+      );
+    }
+    return bytes;
+  }
+
+  List<int> _buildThermalOrderCopyBytes({
+    required Generator generator,
+    required String copyLabel,
+    required OrderReceipt receipt,
+    required List<PosCartLine> lines,
+    String? storeCode,
+    String? staffName,
+    String? receiptFooterText,
+  }) {
     final bytes = <int>[];
 
     bytes.addAll(generator.text(
@@ -246,32 +290,37 @@ class PrinterService {
       ),
     ));
     bytes.addAll(generator.text(
-      'Sales Receipt',
+      'SALES RECEIPT',
+      styles: const PosStyles(align: PosAlign.center, bold: true),
+    ));
+    bytes.addAll(generator.text(
+      copyLabel,
       styles: const PosStyles(align: PosAlign.center, bold: true),
     ));
     bytes.addAll(generator.feed(1));
     if (storeCode != null && storeCode.trim().isNotEmpty) {
-      bytes.addAll(generator.text('Store: ${_thermalSafe(storeCode)}'));
+      bytes.addAll(generator.text('Store / Store: ${_thermalSafe(storeCode)}'));
     }
     if (staffName != null && staffName.trim().isNotEmpty) {
-      bytes.addAll(generator.text('Staff: ${_thermalSafe(staffName)}'));
+      bytes.addAll(generator.text('Staff / Clerk: ${_thermalSafe(staffName)}'));
     }
-    bytes.addAll(generator.text('Order: ${receipt.orderNumber}'));
+    bytes.addAll(generator.text('Order / No.: ${receipt.orderNumber}'));
     bytes.addAll(
       generator.text(
-        'Payment: ${_thermalPaymentMethodLabel(receipt.paymentMethod)}',
+        'Payment / Pay: ${_thermalPaymentMethodLabel(receipt.paymentMethod)}',
       ),
     );
     bytes.addAll(
       generator.text(
-        'Status: ${_thermalPaymentStatusLabel(receipt.paymentStatus)}',
+        'Status / State: ${_thermalPaymentStatusLabel(receipt.paymentStatus)}',
       ),
     );
-    bytes.addAll(generator.text('Printed: ${_formatDateTime(DateTime.now())}'));
+    bytes.addAll(
+        generator.text('Printed / Time: ${_formatDateTime(DateTime.now())}'));
     bytes.addAll(generator.hr());
     bytes.addAll(generator.row([
       PosColumn(
-        text: 'Item',
+        text: 'Item / Prod',
         width: 6,
         styles: const PosStyles(bold: true),
       ),
@@ -326,7 +375,7 @@ class PrinterService {
     bytes.addAll(generator.hr());
     bytes.addAll(generator.row([
       PosColumn(
-        text: 'Items',
+        text: 'Items / Qty',
         width: 8,
         styles: const PosStyles(bold: true),
       ),
@@ -338,7 +387,7 @@ class PrinterService {
     ]));
     bytes.addAll(generator.row([
       PosColumn(
-        text: 'Subtotal',
+        text: 'Subtotal / Sub',
         width: 8,
         styles: const PosStyles(bold: true),
       ),
@@ -351,7 +400,7 @@ class PrinterService {
     if (receipt.discountAmount > 0) {
       bytes.addAll(generator.row([
         PosColumn(
-          text: 'Discount',
+          text: 'Discount / Off',
           width: 8,
           styles: const PosStyles(bold: true),
         ),
@@ -364,27 +413,27 @@ class PrinterService {
       final discountTypeLabel = _thermalDiscountTypeLabel(receipt.discountType);
       if (discountTypeLabel != null) {
         bytes.addAll(generator.text(
-          '  Type: ${_thermalSafe(discountTypeLabel)}',
+          '  Type / Kind: ${_thermalSafe(discountTypeLabel)}',
           styles: const PosStyles(align: PosAlign.left),
         ));
       }
       final discountValueLabel = _thermalDiscountValueLabel(receipt);
       if (discountValueLabel != null) {
         bytes.addAll(generator.text(
-          '  Value: ${_thermalSafe(discountValueLabel)}',
+          '  Value / Amt: ${_thermalSafe(discountValueLabel)}',
           styles: const PosStyles(align: PosAlign.left),
         ));
       }
       if (receipt.discountNote?.trim().isNotEmpty ?? false) {
         bytes.addAll(generator.text(
-          '  Note: ${_thermalSafe(receipt.discountNote!.trim())}',
+          '  Note / Memo: ${_thermalSafe(receipt.discountNote!.trim())}',
           styles: const PosStyles(align: PosAlign.left),
         ));
       }
     }
     bytes.addAll(generator.row([
       PosColumn(
-        text: 'Total',
+        text: 'Total / Due',
         width: 8,
         styles: const PosStyles(
           bold: true,
@@ -405,7 +454,7 @@ class PrinterService {
     ]));
     bytes.addAll(generator.row([
       PosColumn(
-        text: 'Paid',
+        text: 'Paid / Recv',
         width: 8,
         styles: const PosStyles(bold: true),
       ),
@@ -418,7 +467,7 @@ class PrinterService {
     if (receipt.changeAmount > 0) {
       bytes.addAll(generator.row([
         PosColumn(
-          text: 'Change',
+          text: 'Change / Back',
           width: 8,
           styles: const PosStyles(bold: true),
         ),
@@ -431,7 +480,7 @@ class PrinterService {
     }
     bytes.addAll(generator.row([
       PosColumn(
-        text: 'Payment',
+        text: 'Payment / Way',
         width: 8,
         styles: const PosStyles(bold: true),
       ),
@@ -446,11 +495,11 @@ class PrinterService {
     if ((redeemCode?.isNotEmpty ?? false) || (redeemUrl?.isNotEmpty ?? false)) {
       bytes.addAll(generator.hr());
       bytes.addAll(generator.text(
-        'Redeem',
+        'Redeem / Lucky Draw',
         styles: const PosStyles(align: PosAlign.center, bold: true),
       ));
       if (redeemCode != null && redeemCode.isNotEmpty) {
-        bytes.addAll(generator.text('Code: ${_thermalSafe(redeemCode)}'));
+        bytes.addAll(generator.text('Code / No.: ${_thermalSafe(redeemCode)}'));
       }
       if (redeemUrl != null && redeemUrl.isNotEmpty) {
         bytes.addAll(
@@ -465,7 +514,7 @@ class PrinterService {
         } catch (_) {
           bytes.addAll(
             generator.text(
-              'Scan the redeem URL online.',
+              'Scan redeem URL online.',
               styles: const PosStyles(align: PosAlign.center),
             ),
           );
@@ -474,7 +523,7 @@ class PrinterService {
     }
     bytes.addAll(generator.feed(1));
     bytes.addAll(generator.text(
-      'Thank you for your order',
+      'Thank you / Thanks',
       styles: const PosStyles(align: PosAlign.center, bold: true),
     ));
     bytes.addAll(generator.text(
@@ -522,7 +571,8 @@ class PrinterService {
       _centerText('\u5370\u8868\u6a5f\u6e2c\u8a66\u9801', width),
       '=' * width,
       _twoColumn('\u5217\u5370\u6642\u9593', _formatDateTime(now), width),
-      _twoColumn('\u5217\u5370\u985e\u578b', 'Android \u7cfb\u7d71\u5217\u5370', width),
+      _twoColumn('\u5217\u5370\u985e\u578b', 'Android \u7cfb\u7d71\u5217\u5370',
+          width),
       '-' * width,
       '\u9019\u662f Android \u7cfb\u7d71\u5217\u5370\u7684\u6e2c\u8a66\u9801\u3002',
       '\u5982\u679c\u756b\u9762\u6709\u8df3\u51fa\u7cfb\u7d71\u5217\u5370\u9078\u55ae\uff0c\u4ee3\u8868\u4e00\u822c\u5370\u8868\u6a5f\u5217\u5370\u5165\u53e3\u6b63\u5e38\u3002',
@@ -541,25 +591,31 @@ class PrinterService {
     String? storeCode,
     String? staffName,
     String? receiptFooterText,
+    bool includeStoreCopy = false,
   }) {
-    return [
+    final copies = <String>[
       _buildSystemOrderCopy(
-        copyLabel: '\u9867\u5ba2\u806f',
+        copyLabel: '\u9867\u5ba2\u806f Customer Copy',
         receipt: receipt,
         lines: lines,
         storeCode: storeCode,
         staffName: staffName,
         receiptFooterText: receiptFooterText,
       ),
-      _buildSystemOrderCopy(
-        copyLabel: '\u5e97\u5bb6\u7559\u5b58\u806f',
-        receipt: receipt,
-        lines: lines,
-        storeCode: storeCode,
-        staffName: staffName,
-        receiptFooterText: receiptFooterText,
-      ),
-    ].join('\\f');
+    ];
+    if (includeStoreCopy) {
+      copies.add(
+        _buildSystemOrderCopy(
+          copyLabel: '\u5e97\u5bb6\u7559\u5b58\u806f Store Copy',
+          receipt: receipt,
+          lines: lines,
+          storeCode: storeCode,
+          staffName: staffName,
+          receiptFooterText: receiptFooterText,
+        ),
+      );
+    }
+    return copies.join('\\f');
   }
 
   String _buildSystemOrderCopy({
@@ -574,27 +630,33 @@ class PrinterService {
     final printedAt = _formatDateTime(DateTime.now());
     final buffer = StringBuffer()
       ..writeln(_centerText('NUCOSMOS', width))
-      ..writeln(_centerText('\u9580\u5e02\u6d88\u8cbb\u55ae\u64da', width))
+      ..writeln(_centerText(
+          '\u9580\u5e02\u6d88\u8cbb\u55ae\u64da Sales Receipt', width))
       ..writeln(_centerText(copyLabel, width));
 
     if (storeCode != null && storeCode.trim().isNotEmpty) {
-      buffer.writeln(_centerText('\u9580\u5e02\uff1a$storeCode', width));
+      buffer.writeln(_centerText('\u9580\u5e02 Store\uff1a$storeCode', width));
     }
 
     buffer
       ..writeln('=' * width)
-      ..writeln(_twoColumn('\u8a02\u55ae\u7de8\u865f', receipt.orderNumber, width))
-      ..writeln(_twoColumn('\u5217\u5370\u6642\u9593', printedAt, width))
-      ..writeln(_twoColumn('\u4ed8\u6b3e\u65b9\u5f0f', _paymentMethodLabel(receipt.paymentMethod), width))
-      ..writeln(_twoColumn('\u4ed8\u6b3e\u72c0\u614b', _paymentStatusLabel(receipt.paymentStatus), width));
+      ..writeln(_twoColumn(
+          '\u8a02\u55ae\u7de8\u865f Order', receipt.orderNumber, width))
+      ..writeln(
+          _twoColumn('\u5217\u5370\u6642\u9593 Printed', printedAt, width))
+      ..writeln(_twoColumn('\u4ed8\u6b3e\u65b9\u5f0f Payment',
+          _paymentMethodLabel(receipt.paymentMethod), width))
+      ..writeln(_twoColumn('\u4ed8\u6b3e\u72c0\u614b Status',
+          _paymentStatusLabel(receipt.paymentStatus), width));
 
     if (staffName != null && staffName.trim().isNotEmpty) {
-      buffer.writeln(_twoColumn('\u6536\u9280\u4eba\u54e1', staffName.trim(), width));
+      buffer.writeln(_twoColumn(
+          '\u6536\u9280\u4eba\u54e1 Staff', staffName.trim(), width));
     }
 
     buffer
       ..writeln('-' * width)
-      ..writeln(_twoColumn('\u5546\u54c1', '\u91d1\u984d', width))
+      ..writeln(_twoColumn('\u5546\u54c1 Product', '\u91d1\u984d Total', width))
       ..writeln('-' * width);
 
     for (final line in lines) {
@@ -619,38 +681,51 @@ class PrinterService {
 
     buffer
       ..writeln('-' * width)
-      ..writeln(_twoColumn('\u54c1\u9805\u6578\u91cf', '${receipt.itemCount}', width))
-      ..writeln(_twoColumn('\u5c0f\u8a08', _currency(receipt.subtotalAmount), width));
+      ..writeln(_twoColumn(
+          '\u54c1\u9805\u6578\u91cf Items', '${receipt.itemCount}', width))
+      ..writeln(_twoColumn(
+          '\u5c0f\u8a08 Subtotal', _currency(receipt.subtotalAmount), width));
 
     if (receipt.discountAmount > 0) {
-      buffer.writeln(_twoColumn('\u512a\u60e0', '-${_currency(receipt.discountAmount)}', width));
+      buffer.writeln(_twoColumn('\u512a\u60e0 Discount',
+          '-${_currency(receipt.discountAmount)}', width));
       final discountTypeLabel = _discountTypeLabel(receipt.discountType);
       if (discountTypeLabel != null) {
-        buffer.writeln('\u512a\u60e0\u985e\u578b\uff1a$discountTypeLabel');
+        buffer.writeln(
+            '\u512a\u60e0\u985e\u578b Discount Type\uff1a$discountTypeLabel');
       }
       final discountValueLabel = _discountValueLabel(receipt);
       if (discountValueLabel != null) {
-        buffer.writeln('\u512a\u60e0\u5167\u5bb9\uff1a$discountValueLabel');
+        buffer.writeln(
+            '\u512a\u60e0\u5167\u5bb9 Discount Value\uff1a$discountValueLabel');
       }
       if (receipt.discountNote?.trim().isNotEmpty ?? false) {
-        buffer.writeln('\u512a\u60e0\u8aaa\u660e\uff1a${receipt.discountNote!.trim()}');
+        buffer.writeln(
+            '\u512a\u60e0\u8aaa\u660e Discount Note\uff1a${receipt.discountNote!.trim()}');
       }
     }
 
     buffer
-      ..writeln(_twoColumn('\u5408\u8a08', _currency(receipt.totalAmount), width))
-      ..writeln(_twoColumn('\u5be6\u6536', _currency(receipt.paidAmount), width));
+      ..writeln(_twoColumn(
+          '\u5408\u8a08 Total', _currency(receipt.totalAmount), width))
+      ..writeln(_twoColumn(
+          '\u5be6\u6536 Paid', _currency(receipt.paidAmount), width));
 
     if (receipt.changeAmount > 0) {
-      buffer.writeln(_twoColumn('\u627e\u96f6', _currency(receipt.changeAmount), width));
+      buffer.writeln(_twoColumn(
+          '\u627e\u96f6 Change', _currency(receipt.changeAmount), width));
     }
 
-    if ((receipt.redeemCode?.trim().isNotEmpty ?? false) || (receipt.redeemUrl?.trim().isNotEmpty ?? false)) {
+    if ((receipt.redeemCode?.trim().isNotEmpty ?? false) ||
+        (receipt.redeemUrl?.trim().isNotEmpty ?? false)) {
       buffer
         ..writeln('-' * width)
-        ..writeln(_centerText('\u5168\u7db2\u514c\u734e / \u6703\u54e1\u5165\u53e3', width));
+        ..writeln(_centerText(
+            '\u5168\u7db2\u514c\u734e / \u6703\u54e1\u5165\u53e3 Redeem',
+            width));
       if (receipt.redeemCode?.trim().isNotEmpty ?? false) {
-        buffer.writeln(_twoColumn('\u514c\u734e\u78bc', receipt.redeemCode!.trim(), width));
+        buffer.writeln(_twoColumn(
+            '\u514c\u734e\u78bc Code', receipt.redeemCode!.trim(), width));
       }
       if (receipt.redeemUrl?.trim().isNotEmpty ?? false) {
         buffer.writeln('URL: ${receipt.redeemUrl!.trim()}');
@@ -659,14 +734,15 @@ class PrinterService {
 
     buffer
       ..writeln('=' * width)
-      ..writeln(_centerText('\u611f\u8b1d\u60a8\u7684\u5149\u81e8', width))
+      ..writeln(
+          _centerText('\u611f\u8b1d\u60a8\u7684\u5149\u81e8 Thank You', width))
       ..writeln(_centerText('NUCOSMOS POS', width));
 
     final normalizedFooter = _normalizeReceiptFooterText(receiptFooterText);
     if (normalizedFooter.isNotEmpty) {
       buffer
         ..writeln('-' * width)
-        ..writeln(_centerText('\u9580\u5e02\u5099\u8a3b', width));
+        ..writeln(_centerText('\u9580\u5e02\u5099\u8a3b Footer', width));
       for (final line in normalizedFooter.split('\\n')) {
         final trimmedLine = line.trim();
         if (trimmedLine.isNotEmpty) {

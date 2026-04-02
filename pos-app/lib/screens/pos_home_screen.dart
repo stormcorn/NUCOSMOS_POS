@@ -2612,6 +2612,15 @@ class _PrinterPanelState extends State<_PrinterPanel>
               ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
+                title: const Text('\u5217\u5370\u5e97\u5bb6\u7559\u5b58\u806f'),
+                subtitle: const Text(
+                  '\u555f\u7528\u5f8c\uff0c\u6bcf\u6b21\u7d50\u5e33\u9664\u4e86\u9867\u5ba2\u806f\uff0c\u9084\u6703\u591a\u5217\u5370\u4e00\u5f35\u5e97\u5167\u6838\u5c0d\u7528\u7684\u7559\u5b58\u806f\u3002',
+                ),
+                value: printerController.printStoreCopy,
+                onChanged: printerController.setPrintStoreCopy,
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
                 title:
                     const Text('\u4f7f\u7528 Android \u7cfb\u7d71\u5217\u5370'),
                 subtitle: const Text(

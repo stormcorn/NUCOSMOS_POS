@@ -18,6 +18,7 @@ class PrinterController extends ChangeNotifier {
   static const _selectedPrinterKey = 'pos.selected_printer';
   static const _autoPrintEnabledKey = 'pos.auto_print_receipt';
   static const _useAndroidSystemPrintKey = 'pos.use_android_system_print';
+  static const _printStoreCopyKey = 'pos.print_store_copy';
 
   final PrinterService _printerService;
 
@@ -34,6 +35,7 @@ class PrinterController extends ChangeNotifier {
   bool printing = false;
   bool autoPrintReceipt = true;
   bool useAndroidSystemPrint = false;
+  bool printStoreCopy = false;
 
   String statusMessage = '';
   String errorMessage = '';
@@ -86,6 +88,7 @@ class PrinterController extends ChangeNotifier {
     final storedPrinter = prefs.getString(_selectedPrinterKey);
     autoPrintReceipt = prefs.getBool(_autoPrintEnabledKey) ?? true;
     useAndroidSystemPrint = prefs.getBool(_useAndroidSystemPrintKey) ?? false;
+    printStoreCopy = prefs.getBool(_printStoreCopyKey) ?? false;
 
     if (storedPrinter != null && storedPrinter.isNotEmpty) {
       try {
@@ -404,6 +407,7 @@ class PrinterController extends ChangeNotifier {
           storeCode: storeCode,
           staffName: staffName,
           receiptFooterText: receiptFooterText,
+          includeStoreCopy: printStoreCopy,
         );
       } else if (selectedClassicDevice != null) {
         await _printerService.printClassicOrderReceipt(
@@ -413,6 +417,7 @@ class PrinterController extends ChangeNotifier {
           storeCode: storeCode,
           staffName: staffName,
           receiptFooterText: receiptFooterText,
+          includeStoreCopy: printStoreCopy,
         );
       } else {
         final printer = await _ensureSelectedPrinterConnected();
@@ -427,6 +432,7 @@ class PrinterController extends ChangeNotifier {
           storeCode: storeCode,
           staffName: staffName,
           receiptFooterText: receiptFooterText,
+          includeStoreCopy: printStoreCopy,
         );
       }
       statusMessage = useAndroidSystemPrint
@@ -460,6 +466,7 @@ class PrinterController extends ChangeNotifier {
         storeCode: storeCode,
         staffName: staffName,
         receiptFooterText: receiptFooterText,
+        includeStoreCopy: printStoreCopy,
       );
       statusMessage =
           '\u5df2\u6253\u958b Android \u7cfb\u7d71\u5217\u5370\uff0c\u8acb\u9078\u64c7\u4e00\u822c\u5370\u8868\u6a5f\u5217\u5370\u8a02\u55ae ${receipt.orderNumber}\u3002';
@@ -491,6 +498,17 @@ class PrinterController extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_useAndroidSystemPrintKey, value);
+    notifyListeners();
+  }
+
+  Future<void> setPrintStoreCopy(bool value) async {
+    printStoreCopy = value;
+    statusMessage = value
+        ? '\u5df2\u555f\u7528\u5e97\u5bb6\u7559\u5b58\u806f\u5217\u5370\u3002'
+        : '\u5df2\u95dc\u9589\u5e97\u5bb6\u7559\u5b58\u806f\u5217\u5370\u3002';
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_printStoreCopyKey, value);
     notifyListeners();
   }
 
