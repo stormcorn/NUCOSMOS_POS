@@ -25,7 +25,7 @@ public class PublicMemberAuthService {
     public static final String SESSION_COOKIE_NAME = "nucosmos_member_session";
 
     private static final String ACTIVE_STATUS = "ACTIVE";
-    private static final Duration SESSION_TTL = Duration.ofDays(30);
+    private static final Duration SESSION_TTL = Duration.ofDays(90);
 
     private final FirebaseWebProperties firebaseWebProperties;
     private final PhoneVerificationService phoneVerificationService;

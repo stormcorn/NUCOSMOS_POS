@@ -16,7 +16,7 @@
 - 手機驗證沿用 Firebase Phone Auth
 - backend 會驗證 Firebase ID token，並建立或更新 `receipt_members`
 - 公開會員 session 使用 HttpOnly cookie `nucosmos_member_session`
-- session 預設有效期 30 天
+- session 預設有效期 90 天
 
 ## 手機號碼規則
 

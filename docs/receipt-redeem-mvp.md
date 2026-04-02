@@ -30,7 +30,7 @@
 - 公開兌獎 API：
   - `POST /api/v1/public/redeem/{token}/claim`
 - 手機簡訊登入沿用 Firebase Phone Auth
-- 公開會員 session 透過 HttpOnly cookie 維持
+- 公開會員 session 透過 HttpOnly cookie 維持，預設有效期 90 天
 - 抽獎結果與會員點數回饋顯示在同一頁
 - 管理後台可設定獎項、機率、剩餘數量
 
