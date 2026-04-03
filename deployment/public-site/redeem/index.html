@@ -1,0 +1,677 @@
+﻿<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NUCOSMOS 會員兌獎</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg1: #07111b;
+        --bg2: #020617;
+        --panel: rgba(11, 18, 33, 0.92);
+        --panel-soft: rgba(255, 255, 255, 0.04);
+        --border: rgba(255, 255, 255, 0.1);
+        --text: #e5edf7;
+        --muted: #94a3b8;
+        --accent: #55e0c5;
+        --accent-strong: #34d4f6;
+        --danger: #fb7185;
+        --warning: #fbbf24;
+        --shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
+      }
+
+      * { box-sizing: border-box; }
+      html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+      body {
+        margin: 0; min-height: 100vh; color: var(--text);
+        font-family: "Noto Sans TC", "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at top, rgba(85, 224, 197, 0.16), transparent 32%),
+          linear-gradient(180deg, var(--bg1), var(--bg2));
+      }
+      h1, h2, h3, p { margin: 0; }
+      a { color: inherit; }
+      button, input { font: inherit; border-radius: 16px; }
+      input, button { max-width: 100%; }
+      input {
+        width: 100%; min-width: 0; padding: 14px 16px; color: var(--text);
+        background: rgba(15, 23, 42, 0.92); border: 1px solid var(--border);
+      }
+      input::placeholder { color: rgba(148, 163, 184, 0.82); }
+      button {
+        width: 100%; padding: 14px 16px; border: 1px solid var(--border);
+        cursor: pointer; font-weight: 700; color: var(--text);
+        background: rgba(255, 255, 255, 0.05); transition: transform 140ms ease, opacity 140ms ease;
+        white-space: normal;
+      }
+      button:active { transform: translateY(1px); }
+      button:disabled { cursor: not-allowed; opacity: 0.55; }
+      .primary { background: var(--accent); color: #04111f; border-color: transparent; }
+      .secondary { background: rgba(255, 255, 255, 0.04); }
+      .shell {
+        width: min(1160px, calc(100vw - 24px)); max-width: calc(100vw - 24px);
+        margin: 28px auto; padding: 22px; border-radius: 28px; border: 1px solid var(--border);
+        background: var(--panel); box-shadow: var(--shadow);
+      }
+      .hero {
+        border: 1px solid var(--border); border-radius: 24px; padding: 22px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      }
+      .eyebrow {
+        color: rgba(85, 224, 197, 0.92); font-size: 12px; letter-spacing: 0.34em; text-transform: uppercase;
+      }
+      .title { margin-top: 10px; font-size: clamp(28px, 4vw, 44px); line-height: 1.1; overflow-wrap: anywhere; }
+      .lead { margin-top: 14px; color: var(--muted); line-height: 1.8; overflow-wrap: anywhere; }
+      .layout { display: grid; gap: 18px; margin-top: 18px; }
+      @media (min-width: 960px) { .layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+      .stack { display: grid; gap: 18px; min-width: 0; }
+      .panel {
+        border: 1px solid var(--border); border-radius: 22px; background: var(--panel-soft);
+        padding: 18px; min-width: 0; max-width: 100%;
+      }
+      .panel-title { font-size: 18px; margin-bottom: 12px; }
+      .panel-subtitle { color: var(--muted); margin-top: 6px; line-height: 1.75; }
+      .row { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+      .row > * { min-width: 0; }
+      @media (min-width: 640px) {
+        .row.two-up { flex-direction: row; }
+        .row.two-up > * { flex: 1 1 0; }
+      }
+      .section-note, .message, .error, .hint, .banner {
+        border-radius: 16px; padding: 14px 16px; line-height: 1.8; font-size: 14px;
+      }
+      .section-note { border: 1px solid var(--border); background: rgba(15,23,42,0.52); color: var(--muted); }
+      .message { border: 1px solid rgba(85, 224, 197, 0.2); background: rgba(85, 224, 197, 0.08); color: #d9fff9; }
+      .error { border: 1px solid rgba(251, 113, 133, 0.24); background: rgba(251, 113, 133, 0.1); color: #fecdd3; }
+      .hint { border: 1px solid var(--border); background: rgba(15, 23, 42, 0.52); color: var(--muted); }
+      .banner { border: 1px solid rgba(85, 224, 197, 0.24); background: rgba(85, 224, 197, 0.1); color: #d6fff6; }
+      .banner.win { border-color: rgba(251, 191, 36, 0.3); background: rgba(251, 191, 36, 0.12); color: #fef3c7; }
+      .banner.lose { border-color: rgba(148, 163, 184, 0.22); background: rgba(148, 163, 184, 0.08); color: #dce7f5; }
+      .hidden { display: none !important; }
+      .muted { color: var(--muted); }
+      .label {
+        display: block; margin-bottom: 6px; color: var(--muted); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+      }
+      .grid-2 { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stats { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stat, .meta-item, .member-card, .prize-item {
+        border: 1px solid var(--border); border-radius: 18px; background: rgba(15, 23, 42, 0.56);
+        padding: 14px; min-width: 0;
+      }
+      .stat small { display: block; color: var(--muted); font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; }
+      .stat strong { display: block; margin-top: 8px; font-size: 18px; overflow-wrap: anywhere; }
+      .meta { display: grid; gap: 10px; }
+      .meta-item { line-height: 1.85; overflow-wrap: anywhere; word-break: break-word; }
+      .checkbox { display: flex; gap: 10px; align-items: flex-start; line-height: 1.7; color: var(--muted); }
+      .checkbox input { width: 18px; height: 18px; margin-top: 4px; flex: none; }
+      .ticket { display: none; }
+      .ticket.active { display: block; }
+      .ticket-title { font-size: clamp(24px, 3vw, 34px); line-height: 1.15; overflow-wrap: anywhere; }
+      .divider { height: 1px; background: var(--border); margin: 16px 0; }
+      .prize-list { display: grid; gap: 12px; }
+      .prize-top { display: flex; flex-direction: column; gap: 10px; }
+      @media (min-width: 640px) {
+        .prize-top { flex-direction: row; justify-content: space-between; align-items: center; }
+      }
+      .pill { display: inline-flex; align-items: center; border-radius: 999px; padding: 6px 10px; background: rgba(85, 224, 197, 0.12); color: var(--accent); font-size: 12px; font-weight: 700; }
+      .pill.sold-out { background: rgba(251, 113, 133, 0.12); color: #fecdd3; }
+      #redeem-url { display: block; margin-top: 4px; overflow-wrap: anywhere; word-break: break-all; }
+      .mobile-hide { display: block; }
+      @media (max-width: 639px) {
+        .shell {
+          width: calc(100vw - 14px); max-width: calc(100vw - 14px); margin: 7px auto 16px; padding: 12px; border-radius: 20px;
+        }
+        .hero { padding: 16px; border-radius: 18px; }
+        .panel { padding: 14px; border-radius: 18px; }
+        .title { font-size: 24px; }
+        .lead { font-size: 14px; }
+        .grid-2, .stats { grid-template-columns: 1fr; }
+        .prize-list { gap: 10px; }
+        .mobile-hide { display: none !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">Redeem & Lucky Draw</p>
+        <h1 class="title">NUCOSMOS 會員兌獎</h1>
+        <p class="lead">掃描收據 QR Code 後即可進入兌獎頁。手機上先完成簡訊登入，系統就能自動記住這台裝置，之後回來可直接登入。</p>
+      </section>
+
+      <div id="status-message" class="message hidden" style="margin-top:16px;"></div>
+      <div id="error-message" class="error hidden" style="margin-top:12px;"></div>
+
+      <div class="layout">
+        <div class="stack">
+          <section class="panel">
+            <p class="eyebrow">Member Login</p>
+            <h2 class="panel-title">手機簡訊登入會員</h2>
+            <p class="panel-subtitle">第一次登入請先輸入姓名與手機號碼，再收取驗證碼。勾選「記住這台裝置」後，下次可直接登入。</p>
+
+            <div id="member-session-card" class="member-card hidden" style="margin-top:16px;"></div>
+
+            <div id="login-form" class="stack" style="margin-top:16px;">
+              <div class="grid-2">
+                <div>
+                  <span class="label">姓名</span>
+                  <input id="login-display-name" type="text" placeholder="首次登入請輸入姓名" />
+                </div>
+                <div>
+                  <span class="label">手機號碼</span>
+                  <input id="login-phone" type="tel" placeholder="例如 0912345678" inputmode="tel" />
+                </div>
+              </div>
+
+              <label class="checkbox">
+                <input id="remember-device" type="checkbox" />
+                <span>記住這台裝置，下次可直接登入</span>
+              </label>
+
+              <div class="row two-up">
+                <button id="send-code-button" class="primary">發送簡訊驗證碼</button>
+                <button id="refresh-session-button" class="secondary">重新整理登入狀態</button>
+              </div>
+
+              <div class="row two-up">
+                <div>
+                  <span class="label">驗證碼</span>
+                  <input id="login-verification-code" type="text" maxlength="6" placeholder="輸入 6 位驗證碼" inputmode="numeric" />
+                </div>
+                <div style="display:flex; align-items:end;">
+                  <button id="verify-login-button" class="secondary">確認登入</button>
+                </div>
+              </div>
+
+              <p class="muted" style="font-size:13px; line-height:1.8;">若 session 還在有效期內，頁面會直接恢復登入；若 session 過期但裝置仍被信任，也會自動補回。</p>
+              <div id="recaptcha-container"></div>
+            </div>
+
+            <div class="row two-up" style="margin-top:16px;">
+              <button id="logout-button" class="secondary hidden">登出會員</button>
+              <div class="mobile-hide"></div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <p class="eyebrow">Rules</p>
+            <h2 class="panel-title">兌獎規則</h2>
+            <div class="stack" style="gap:12px;">
+              <div class="hint">1. 每張收據只可參加一次抽獎。</div>
+              <div class="hint">2. 掃 QR Code 後會先顯示收據內容，再請完成手機簡訊登入。</div>
+              <div class="hint">3. 未中獎會顯示銘謝惠顧，並獲得 1 點。</div>
+              <div class="hint">4. 每累積 5 點，可兌換 50 元抵用券。</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <p class="eyebrow">Prizes</p>
+            <h2 class="panel-title">目前獎項與機率</h2>
+            <div id="prize-list" class="prize-list"></div>
+          </section>
+        </div>
+
+        <div class="stack">
+          <section id="ticket-card" class="panel ticket">
+            <p class="eyebrow">Receipt Ticket</p>
+            <h2 class="panel-title ticket-title">這張收據可參加本次抽獎</h2>
+
+            <div class="stack" style="margin-top:14px;">
+              <div id="ticket-claim-banner" class="banner hidden"></div>
+              <div id="ticket-login-banner" class="banner hidden"></div>
+              <div id="draw-banner" class="banner hidden"></div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="stack" style="gap:12px;">
+              <div class="row two-up">
+                <button id="claim-button" class="primary">參加抽獎</button>
+                <button id="reload-ticket-button" class="secondary">重新查詢收據</button>
+              </div>
+
+              <div class="meta">
+                <div class="meta-item"><span class="label">訂單時間</span><span id="ordered-at"></span></div>
+                <div class="meta-item"><span class="label">兌獎時間</span><span id="claimed-at"></span></div>
+                <div class="meta-item"><span class="label">兌獎碼</span><span id="claim-code-view"></span></div>
+                <div class="meta-item"><span class="label">兌獎網址</span><span id="redeem-url"></span></div>
+                <div class="meta-item"><span class="label">已綁定會員</span><span id="member-name">尚未綁定</span></div>
+                <div class="meta-item"><span class="label">會員手機</span><span id="member-phone">尚未綁定</span></div>
+                <div class="meta-item"><span class="label">目前點數</span><span id="member-points">0</span></div>
+                <div class="meta-item"><span class="label">歷史兌獎次數</span><span id="member-claims">0</span></div>
+                <div class="meta-item"><span class="label">本次回饋</span><span id="reward-message">尚未兌換</span></div>
+                <div class="meta-item"><span class="label">優惠券代碼</span><span id="reward-coupon-code">尚未發券</span></div>
+                <div class="meta-item"><span class="label">優惠券名稱</span><span id="reward-coupon-title">尚未發券</span></div>
+              </div>
+
+              <div class="stats">
+                <div class="stat"><small>金額</small><strong id="total-amount"></strong></div>
+                <div class="stat"><small>品項</small><strong id="item-count"></strong></div>
+                <div class="stat"><small>付款狀態</small><strong id="payment-status"></strong></div>
+                <div class="stat"><small>兌獎狀態</small><strong id="claim-status"></strong></div>
+              </div>
+
+              <div class="meta" style="margin-top:4px;">
+                <div class="meta-item"><span class="label">門市</span><span id="store-line"></span></div>
+                <div class="meta-item"><span class="label">訂單編號</span><span id="order-number"></span></div>
+              </div>
+            </div>
+          </section>
+
+          <section id="placeholder-card" class="panel">
+            <p class="eyebrow">Ticket</p>
+            <h2 class="panel-title">請掃收據 QR Code</h2>
+            <p class="panel-subtitle">兌獎頁會在掃描收據後顯示；若是會員本人，先完成手機簡訊登入，之後在同一台裝置上可直接登入。</p>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+      import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+
+      const els = {
+        status: document.getElementById("status-message"),
+        error: document.getElementById("error-message"),
+        loginForm: document.getElementById("login-form"),
+        loginDisplayName: document.getElementById("login-display-name"),
+        loginPhone: document.getElementById("login-phone"),
+        rememberDevice: document.getElementById("remember-device"),
+        loginCode: document.getElementById("login-verification-code"),
+        sendCode: document.getElementById("send-code-button"),
+        verifyLogin: document.getElementById("verify-login-button"),
+        refreshSession: document.getElementById("refresh-session-button"),
+        logout: document.getElementById("logout-button"),
+        memberCard: document.getElementById("member-session-card"),
+        ticketCard: document.getElementById("ticket-card"),
+        placeholderCard: document.getElementById("placeholder-card"),
+        claimBanner: document.getElementById("ticket-claim-banner"),
+        loginBanner: document.getElementById("ticket-login-banner"),
+        drawBanner: document.getElementById("draw-banner"),
+        claimButton: document.getElementById("claim-button"),
+        reloadTicket: document.getElementById("reload-ticket-button"),
+        prizeList: document.getElementById("prize-list"),
+      };
+
+      const fields = {
+        orderNumber: document.getElementById("order-number"),
+        storeLine: document.getElementById("store-line"),
+        totalAmount: document.getElementById("total-amount"),
+        itemCount: document.getElementById("item-count"),
+        paymentStatus: document.getElementById("payment-status"),
+        claimStatus: document.getElementById("claim-status"),
+        orderedAt: document.getElementById("ordered-at"),
+        claimedAt: document.getElementById("claimed-at"),
+        claimCode: document.getElementById("claim-code-view"),
+        redeemUrl: document.getElementById("redeem-url"),
+        memberName: document.getElementById("member-name"),
+        memberPhone: document.getElementById("member-phone"),
+        memberPoints: document.getElementById("member-points"),
+        memberClaims: document.getElementById("member-claims"),
+        rewardMessage: document.getElementById("reward-message"),
+        rewardCouponCode: document.getElementById("reward-coupon-code"),
+        rewardCouponTitle: document.getElementById("reward-coupon-title"),
+      };
+
+      const storageKeys = {
+        deviceToken: "nucosmos_redeem_device_token",
+        deviceLabel: "nucosmos_redeem_device_label",
+      };
+
+      let firebaseConfig = null;
+      let auth = null;
+      let recaptchaVerifier = null;
+      let confirmationResult = null;
+      let currentTicket = null;
+      let currentSession = null;
+      let currentToken = null;
+
+      function getOrCreateDeviceToken() {
+        let token = localStorage.getItem(storageKeys.deviceToken);
+        if (!token) {
+          token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+          localStorage.setItem(storageKeys.deviceToken, token);
+        }
+        return token;
+      }
+
+      function getOrCreateDeviceLabel() {
+        let label = localStorage.getItem(storageKeys.deviceLabel);
+        if (!label) {
+          label = (navigator.userAgent || "Redeem Browser").slice(0, 180);
+          localStorage.setItem(storageKeys.deviceLabel, label);
+        }
+        return label;
+      }
+
+      function deviceHeaders() {
+        return {
+          "X-Nucosmos-Device-Token": getOrCreateDeviceToken(),
+          "X-Nucosmos-Device-Label": getOrCreateDeviceLabel(),
+        };
+      }
+
+      function money(value) {
+        return new Intl.NumberFormat("zh-TW", {
+          style: "currency",
+          currency: "TWD",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2,
+        }).format(value ?? 0);
+      }
+
+      function dt(value) {
+        if (!value) return "尚未發生";
+        return new Intl.DateTimeFormat("zh-TW", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+      }
+
+      function phone(raw) {
+        const normalized = (raw || "").replace(/[\s\-()]/g, "").trim();
+        if (/^09\d{8}$/.test(normalized)) return `+886${normalized.slice(1)}`;
+        if (/^\d{10,15}$/.test(normalized)) return `+${normalized}`;
+        return normalized;
+      }
+
+      function setMessage(text) {
+        els.status.textContent = text || "";
+        els.status.classList.toggle("hidden", !text);
+      }
+
+      function setError(text) {
+        els.error.textContent = text || "";
+        els.error.classList.toggle("hidden", !text);
+      }
+
+      function setBusy(button, busy, busyText, idleText) {
+        button.disabled = busy;
+        button.textContent = busy ? busyText : idleText;
+      }
+
+      function showTicketHints() {
+        if (!currentTicket) {
+          els.claimBanner.classList.add("hidden");
+          els.loginBanner.classList.add("hidden");
+          return;
+        }
+        els.claimBanner.textContent = currentTicket.claimable ? "這張收據可參加本次抽獎。" : "這張收據目前尚未可抽獎。";
+        els.claimBanner.classList.remove("hidden");
+        const authenticated = Boolean(currentSession?.authenticated && currentSession.member);
+        els.loginBanner.textContent = authenticated
+          ? currentSession.deviceTrusted
+            ? "會員已登入，且此裝置已被信任。"
+            : "會員已登入，但此裝置尚未加入信任名單。"
+          : "請先完成手機簡訊登入，才能參加抽獎。";
+        els.loginBanner.classList.remove("hidden");
+      }
+
+      function requestJson(url, options = {}) {
+        return fetch(url, {
+          ...options,
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/json",
+            ...deviceHeaders(),
+            ...(options.headers || {}),
+          },
+        }).then(async (response) => {
+          let payload = null;
+          try { payload = await response.json(); } catch { payload = null; }
+          if (!response.ok) throw new Error(payload?.message || `Request failed with status ${response.status}`);
+          return payload?.data ?? null;
+        });
+      }
+
+      function renderPrizes(prizes) {
+        els.prizeList.innerHTML = "";
+        if (!Array.isArray(prizes) || prizes.length === 0) {
+          els.prizeList.innerHTML = '<div class="section-note">目前沒有可抽獎的獎項，或活動尚未開啟。</div>';
+          return;
+        }
+        prizes.forEach((prize) => {
+          const article = document.createElement("article");
+          article.className = "prize-item";
+          article.innerHTML = `
+            <div class="prize-top">
+              <div>
+                <h3 style="font-size:16px; line-height:1.4;">${prize.name}</h3>
+                <p class="muted" style="margin-top:8px; line-height:1.7;">${prize.description || "未提供說明"}</p>
+              </div>
+              <span class="pill ${prize.remainingQuantity <= 0 ? "sold-out" : ""}">${prize.remainingQuantity <= 0 ? "已送完" : `剩餘 ${prize.remainingQuantity}`}</span>
+            </div>
+            <div class="muted" style="margin-top:12px; line-height:1.7;">中獎機率：${Number(prize.probabilityPercent || 0).toFixed(2)}%</div>
+          `;
+          els.prizeList.appendChild(article);
+        });
+      }
+
+      function renderSession(session) {
+        currentSession = session;
+        const authenticated = Boolean(session?.authenticated && session.member);
+        els.loginForm.classList.toggle("hidden", authenticated);
+        els.logout.classList.toggle("hidden", !authenticated);
+        els.memberCard.classList.toggle("hidden", !authenticated);
+        if (authenticated) {
+          els.memberCard.innerHTML = `
+            <div style="font-weight:700;">已登入會員：${session.member.displayName}</div>
+            <div class="muted" style="margin-top:8px;">手機：${session.member.phoneNumber}</div>
+            <div class="muted">目前點數：${session.member.pointBalance}</div>
+            <div class="muted">累積兌獎次數：${session.member.totalClaims}</div>
+            <div class="muted">裝置狀態：${session.deviceTrusted ? "已信任，可直接登入" : "尚未信任，仍需簡訊驗證"}</div>
+          `;
+        } else {
+          els.memberCard.innerHTML = "";
+        }
+        showTicketHints();
+      }
+
+      function renderTicket(ticket) {
+        currentTicket = ticket;
+        els.placeholderCard.classList.add("hidden");
+        els.ticketCard.classList.add("active");
+        showTicketHints();
+
+        fields.orderNumber.textContent = ticket.orderNumber || "-";
+        fields.storeLine.textContent = `${ticket.storeCode || "-"} ｜ ${ticket.storeName || "-"}`;
+        fields.totalAmount.textContent = money(ticket.totalAmount);
+        fields.itemCount.textContent = String(ticket.itemCount || 0);
+        fields.paymentStatus.textContent = ticket.paymentStatus || "-";
+        fields.claimStatus.textContent = ticket.claimed ? "已兌獎" : ticket.claimable ? "可兌獎" : "尚未開放";
+        fields.orderedAt.textContent = dt(ticket.orderedAt);
+        fields.claimedAt.textContent = dt(ticket.claimedAt);
+        fields.claimCode.textContent = ticket.claimCode || "-";
+        fields.redeemUrl.textContent = ticket.redeemUrl || "-";
+        fields.memberName.textContent = ticket.member?.displayName || "尚未綁定";
+        fields.memberPhone.textContent = ticket.member?.phoneNumber || "尚未綁定";
+        fields.memberPoints.textContent = String(ticket.member?.pointBalance ?? 0);
+        fields.memberClaims.textContent = String(ticket.member?.totalClaims ?? 0);
+        fields.rewardMessage.textContent = ticket.rewards?.message || "尚未兌換";
+        fields.rewardCouponCode.textContent = ticket.rewards?.issuedCoupon?.code || "尚未發券";
+        fields.rewardCouponTitle.textContent = ticket.rewards?.issuedCoupon?.title || "尚未發券";
+
+        els.drawBanner.textContent = "";
+        els.drawBanner.className = "banner hidden";
+        if (ticket.draw) {
+          els.drawBanner.textContent = `${ticket.draw.title} ${ticket.draw.message}`;
+          els.drawBanner.classList.remove("hidden");
+          els.drawBanner.classList.add(ticket.draw.won ? "win" : "lose");
+        }
+
+        els.claimButton.disabled = !ticket.claimable;
+        els.claimButton.textContent = ticket.claimed ? "已完成兌獎" : "參加抽獎";
+        renderPrizes(ticket.availablePrizes || []);
+        renderSession(currentSession);
+      }
+
+      async function loadFirebaseConfig() {
+        firebaseConfig = await requestJson("/api/v1/public/member/firebase-config");
+        if (!firebaseConfig?.configured) {
+          setError("手機簡訊登入尚未完成設定，請先確認 Firebase Web Auth 參數。");
+          els.sendCode.disabled = true;
+          els.verifyLogin.disabled = true;
+        }
+      }
+
+      function ensureFirebaseAuth() {
+        if (!firebaseConfig?.configured) throw new Error("Firebase web auth is not configured.");
+        if (!auth) {
+          const app = initializeApp({
+            apiKey: firebaseConfig.apiKey,
+            authDomain: firebaseConfig.authDomain,
+            projectId: firebaseConfig.projectId,
+            storageBucket: firebaseConfig.storageBucket,
+            messagingSenderId: firebaseConfig.messagingSenderId,
+            appId: firebaseConfig.appId,
+            measurementId: firebaseConfig.measurementId,
+          });
+          auth = getAuth(app);
+          auth.languageCode = "zh-TW";
+        }
+        return auth;
+      }
+
+      async function ensureRecaptcha() {
+        const authClient = ensureFirebaseAuth();
+        if (!recaptchaVerifier) {
+          recaptchaVerifier = new RecaptchaVerifier(authClient, "recaptcha-container", { size: "invisible" });
+          await recaptchaVerifier.render();
+        }
+        return recaptchaVerifier;
+      }
+
+      async function sendLoginCode() {
+        try {
+          setBusy(els.sendCode, true, "發送中...", "發送簡訊驗證碼");
+          setError("");
+          setMessage("正在準備簡訊驗證...");
+
+          const authClient = ensureFirebaseAuth();
+          const verifier = await ensureRecaptcha();
+          const phoneNumber = phone(els.loginPhone.value);
+          if (!/^\+\d{10,15}$/.test(phoneNumber)) throw new Error("請輸入正確的手機號碼，例如 0912345678");
+
+          confirmationResult = await signInWithPhoneNumber(authClient, phoneNumber, verifier);
+          setMessage(`驗證碼已送出到 ${phoneNumber}。`);
+        } catch (error) {
+          setError(error instanceof Error ? error.message : "發送驗證碼失敗");
+          setMessage("");
+          if (recaptchaVerifier) { recaptchaVerifier.clear(); recaptchaVerifier = null; }
+        } finally {
+          setBusy(els.sendCode, false, "發送簡訊驗證碼", "發送簡訊驗證碼");
+        }
+      }
+
+      async function verifyLogin() {
+        if (!confirmationResult) { setError("請先發送手機簡訊驗證碼。"); return; }
+        const code = els.loginCode.value.trim();
+        if (!/^\d{6}$/.test(code)) { setError("請輸入 6 位數驗證碼。"); return; }
+
+        try {
+          setBusy(els.verifyLogin, true, "登入中...", "確認登入");
+          setError("");
+          setMessage("正在完成會員登入...");
+
+          const confirmation = await confirmationResult.confirm(code);
+          const firebaseIdToken = await confirmation.user.getIdToken();
+          await requestJson("/api/v1/public/member/login/sms", {
+            method: "POST",
+            body: JSON.stringify({
+              displayName: els.loginDisplayName.value.trim(),
+              firebaseIdToken,
+              rememberDevice: els.rememberDevice.checked,
+            }),
+          });
+          confirmationResult = null;
+          els.loginCode.value = "";
+          await refreshSession();
+          setMessage("會員登入成功，可以直接參加抽獎。");
+        } catch (error) {
+          setError(error instanceof Error ? error.message : "會員登入失敗");
+          setMessage("");
+        } finally {
+          setBusy(els.verifyLogin, false, "確認登入", "確認登入");
+        }
+      }
+
+      async function refreshSession() {
+        const session = await requestJson("/api/v1/public/member/session");
+        renderSession(session);
+      }
+
+      async function logout() {
+        try {
+          await requestJson("/api/v1/public/member/logout", { method: "POST", body: JSON.stringify({}) });
+          renderSession({ authenticated: false, member: null, deviceTrusted: false });
+          setMessage("已登出會員。");
+          setError("");
+        } catch (error) {
+          setError(error instanceof Error ? error.message : "登出失敗");
+        }
+      }
+
+      async function lookupByToken(token) {
+        currentToken = token;
+        const ticket = await requestJson(`/api/v1/public/redeem/${encodeURIComponent(token)}`);
+        renderTicket(ticket);
+        setMessage(ticket.message || "請先完成手機簡訊登入後再參加抽獎。");
+        setError("");
+      }
+
+      async function claimTicket() {
+        if (!currentTicket?.token) { setError("目前沒有可兌獎的收據。"); return; }
+        if (!currentSession?.authenticated) { setError("請先完成手機簡訊登入，才能參加抽獎。"); return; }
+
+        try {
+          setBusy(els.claimButton, true, "兌獎中...", "參加抽獎");
+          setMessage("正在進行抽獎...");
+          const ticket = await requestJson(`/api/v1/public/redeem/${encodeURIComponent(currentTicket.token)}/claim`, {
+            method: "POST",
+            body: JSON.stringify({}),
+          });
+          renderTicket(ticket);
+          await refreshSession();
+          setMessage(ticket.draw?.title ? `${ticket.draw.title} ${ticket.draw.message}` : ticket.message || "兌獎完成。");
+          setError("");
+        } catch (error) {
+          setError(error instanceof Error ? error.message : "兌獎失敗");
+          setMessage("");
+        } finally {
+          setBusy(els.claimButton, false, "參加抽獎", currentTicket?.claimed ? "已完成兌獎" : "參加抽獎");
+        }
+      }
+
+      function ticketTokenFromPath() {
+        const path = window.location.pathname.replace(/\/+$/, "");
+        const parts = path.split("/").filter(Boolean);
+        if (!parts.length) return null;
+        const last = parts[parts.length - 1];
+        return last === "redeem" ? null : last;
+      }
+
+      els.claimButton.addEventListener("click", claimTicket);
+      els.reloadTicket.addEventListener("click", async () => {
+        if (!currentToken) { setError("目前沒有可重新查詢的收據。"); return; }
+        await lookupByToken(currentToken);
+      });
+      els.sendCode.addEventListener("click", sendLoginCode);
+      els.verifyLogin.addEventListener("click", verifyLogin);
+      els.refreshSession.addEventListener("click", async () => {
+        await refreshSession();
+        setMessage("已重新整理登入狀態。");
+        setError("");
+      });
+      els.logout.addEventListener("click", logout);
+
+      (async () => {
+        try {
+          await Promise.all([loadFirebaseConfig(), refreshSession()]);
+          const token = ticketTokenFromPath();
+          if (token) await lookupByToken(token);
+        } catch (error) {
+          setError(error instanceof Error ? error.message : "頁面載入失敗");
+        }
+      })();
+    </script>
+  </body>
+</html>
