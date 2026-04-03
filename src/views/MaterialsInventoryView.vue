@@ -142,7 +142,7 @@ function openEditForm(item: MaterialAdminItem) {
   form.uploadedImageName = isEmbeddedImage(item.imageUrl) ? "已上傳圖片" : "";
   form.description = item.description ?? "";
   form.reorderLevel = String(item.reorderLevel);
-  form.latestUnitCost = item.latestUnitCost === null ? "" : item.latestUnitCost.toFixed(2);
+  form.latestUnitCost = item.latestPurchaseUnitCost === null ? "" : item.latestPurchaseUnitCost.toFixed(2);
   isFormOpen.value = true;
 }
 
@@ -177,7 +177,9 @@ async function submitForm() {
     imageUrl: form.imageUrlInput.trim() || form.imageUrl.trim(),
     description: form.description.trim(),
     reorderLevel: Number(form.reorderLevel),
-    latestUnitCost: form.latestUnitCost ? Number(form.latestUnitCost) : null,
+    latestUnitCost: form.latestUnitCost
+      ? Number(form.latestUnitCost) / Number(form.purchaseToStockRatio || "1")
+      : null,
   };
 
   const success = editingId.value
@@ -462,8 +464,8 @@ onMounted(async () => {
                   <input v-model="form.reorderLevel" type="number" min="0" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="輸入補貨門檻" />
                 </label>
                 <label class="block">
-                  <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">最近庫存單位成本</span>
-                  <input v-model="form.latestUnitCost" type="number" min="0" step="0.01" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="輸入最新庫存單位成本" />
+                  <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">最近採購單位成本</span>
+                  <input v-model="form.latestUnitCost" type="number" min="0" step="0.01" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" :placeholder="`輸入每 ${form.purchaseUnit || '採購單位'} 成本`" />
                 </label>
               </div>
             </div>
