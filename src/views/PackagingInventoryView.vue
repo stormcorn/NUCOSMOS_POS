@@ -423,14 +423,49 @@ onMounted(async () => {
           <div v-if="formError" class="rounded-2xl border border-brand-coral/20 bg-brand-coral/10 px-4 py-3 text-sm text-brand-coral">
             {{ formError }}
           </div>
-          <input v-model="form.sku" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="SKU" />
-          <input v-model="form.name" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="包裝名稱" />
-          <input v-model="form.unit" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="庫存單位，例如 pcs" />
-          <input v-model="form.purchaseUnit" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="採購單位，例如 sleeve / box / carton" />
-          <input v-model="form.purchaseToStockRatio" type="number" min="1" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="1 採購單位可換算成幾個庫存單位" />
-          <input v-model="form.specification" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="規格，例如 700cc 杯 / 平口蓋" />
-          <input v-model="form.reorderLevel" type="number" min="0" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="補貨門檻" />
-          <input v-model="form.latestUnitCost" type="number" min="0" step="0.01" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="最近庫存單位成本" />
+          <div class="rounded-[1.5rem] border border-white/8 bg-white/4 p-4">
+            <p class="text-sm font-semibold text-white">????</p>
+            <div class="mt-4 grid gap-4">
+              <label class="block">
+                <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">SKU</span>
+                <input v-model="form.sku" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="SKU" />
+              </label>
+              <label class="block">
+                <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">????</span>
+                <input v-model="form.name" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="??????" />
+              </label>
+              <div class="grid gap-4 md:grid-cols-2">
+                <label class="block">
+                  <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">????</span>
+                  <input v-model="form.unit" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="?? pcs" />
+                </label>
+                <label class="block">
+                  <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">????</span>
+                  <input v-model="form.purchaseUnit" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="?? sleeve / box / carton" />
+                </label>
+              </div>
+              <div class="grid gap-4 md:grid-cols-2">
+                <label class="block">
+                  <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">????</span>
+                  <input v-model="form.purchaseToStockRatio" type="number" min="1" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="1 ?????????????" />
+                </label>
+                <label class="block">
+                  <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">??</span>
+                  <input v-model="form.specification" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="?? 700cc ? / ???" />
+                </label>
+              </div>
+              <div class="grid gap-4 md:grid-cols-2">
+                <label class="block">
+                  <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">????</span>
+                  <input v-model="form.reorderLevel" type="number" min="0" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="??????" />
+                </label>
+                <label class="block">
+                  <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">????????</span>
+                  <input v-model="form.latestUnitCost" type="number" min="0" step="0.01" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="??????????" />
+                </label>
+              </div>
+            </div>
+          </div>
           <div class="rounded-[1.5rem] border border-white/8 bg-white/4 p-4">
             <div class="flex items-center justify-between gap-3">
               <div>
@@ -469,7 +504,10 @@ onMounted(async () => {
               </div>
             </div>
           </div>
-          <textarea v-model="form.description" rows="4" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="包裝備註" />
+          <label class="block">
+            <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">????</span>
+            <textarea v-model="form.description" rows="4" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="??????" />
+          </label>
           <button class="w-full rounded-2xl bg-brand-aqua px-5 py-3 text-sm font-semibold text-slate-950" :disabled="packagingStore.saving" @click="submitForm">
             {{ packagingStore.saving ? "處理中..." : editingId ? "更新包裝" : "建立包裝" }}
           </button>

@@ -396,14 +396,43 @@ onMounted(async () => {
           <div v-if="formError" class="rounded-2xl border border-brand-coral/20 bg-brand-coral/10 px-4 py-3 text-sm text-brand-coral">
             {{ formError }}
           </div>
-          <input v-model="form.sku" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="SKU" />
-          <input v-model="form.name" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="製成品名稱" />
-          <input v-model="form.unit" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="庫存單位，例如 ml / g / pcs" />
-          <input v-model="form.purchaseUnit" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="採購單位，例如 桶 / 袋 / 箱" />
-          <input v-model="form.purchaseToStockRatio" type="number" min="1" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="1 採購單位換算的庫存數量" />
-          <input v-model="form.reorderLevel" type="number" min="0" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="補貨警戒值" />
-          <input v-model="form.latestUnitCost" type="number" min="0" step="0.01" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="最新單位成本" />
           <div class="rounded-[1.5rem] border border-white/8 bg-white/4 p-4">
+            <p class="text-sm font-semibold text-white">基本資料</p>
+            <div class="mt-4 grid gap-4">
+              <label class="block">
+                <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">SKU</span>
+                <input v-model="form.sku" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="SKU" />
+              </label>
+              <label class="block">
+                <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">製成品名稱</span>
+                <input v-model="form.name" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="輸入製成品名稱" />
+              </label>
+              <div class="grid gap-4 md:grid-cols-2">
+                <label class="block">
+                  <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">庫存單位</span>
+                  <input v-model="form.unit" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="例如 ml / g / pcs" />
+                </label>
+                <label class="block">
+                  <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">採購單位</span>
+                  <input v-model="form.purchaseUnit" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="例如 瓶 / 箱 / 組" />
+                </label>
+              </div>
+              <div class="grid gap-4 md:grid-cols-3">
+                <label class="block">
+                  <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">換算倍率</span>
+                  <input v-model="form.purchaseToStockRatio" type="number" min="1" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="1 採購單位可換算多少庫存單位" />
+                </label>
+                <label class="block">
+                  <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">補貨門檻</span>
+                  <input v-model="form.reorderLevel" type="number" min="0" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="輸入補貨門檻" />
+                </label>
+                <label class="block">
+                  <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">最近庫存單位成本</span>
+                  <input v-model="form.latestUnitCost" type="number" min="0" step="0.01" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="輸入最新庫存單位成本" />
+                </label>
+              </div>
+            </div>
+          </div>          <div class="rounded-[1.5rem] border border-white/8 bg-white/4 p-4">
             <div class="flex items-center justify-between gap-3">
               <div>
                 <p class="text-sm font-semibold text-white">圖片</p>
@@ -441,7 +470,10 @@ onMounted(async () => {
               </div>
             </div>
           </div>
-          <textarea v-model="form.description" rows="4" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="描述或備註" />
+          <label class="block">
+            <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">製成品描述</span>
+            <textarea v-model="form.description" rows="4" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="輸入製成品描述" />
+          </label>
           <button class="w-full rounded-2xl bg-brand-aqua px-5 py-3 text-sm font-semibold text-slate-950" :disabled="manufacturedStore.saving" @click="submitForm">
             {{ manufacturedStore.saving ? "處理中..." : editingId ? "更新製成品" : "建立製成品" }}
           </button>
