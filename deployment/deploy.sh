@@ -28,6 +28,7 @@ set +a
 
 ADMIN_WEB_PORT="${ADMIN_WEB_PORT:-8080}"
 BACKEND_PORT="${BACKEND_PORT:-8081}"
+BACKEND_CONTAINER_NAME="${BACKEND_CONTAINER_NAME:-nucosmos-pos-backend-prod}"
 
 if [ -d "$PUBLIC_SITE_SOURCE" ]; then
   echo "[deploy] syncing public site: $PUBLIC_SITE_SOURCE -> $PUBLIC_SITE_ROOT"
@@ -64,6 +65,11 @@ HEALTH_INTERVAL_SECONDS="${HEALTH_INTERVAL_SECONDS:-2}"
 elapsed=0
 
 until curl -fsS "$HEALTH_URL"; do
+  if docker ps --format '{{.Names}}' | grep -qx "$BACKEND_CONTAINER_NAME" \
+    && docker logs "$BACKEND_CONTAINER_NAME" 2>&1 | grep -q "Started NucosmosPosBackendApplication"; then
+    echo "[deploy] backend startup confirmed via container logs"
+    break
+  fi
   elapsed=$((elapsed + HEALTH_INTERVAL_SECONDS))
   if [ "$elapsed" -ge "$HEALTH_TIMEOUT_SECONDS" ]; then
     echo
