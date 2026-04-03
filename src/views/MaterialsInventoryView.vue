@@ -433,11 +433,11 @@ onMounted(async () => {
               <div class="grid gap-4">
                 <label class="block">
                   <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">庫存單位</span>
-                  <input v-model="form.unit" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="?? g / ml / pcs" />
+                  <input v-model="form.unit" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="例如 g / ml / pcs" />
                 </label>
                 <label class="block">
                   <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">採購單位</span>
-                  <input v-model="form.purchaseUnit" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="?? bag / box / bottle" />
+                  <input v-model="form.purchaseUnit" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="例如 bag / box / bottle" />
                 </label>
               </div>
               <div class="grid gap-4">
@@ -477,20 +477,26 @@ onMounted(async () => {
                 <span v-else>尚未上傳</span>
               </div>
               <div class="min-w-0 flex-1 space-y-3">
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/gif,image/webp"
-                  class="block w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-slate-200 file:mr-4 file:rounded-xl file:border-0 file:bg-brand-aqua file:px-3 file:py-2 file:text-sm file:font-semibold file:text-slate-950"
-                  @change="handleImageUpload"
-                />
+                <label class="block">
+                  <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">上傳圖片</span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/gif,image/webp"
+                    class="block w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-slate-200 file:mr-4 file:rounded-xl file:border-0 file:bg-brand-aqua file:px-3 file:py-2 file:text-sm file:font-semibold file:text-slate-950"
+                    @change="handleImageUpload"
+                  />
+                </label>
                 <p v-if="form.uploadedImageName" class="text-xs text-slate-400">{{ form.uploadedImageName }}</p>
-                <input
-                  v-model="form.imageUrlInput"
-                  type="url"
-                  class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none"
-                  placeholder="圖片網址（可留空，改用上傳）"
-                  @input="handleImageUrlInput"
-                />
+                <label class="block">
+                  <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">圖片網址</span>
+                  <input
+                    v-model="form.imageUrlInput"
+                    type="url"
+                    class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none"
+                    placeholder="圖片網址（可留空，改用上傳）"
+                    @input="handleImageUrlInput"
+                  />
+                </label>
               </div>
             </div>
           </div>
@@ -514,28 +520,50 @@ onMounted(async () => {
         <p class="text-xs uppercase tracking-[0.28em] text-brand-aqua/70">Stock Movement</p>
         <h3 class="mt-2 text-2xl font-semibold text-white">原料異動</h3>
         <div v-if="canEditInventory" class="mt-6 space-y-4">
-          <select v-model="selectedItemId" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none">
-            <option value="">請選擇原料</option>
-            <option v-for="item in materialsStore.activeItems" :key="item.id" :value="item.id">
-              {{ item.name }} ({{ item.sku }})
-            </option>
-          </select>
-          <select v-model="movementForm.movementType" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none">
-            <option v-for="option in movementOptions" :key="option.value" :value="option.value">
-              {{ option.label }}
-            </option>
-          </select>
+          <label class="block">
+            <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">選擇原料</span>
+            <select v-model="selectedItemId" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none">
+              <option value="">請選擇原料</option>
+              <option v-for="item in materialsStore.activeItems" :key="item.id" :value="item.id">
+                {{ item.name }} ({{ item.sku }})
+              </option>
+            </select>
+          </label>
+          <label class="block">
+            <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">異動類型</span>
+            <select v-model="movementForm.movementType" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none">
+              <option v-for="option in movementOptions" :key="option.value" :value="option.value">
+                {{ option.label }}
+              </option>
+            </select>
+          </label>
           <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
             {{ movementOptions.find((option) => option.value === movementForm.movementType)?.description }}
           </div>
-          <input v-model="movementForm.quantity" type="number" min="1" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="異動數量" />
-          <input v-model="movementForm.unitCost" type="number" min="0" step="0.01" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="單位成本，進貨時建議填寫" />
-          <input v-model="movementForm.batchCode" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="批號，進貨時可選填" />
-          <div class="grid gap-4 md:grid-cols-2">
+          <label class="block">
+            <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">異動數量</span>
+            <input v-model="movementForm.quantity" type="number" min="1" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="輸入異動數量" />
+          </label>
+          <label class="block">
+            <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">單位成本</span>
+            <input v-model="movementForm.unitCost" type="number" min="0" step="0.01" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="單位成本，進貨時建議填寫" />
+          </label>
+          <label class="block">
+            <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">批號</span>
+            <input v-model="movementForm.batchCode" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="批號，進貨時可選填" />
+          </label>
+          <label class="block">
+            <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">製造時間</span>
             <input v-model="movementForm.manufacturedAt" type="datetime-local" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" />
+          </label>
+          <label class="block">
+            <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">效期</span>
             <input v-model="movementForm.expiryDate" type="datetime-local" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" />
-          </div>
-          <textarea v-model="movementForm.note" rows="3" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="異動備註" />
+          </label>
+          <label class="block">
+            <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">異動備註</span>
+            <textarea v-model="movementForm.note" rows="3" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="輸入異動備註" />
+          </label>
           <div v-if="selectedItem" class="rounded-[1.5rem] border border-white/8 bg-white/4 p-4 text-sm text-slate-300">
             <p class="font-semibold text-white">{{ selectedItem.name }}</p>
             <p class="mt-2">目前庫存：{{ selectedItem.quantityOnHand }} {{ selectedItem.unit }}</p>
@@ -545,6 +573,9 @@ onMounted(async () => {
           <button class="w-full rounded-2xl bg-brand-aqua px-5 py-3 text-sm font-semibold text-slate-950" :disabled="!canEditInventory || materialsStore.saving" @click="submitMovement">
             {{ materialsStore.saving ? "處理中..." : "建立異動" }}
           </button>
+        </div>
+        <div v-else class="mt-6 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
+          目前帳號為唯讀模式，不能建立原料庫存異動。
         </div>
       </section>
     </aside>
