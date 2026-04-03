@@ -27,6 +27,7 @@ source "$ENV_FILE"
 set +a
 
 ADMIN_WEB_PORT="${ADMIN_WEB_PORT:-8080}"
+BACKEND_PORT="${BACKEND_PORT:-8081}"
 
 if [ -d "$PUBLIC_SITE_SOURCE" ]; then
   echo "[deploy] syncing public site: $PUBLIC_SITE_SOURCE -> $PUBLIC_SITE_ROOT"
@@ -57,7 +58,7 @@ docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" pull || true
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --build
 
 echo "[deploy] waiting for backend health..."
-HEALTH_URL="http://127.0.0.1:${ADMIN_WEB_PORT}/api/v1/health"
+HEALTH_URL="http://127.0.0.1:${BACKEND_PORT}/api/v1/health"
 HEALTH_TIMEOUT_SECONDS="${HEALTH_TIMEOUT_SECONDS:-60}"
 HEALTH_INTERVAL_SECONDS="${HEALTH_INTERVAL_SECONDS:-2}"
 elapsed=0
