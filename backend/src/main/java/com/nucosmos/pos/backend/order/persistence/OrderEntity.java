@@ -106,6 +106,9 @@ public class OrderEntity extends BaseEntity {
     @Column(nullable = false)
     private boolean inventoryCommitted;
 
+    @Column(name = "is_test_order", nullable = false)
+    private boolean testOrder;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("lineNumber ASC")
     private List<OrderItemEntity> items = new ArrayList<>();
@@ -167,6 +170,7 @@ public class OrderEntity extends BaseEntity {
         this.discountNote = discountNote;
         this.orderedAt = orderedAt;
         this.inventoryCommitted = false;
+        this.testOrder = false;
     }
 
     public void addItem(OrderItemEntity item) {
@@ -328,6 +332,14 @@ public class OrderEntity extends BaseEntity {
 
     public boolean isInventoryCommitted() {
         return inventoryCommitted;
+    }
+
+    public boolean isTestOrder() {
+        return testOrder;
+    }
+
+    public void markAsTestOrder(boolean testOrder) {
+        this.testOrder = testOrder;
     }
 
     public List<OrderItemEntity> getItems() {

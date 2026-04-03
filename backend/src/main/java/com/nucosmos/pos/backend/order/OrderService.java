@@ -540,6 +540,7 @@ public class OrderService {
         return new OrderResponse(
                 order.getId(),
                 order.getOrderNumber(),
+                order.isTestOrder(),
                 order.getStatus(),
                 order.getPaymentStatus(),
                 order.getStore().getCode(),
@@ -652,6 +653,7 @@ public class OrderService {
         return new OrderSummaryResponse(
                 order.getId(),
                 order.getOrderNumber(),
+                order.isTestOrder(),
                 order.getStatus(),
                 order.getPaymentStatus(),
                 order.getStore().getCode(),

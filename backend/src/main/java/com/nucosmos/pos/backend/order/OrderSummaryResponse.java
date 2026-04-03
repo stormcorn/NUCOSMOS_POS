@@ -7,6 +7,7 @@ import java.util.UUID;
 public record OrderSummaryResponse(
         UUID id,
         String orderNumber,
+        boolean testOrder,
         String status,
         String paymentStatus,
         String storeCode,

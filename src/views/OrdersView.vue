@@ -74,7 +74,15 @@ onMounted(() => {
         >
           <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <p class="font-semibold text-white">{{ order.orderNumber }}</p>
+              <div class="flex flex-wrap items-center gap-2">
+                <p class="font-semibold text-white">{{ order.orderNumber }}</p>
+                <span
+                  v-if="order.testOrder"
+                  class="rounded-full border border-amber-300/25 bg-amber-300/10 px-2 py-1 text-[11px] font-semibold tracking-[0.12em] text-amber-200"
+                >
+                  測試訂單
+                </span>
+              </div>
               <p class="mt-1 text-sm text-slate-400">{{ order.storeCode }} · {{ formatDateTime(order.orderedAt) }}</p>
             </div>
             <div class="flex items-center gap-3">
@@ -142,7 +150,15 @@ onMounted(() => {
       <div v-else-if="orderStore.detail" class="mt-6 space-y-4">
         <div class="rounded-[1.5rem] border border-white/8 bg-white/4 p-4">
           <p class="text-sm text-slate-400">訂單編號</p>
-          <p class="mt-2 text-xl font-semibold text-white">{{ orderStore.detail.orderNumber }}</p>
+          <div class="mt-2 flex flex-wrap items-center gap-2">
+            <p class="text-xl font-semibold text-white">{{ orderStore.detail.orderNumber }}</p>
+            <span
+              v-if="orderStore.detail.testOrder"
+              class="rounded-full border border-amber-300/25 bg-amber-300/10 px-2 py-1 text-[11px] font-semibold tracking-[0.12em] text-amber-200"
+            >
+              測試訂單
+            </span>
+          </div>
           <p class="mt-2 text-sm text-slate-400">
             {{ orderStore.detail.storeCode }} · {{ formatDateTime(orderStore.detail.orderedAt) }}
           </p>

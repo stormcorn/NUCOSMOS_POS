@@ -1,6 +1,7 @@
 export type OrderSummary = {
   id: string;
   orderNumber: string;
+  testOrder: boolean;
   status: string;
   paymentStatus: string;
   storeCode: string;
@@ -75,6 +76,7 @@ export type RefundDetail = {
 export type OrderDetail = {
   id: string;
   orderNumber: string;
+  testOrder: boolean;
   status: string;
   paymentStatus: string;
   storeCode: string;
