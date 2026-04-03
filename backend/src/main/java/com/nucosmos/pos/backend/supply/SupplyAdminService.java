@@ -163,7 +163,8 @@ public class SupplyAdminService {
             throw new BadRequestException("Insufficient material stock for this movement");
         }
 
-        item.applyMovement(quantityDelta, request.unitCost());
+        BigDecimal unitCost = normalizeMovementUnitCost(movementType, request.unitCost(), item.getPurchaseToStockRatio());
+        item.applyMovement(quantityDelta, unitCost);
         MaterialMovementEntity movement = new MaterialMovementEntity(
                 item,
                 actor,
@@ -171,7 +172,7 @@ public class SupplyAdminService {
                 request.quantity(),
                 quantityDelta,
                 quantityAfter,
-                request.unitCost(),
+                unitCost,
                 blankToNull(request.note()),
                 null,
                 null,
@@ -186,7 +187,7 @@ public class SupplyAdminService {
                     request.expiryDate(),
                     request.manufacturedAt(),
                     request.quantity(),
-                    request.unitCost(),
+                    unitCost,
                     movement.getOccurredAt()
             ));
         }
@@ -282,7 +283,8 @@ public class SupplyAdminService {
             throw new BadRequestException("Insufficient manufactured stock for this movement");
         }
 
-        item.applyMovement(quantityDelta, request.unitCost());
+        BigDecimal unitCost = normalizeMovementUnitCost(movementType, request.unitCost(), item.getPurchaseToStockRatio());
+        item.applyMovement(quantityDelta, unitCost);
         ManufacturedMovementEntity movement = new ManufacturedMovementEntity(
                 item,
                 actor,
@@ -290,7 +292,7 @@ public class SupplyAdminService {
                 request.quantity(),
                 quantityDelta,
                 quantityAfter,
-                request.unitCost(),
+                unitCost,
                 blankToNull(request.note()),
                 null,
                 null,
@@ -305,7 +307,7 @@ public class SupplyAdminService {
                     request.expiryDate(),
                     request.manufacturedAt(),
                     request.quantity(),
-                    request.unitCost(),
+                    unitCost,
                     movement.getOccurredAt()
             ));
         }
@@ -403,7 +405,8 @@ public class SupplyAdminService {
             throw new BadRequestException("Insufficient packaging stock for this movement");
         }
 
-        item.applyMovement(quantityDelta, request.unitCost());
+        BigDecimal unitCost = normalizeMovementUnitCost(movementType, request.unitCost(), item.getPurchaseToStockRatio());
+        item.applyMovement(quantityDelta, unitCost);
         PackagingMovementEntity movement = new PackagingMovementEntity(
                 item,
                 actor,
@@ -411,7 +414,7 @@ public class SupplyAdminService {
                 request.quantity(),
                 quantityDelta,
                 quantityAfter,
-                request.unitCost(),
+                unitCost,
                 blankToNull(request.note()),
                 null,
                 null,
@@ -426,7 +429,7 @@ public class SupplyAdminService {
                     request.expiryDate(),
                     request.manufacturedAt(),
                     request.quantity(),
-                    request.unitCost(),
+                    unitCost,
                     movement.getOccurredAt()
             ));
         }
@@ -724,5 +727,22 @@ public class SupplyAdminService {
         }
 
         return latestUnitCost.multiply(BigDecimal.valueOf(purchaseToStockRatio)).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal normalizeMovementUnitCost(
+            SupplyMovementType movementType,
+            BigDecimal submittedUnitCost,
+            int purchaseToStockRatio
+    ) {
+        if (submittedUnitCost == null) {
+            return null;
+        }
+
+        if (movementType == SupplyMovementType.PURCHASE_IN) {
+            return submittedUnitCost.divide(BigDecimal.valueOf(purchaseToStockRatio), 6, RoundingMode.HALF_UP)
+                    .setScale(2, RoundingMode.HALF_UP);
+        }
+
+        return submittedUnitCost;
     }
 }

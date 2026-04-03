@@ -78,6 +78,18 @@ function displayUnitCost(value: number | null, unit: string) {
   return value === null ? "--" : `${formatCurrency(value)} / ${unit}`;
 }
 
+const movementCostLabel = computed(() =>
+  movementForm.movementType === "PURCHASE_IN" ? "採購單位成本" : "單位成本",
+);
+
+const movementCostPlaceholder = computed(() => {
+  if (movementForm.movementType === "PURCHASE_IN") {
+    return `輸入每 ${selectedItem.value?.purchaseUnit || "採購單位"} 成本`;
+  }
+
+  return `輸入每 ${selectedItem.value?.unit || "庫存單位"} 成本`;
+});
+
 function resetForm() {
   editingId.value = null;
   formError.value = "";
@@ -515,8 +527,8 @@ onMounted(async () => {
             <input v-model="movementForm.quantity" type="number" min="1" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="輸入異動數量" />
           </label>
           <label class="block">
-            <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">單位成本</span>
-            <input v-model="movementForm.unitCost" type="number" min="0" step="0.01" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="單位成本（庫存單位）" />
+            <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">{{ movementCostLabel }}</span>
+            <input v-model="movementForm.unitCost" type="number" min="0" step="0.01" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" :placeholder="movementCostPlaceholder" />
           </label>
           <label class="block">
             <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">批號</span>
