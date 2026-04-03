@@ -430,7 +430,7 @@ onMounted(async () => {
                 <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">原料名稱</span>
                 <input v-model="form.name" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="輸入原料名稱" />
               </label>
-              <div class="grid gap-4 md:grid-cols-2">
+              <div class="grid gap-4">
                 <label class="block">
                   <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">庫存單位</span>
                   <input v-model="form.unit" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="?? g / ml / pcs" />
@@ -440,7 +440,7 @@ onMounted(async () => {
                   <input v-model="form.purchaseUnit" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="?? bag / box / bottle" />
                 </label>
               </div>
-              <div class="grid gap-4 md:grid-cols-3">
+              <div class="grid gap-4">
                 <label class="block">
                   <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">換算倍率</span>
                   <input v-model="form.purchaseToStockRatio" type="number" min="1" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="1 採購單位可換算多少庫存單位" />
@@ -471,7 +471,7 @@ onMounted(async () => {
                 移除圖片
               </button>
             </div>
-            <div class="mt-4 flex items-start gap-4">
+            <div class="mt-4 flex flex-col gap-4 md:flex-row md:items-start">
               <div class="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-slate-900/70 text-[11px] text-slate-500">
                 <img v-if="form.imageUrl" :src="form.imageUrl" :alt="form.name || '原料圖片'" class="h-full w-full object-cover" />
                 <span v-else>尚未上傳</span>
