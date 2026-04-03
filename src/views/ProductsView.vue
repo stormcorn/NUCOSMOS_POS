@@ -707,7 +707,7 @@ onMounted(async () => {
               <th class="px-4 py-3 font-medium">活動</th>
               <th class="px-4 py-3 font-medium">成本</th>
               <th class="px-4 py-3 font-medium">圖片</th>
-              <th class="px-4 py-3 font-medium">操作</th>
+              <th class="w-40 min-w-[10rem] px-4 py-3 font-medium">操作</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-white/8">
@@ -756,18 +756,18 @@ onMounted(async () => {
                   No Image
                 </div>
               </td>
-              <td class="px-4 py-4">
-                <div class="flex gap-2">
+              <td class="w-40 min-w-[10rem] px-4 py-4 align-top">
+                <div class="flex min-w-[9rem] flex-col gap-2 sm:flex-row">
                   <button
                     v-if="canEditProducts"
-                    class="rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-200"
+                    class="flex-1 rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-200"
                     @click="openEditForm(product)"
                   >
                     編輯
                   </button>
                   <button
                     v-if="canEditProducts"
-                    class="rounded-xl border border-brand-coral/20 px-3 py-2 text-xs text-brand-coral"
+                    class="flex-1 rounded-xl border border-brand-coral/20 px-3 py-2 text-xs text-brand-coral"
                     :disabled="!product.active"
                     @click="deactivate(product)"
                   >
@@ -800,16 +800,39 @@ onMounted(async () => {
           {{ formError }}
         </div>
 
-        <select v-model="form.categoryId" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none">
-          <option v-for="category in productStore.categories" :key="category.id" :value="category.id">
-            {{ category.name }}
-          </option>
-        </select>
+        <div class="rounded-[1.5rem] border border-white/8 bg-white/4 p-4">
+          <p class="text-sm font-semibold text-white">基本資料</p>
+          <div class="mt-4 space-y-4">
+            <label class="block">
+              <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">分類</span>
+              <select v-model="form.categoryId" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none">
+                <option v-for="category in productStore.categories" :key="category.id" :value="category.id">
+                  {{ category.name }}
+                </option>
+              </select>
+            </label>
 
-        <input v-model="form.sku" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="SKU" />
-        <input v-model="form.name" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="商品名稱" />
-        <input v-model="form.price" type="number" min="0.01" step="0.01" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="原價" />
-        <textarea v-model="form.description" rows="3" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="商品描述" />
+            <label class="block">
+              <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">SKU</span>
+              <input v-model="form.sku" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="SKU" />
+            </label>
+
+            <label class="block">
+              <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">商品名稱</span>
+              <input v-model="form.name" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="商品名稱" />
+            </label>
+
+            <label class="block">
+              <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">售價</span>
+              <input v-model="form.price" type="number" min="0.01" step="0.01" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="原價" />
+            </label>
+
+            <label class="block">
+              <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">商品描述</span>
+              <textarea v-model="form.description" rows="3" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="商品描述" />
+            </label>
+          </div>
+        </div>
         <div class="rounded-[1.5rem] border border-white/8 bg-white/4 p-4">
           <div class="flex items-center justify-between gap-3">
             <div>
@@ -896,7 +919,10 @@ onMounted(async () => {
           </div>
         </div>
 
-        <input v-model="form.recipeNote" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="本次配方調整備註" />
+        <label class="block">
+          <span class="mb-2 block text-xs uppercase tracking-[0.2em] text-slate-400">配方備註</span>
+          <input v-model="form.recipeNote" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="本次配方調整備註" />
+        </label>
 
         <div class="manufactured-recipe-card rounded-[1.5rem] border border-white/8 bg-white/4 p-4">
           <div class="flex items-center justify-between">
