@@ -1,7 +1,8 @@
 enum QuickReceiveItemType {
   material,
   manufactured,
-  packaging;
+  packaging,
+  product;
 
   String get label {
     switch (this) {
@@ -11,10 +12,12 @@ enum QuickReceiveItemType {
         return '製成品';
       case QuickReceiveItemType.packaging:
         return '包裝';
+      case QuickReceiveItemType.product:
+        return '商品';
     }
   }
 
-  String get apiPath {
+  String get catalogPath {
     switch (this) {
       case QuickReceiveItemType.material:
         return '/api/v1/admin/materials';
@@ -22,8 +25,25 @@ enum QuickReceiveItemType {
         return '/api/v1/admin/manufactured-items';
       case QuickReceiveItemType.packaging:
         return '/api/v1/admin/packaging-items';
+      case QuickReceiveItemType.product:
+        return '/api/v1/admin/inventory/stocks';
     }
   }
+
+  String? get createPath {
+    switch (this) {
+      case QuickReceiveItemType.material:
+        return '/api/v1/admin/materials';
+      case QuickReceiveItemType.manufactured:
+        return '/api/v1/admin/manufactured-items';
+      case QuickReceiveItemType.packaging:
+        return '/api/v1/admin/packaging-items';
+      case QuickReceiveItemType.product:
+        return null;
+    }
+  }
+
+  bool get supportsInlineCreate => createPath != null;
 }
 
 class QuickReceiveItem {
@@ -131,6 +151,24 @@ class QuickReceiveItem {
       specification: json['specification'] as String?,
     );
   }
+
+  factory QuickReceiveItem.fromProductStockJson(Map<String, dynamic> json) {
+    final categoryName = (json['categoryName'] as String?)?.trim();
+    return QuickReceiveItem(
+      id: json['productId']?.toString() ?? '',
+      type: QuickReceiveItemType.product,
+      sku: json['sku'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      unit: '件',
+      purchaseUnit: '件',
+      purchaseToStockRatio: 1,
+      quantityOnHand: (json['quantityOnHand'] as num?)?.toInt() ?? 0,
+      lowStock: json['lowStock'] as bool? ?? false,
+      active: true,
+      imageUrl: json['imageUrl'] as String?,
+      description: categoryName?.isEmpty ?? true ? null : categoryName,
+    );
+  }
 }
 
 class QuickReceiveResult {
@@ -177,6 +215,18 @@ class QuickReceiveResult {
     return QuickReceiveResult(
       itemName: json['packagingName'] as String? ?? '',
       itemType: QuickReceiveItemType.packaging,
+      quantityAfter: (json['quantityAfter'] as num?)?.toInt() ?? 0,
+      receivedStockQuantity: receivedStockQuantity,
+    );
+  }
+
+  factory QuickReceiveResult.fromProductMovementJson(
+    Map<String, dynamic> json, {
+    required int receivedStockQuantity,
+  }) {
+    return QuickReceiveResult(
+      itemName: json['productName'] as String? ?? '',
+      itemType: QuickReceiveItemType.product,
       quantityAfter: (json['quantityAfter'] as num?)?.toInt() ?? 0,
       receivedStockQuantity: receivedStockQuantity,
     );

@@ -14,7 +14,7 @@ class QuickReceiveService {
   Future<List<QuickReceiveItem>> fetchMaterials(String accessToken) async {
     return _fetchItems(
       accessToken: accessToken,
-      path: '/api/v1/admin/materials',
+      path: QuickReceiveItemType.material.catalogPath,
       mapper: QuickReceiveItem.fromMaterialJson,
     );
   }
@@ -24,7 +24,7 @@ class QuickReceiveService {
   ) async {
     return _fetchItems(
       accessToken: accessToken,
-      path: '/api/v1/admin/manufactured-items',
+      path: QuickReceiveItemType.manufactured.catalogPath,
       mapper: QuickReceiveItem.fromManufacturedJson,
     );
   }
@@ -32,8 +32,16 @@ class QuickReceiveService {
   Future<List<QuickReceiveItem>> fetchPackagingItems(String accessToken) async {
     return _fetchItems(
       accessToken: accessToken,
-      path: '/api/v1/admin/packaging-items',
+      path: QuickReceiveItemType.packaging.catalogPath,
       mapper: QuickReceiveItem.fromPackagingJson,
+    );
+  }
+
+  Future<List<QuickReceiveItem>> fetchProductStocks(String accessToken) async {
+    return _fetchItems(
+      accessToken: accessToken,
+      path: QuickReceiveItemType.product.catalogPath,
+      mapper: QuickReceiveItem.fromProductStockJson,
     );
   }
 
@@ -49,6 +57,11 @@ class QuickReceiveService {
     String? description,
     double? latestUnitCost,
   }) async {
+    final createPath = type.createPath;
+    if (createPath == null) {
+      throw ApiException('${type.label}請先在後台建立，再到 POS 進行入庫。', 400);
+    }
+
     final payload = {
       'sku': sku.trim(),
       'name': name.trim(),
@@ -63,7 +76,7 @@ class QuickReceiveService {
     };
 
     final json = await _apiClient.post(
-      type.apiPath,
+      createPath,
       accessToken: accessToken,
       body: payload,
     );
@@ -85,6 +98,30 @@ class QuickReceiveService {
     final unitCost = purchaseUnitCost == null
         ? null
         : purchaseUnitCost / item.purchaseToStockRatio;
+
+    if (item.type == QuickReceiveItemType.product) {
+      final json = await _apiClient.post(
+        '/api/v1/admin/inventory/movements',
+        accessToken: accessToken,
+        body: {
+          'productId': item.id,
+          'movementType': 'PURCHASE_IN',
+          'quantity': purchaseQuantity,
+          if (purchaseUnitCost != null)
+            'unitCost': double.parse(purchaseUnitCost.toStringAsFixed(2)),
+          if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+        },
+      );
+
+      return ApiEnvelope<QuickReceiveResult>.fromJson(
+        json,
+        (data) => QuickReceiveResult.fromProductMovementJson(
+          data,
+          receivedStockQuantity: purchaseQuantity,
+        ),
+      ).data;
+    }
+
     final payload = {
       'movementType': 'PURCHASE_IN',
       'quantity': receivedStockQuantity,
@@ -94,7 +131,7 @@ class QuickReceiveService {
     };
 
     final json = await _apiClient.post(
-      '${item.type.apiPath}/${item.id}/movements',
+      '${item.type.catalogPath}/${item.id}/movements',
       accessToken: accessToken,
       body: payload,
     );
@@ -132,6 +169,8 @@ class QuickReceiveService {
         return QuickReceiveItem.fromManufacturedJson(json);
       case QuickReceiveItemType.packaging:
         return QuickReceiveItem.fromPackagingJson(json);
+      case QuickReceiveItemType.product:
+        return QuickReceiveItem.fromProductStockJson(json);
     }
   }
 
@@ -153,6 +192,11 @@ class QuickReceiveService {
         );
       case QuickReceiveItemType.packaging:
         return QuickReceiveResult.fromPackagingJson(
+          json,
+          receivedStockQuantity: receivedStockQuantity,
+        );
+      case QuickReceiveItemType.product:
+        return QuickReceiveResult.fromProductMovementJson(
           json,
           receivedStockQuantity: receivedStockQuantity,
         );

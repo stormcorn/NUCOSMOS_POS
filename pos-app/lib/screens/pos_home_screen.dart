@@ -1010,33 +1010,18 @@ class _QuickReceiveListPane extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _TypeToggleChip(
-                    label: QuickReceiveItemType.material.label,
-                    active: receiveType == QuickReceiveItemType.material,
-                    onTap: () => onTypeChanged(QuickReceiveItemType.material),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _TypeToggleChip(
-                    label: QuickReceiveItemType.manufactured.label,
-                    active: receiveType == QuickReceiveItemType.manufactured,
-                    onTap: () =>
-                        onTypeChanged(QuickReceiveItemType.manufactured),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _TypeToggleChip(
-                    label: QuickReceiveItemType.packaging.label,
-                    active: receiveType == QuickReceiveItemType.packaging,
-                    onTap: () => onTypeChanged(QuickReceiveItemType.packaging),
-                  ),
-                ),
-              ],
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: QuickReceiveItemType.values
+                  .map(
+                    (type) => _TypeToggleChip(
+                      label: type.label,
+                      active: receiveType == type,
+                      onTap: () => onTypeChanged(type),
+                    ),
+                  )
+                  .toList(growable: false),
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -1331,8 +1316,10 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
           ),
         ),
       const SizedBox(height: 12),
-      _buildCreateSection(),
-      const SizedBox(height: 18),
+      if (widget.itemType.supportsInlineCreate) ...[
+        _buildCreateSection(),
+        const SizedBox(height: 18),
+      ],
       ..._buildReceiveFormFields(item),
       const SizedBox(height: 16),
       SizedBox(
@@ -1359,10 +1346,12 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
   }
 
   Widget _buildEmptyState(bool useEmbeddedLayout) {
-    const emptyHint = Center(
+    final dynamicEmptyHint = Center(
       child: Text(
-        '請先從左側選擇品項，或直接建立新品項後再收貨。',
-        style: TextStyle(color: Colors.white54),
+        widget.itemType.supportsInlineCreate
+            ? '請先從左側選擇項目，或先建立新項目後再入庫。'
+            : '請先從左側選擇商品後，再進行商品入庫。',
+        style: const TextStyle(color: Colors.white54),
         textAlign: TextAlign.center,
       ),
     );
@@ -1370,11 +1359,13 @@ class _QuickReceiveFormPaneState extends State<_QuickReceiveFormPane> {
     return AdaptiveScrollBody(
       embedInParentScroll: useEmbeddedLayout,
       children: [
-        _buildCreateSection(),
-        const SizedBox(height: 16),
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 12),
-          child: emptyHint,
+        if (widget.itemType.supportsInlineCreate) ...[
+          _buildCreateSection(),
+          const SizedBox(height: 16),
+        ],
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: dynamicEmptyHint,
         ),
       ],
     );

@@ -100,6 +100,7 @@ class SessionController extends ChangeNotifier {
   List<QuickReceiveItem> receiveMaterials = const [];
   List<QuickReceiveItem> receiveManufacturedItems = const [];
   List<QuickReceiveItem> receivePackagingItems = const [];
+  List<QuickReceiveItem> receiveProductItems = const [];
 
   bool get isLoggedIn => accessToken != null && session != null;
 
@@ -160,6 +161,7 @@ class SessionController extends ChangeNotifier {
       QuickReceiveItemType.material => receiveMaterials,
       QuickReceiveItemType.manufactured => receiveManufacturedItems,
       QuickReceiveItemType.packaging => receivePackagingItems,
+      QuickReceiveItemType.product => receiveProductItems,
     };
 
     final result = source
@@ -264,6 +266,7 @@ class SessionController extends ChangeNotifier {
         receiveMaterials = const [];
         receiveManufacturedItems = const [];
         receivePackagingItems = const [];
+        receiveProductItems = const [];
       }
 
       return true;
@@ -324,6 +327,7 @@ class SessionController extends ChangeNotifier {
       receiveMaterials = const [];
       receiveManufacturedItems = const [];
       receivePackagingItems = const [];
+      receiveProductItems = const [];
       quickReceiveMessage = '';
       notifyListeners();
       return;
@@ -340,11 +344,13 @@ class SessionController extends ChangeNotifier {
           _quickReceiveService.fetchMaterials(accessToken!),
           _quickReceiveService.fetchManufacturedItems(accessToken!),
           _quickReceiveService.fetchPackagingItems(accessToken!),
+          _quickReceiveService.fetchProductStocks(accessToken!),
         ]),
       );
       receiveMaterials = results[0];
       receiveManufacturedItems = results[1];
       receivePackagingItems = results[2];
+      receiveProductItems = results[3];
       errorMessage = '';
     } on ApiException catch (error) {
       errorMessage = _hasQuickReceiveCatalogCache()
@@ -367,7 +373,8 @@ class SessionController extends ChangeNotifier {
   bool _hasQuickReceiveCatalogCache() {
     return receiveMaterials.isNotEmpty ||
         receiveManufacturedItems.isNotEmpty ||
-        receivePackagingItems.isNotEmpty;
+        receivePackagingItems.isNotEmpty ||
+        receiveProductItems.isNotEmpty;
   }
 
   void selectCategory(String? categoryCode) {
@@ -787,6 +794,11 @@ class SessionController extends ChangeNotifier {
     String? description,
     double? latestUnitCost,
   }) async {
+    if (!type.supportsInlineCreate) {
+      errorMessage = '${type.label}請先在管理後台建立，再回 POS 進行入庫。';
+      notifyListeners();
+      return null;
+    }
     if (accessToken == null || session == null) {
       errorMessage = '請先登入後再建立快速收貨品項。';
       notifyListeners();
@@ -839,6 +851,7 @@ class SessionController extends ChangeNotifier {
     receiveMaterials = const [];
     receiveManufacturedItems = const [];
     receivePackagingItems = const [];
+    receiveProductItems = const [];
     _discount = null;
     errorMessage = '';
     checkoutMessage = '';
