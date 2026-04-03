@@ -740,9 +740,9 @@ public class SupplyAdminService {
 
         if (movementType == SupplyMovementType.PURCHASE_IN) {
             return submittedUnitCost.divide(BigDecimal.valueOf(purchaseToStockRatio), 6, RoundingMode.HALF_UP)
-                    .setScale(2, RoundingMode.HALF_UP);
+                    .setScale(6, RoundingMode.HALF_UP);
         }
 
-        return submittedUnitCost;
+        return submittedUnitCost.setScale(6, RoundingMode.HALF_UP);
     }
 }

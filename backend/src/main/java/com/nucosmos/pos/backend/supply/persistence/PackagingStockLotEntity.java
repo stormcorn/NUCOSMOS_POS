@@ -41,7 +41,7 @@ public class PackagingStockLotEntity extends BaseEntity {
     @Column(nullable = false)
     private int remainingQuantity;
 
-    @Column(precision = 10, scale = 2)
+    @Column(precision = 12, scale = 6)
     private BigDecimal unitCost;
 
     @Column(nullable = false)

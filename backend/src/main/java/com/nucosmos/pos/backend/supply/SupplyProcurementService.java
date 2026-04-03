@@ -538,6 +538,6 @@ public class SupplyProcurementService {
         }
 
         return purchaseUnitCost.divide(BigDecimal.valueOf(purchaseToStockRatio), 6, RoundingMode.HALF_UP)
-                .setScale(2, RoundingMode.HALF_UP);
+                .setScale(6, RoundingMode.HALF_UP);
     }
 }

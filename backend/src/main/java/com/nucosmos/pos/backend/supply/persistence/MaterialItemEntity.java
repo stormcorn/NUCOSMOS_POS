@@ -46,7 +46,7 @@ public class MaterialItemEntity extends BaseEntity {
     @Column(nullable = false)
     private int reorderLevel;
 
-    @Column(precision = 10, scale = 2)
+    @Column(precision = 12, scale = 6)
     private BigDecimal latestUnitCost;
 
     @Column(nullable = false)
