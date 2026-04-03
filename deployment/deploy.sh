@@ -58,7 +58,7 @@ docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" pull || true
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --build
 
 echo "[deploy] waiting for backend health..."
-HEALTH_URL="http://127.0.0.1:${BACKEND_PORT}/api/v1/health"
+HEALTH_URL="http://127.0.0.1:${BACKEND_PORT}/actuator/health"
 HEALTH_TIMEOUT_SECONDS="${HEALTH_TIMEOUT_SECONDS:-60}"
 HEALTH_INTERVAL_SECONDS="${HEALTH_INTERVAL_SECONDS:-2}"
 elapsed=0
