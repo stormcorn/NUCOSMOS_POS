@@ -256,6 +256,30 @@ class _PosHomeScreenState extends State<PosHomeScreen>
     );
   }
 
+  Future<void> _openOrderHistorySheet() async {
+    await widget.controller.loadOrderHistory();
+    if (!mounted) {
+      return;
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF101827),
+      builder: (context) {
+        return SafeArea(
+          child: FractionallySizedBox(
+            heightFactor: 0.94,
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: _OrderHistorySheet(controller: widget.controller),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<List<PosCartSelection>?> _openCustomizationSheet(
     ProductSummary product,
   ) {
@@ -304,6 +328,7 @@ class _PosHomeScreenState extends State<PosHomeScreen>
                   showQuickReceive: controller.canUseQuickReceive,
                   onOpenSales: _openSalesWorkspace,
                   onOpenQuickReceive: _openQuickReceiveWorkspace,
+                  onOpenOrderHistory: _openOrderHistorySheet,
                   onOpenPrinter: _openPrinterSheet,
                   onLogout: controller.logout,
                   onRefresh: () => controller.loadProducts(),
@@ -389,6 +414,7 @@ class _PosHomeScreenState extends State<PosHomeScreen>
                                       controller: controller,
                                       onCheckout: _checkoutCash,
                                       onOpenDiscount: _openDiscountSheet,
+                                      onOpenOrderHistory: _openOrderHistorySheet,
                                       compact: !layout.desktopLayout,
                                     ),
                                   ),
@@ -429,6 +455,7 @@ class _PosHomeScreenState extends State<PosHomeScreen>
                                           controller: controller,
                                           onCheckout: _checkoutCash,
                                           onOpenDiscount: _openDiscountSheet,
+                                          onOpenOrderHistory: _openOrderHistorySheet,
                                           compact: true,
                                         ),
                                       ],
@@ -469,6 +496,7 @@ class _NavigationRail extends StatelessWidget {
     required this.showQuickReceive,
     required this.onOpenSales,
     required this.onOpenQuickReceive,
+    required this.onOpenOrderHistory,
     required this.onOpenPrinter,
     required this.onLogout,
     required this.onRefresh,
@@ -479,6 +507,7 @@ class _NavigationRail extends StatelessWidget {
   final bool showQuickReceive;
   final VoidCallback onOpenSales;
   final VoidCallback onOpenQuickReceive;
+  final VoidCallback onOpenOrderHistory;
   final VoidCallback onOpenPrinter;
   final VoidCallback onLogout;
   final VoidCallback onRefresh;
@@ -521,6 +550,10 @@ class _NavigationRail extends StatelessWidget {
               active: receiveActive,
               onTap: onOpenQuickReceive,
             ),
+          _RailButton(
+            icon: Icons.receipt_long_rounded,
+            onTap: onOpenOrderHistory,
+          ),
           _RailButton(
             icon: Icons.grid_view_rounded,
             onTap: onRefresh,
@@ -1770,12 +1803,14 @@ class _CurrentOrderPanel extends StatelessWidget {
     required this.controller,
     required this.onCheckout,
     required this.onOpenDiscount,
+    required this.onOpenOrderHistory,
     this.compact = false,
   });
 
   final SessionController controller;
   final Future<void> Function() onCheckout;
   final Future<void> Function() onOpenDiscount;
+  final Future<void> Function() onOpenOrderHistory;
   final bool compact;
 
   @override
@@ -1798,13 +1833,27 @@ class _CurrentOrderPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Current Order',
-            style: TextStyle(
-              color: const Color(0xFF14F1FF),
-              fontSize: compact ? 16 : 18,
-              fontWeight: FontWeight.w800,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Current Order',
+                  style: TextStyle(
+                    color: const Color(0xFF14F1FF),
+                    fontSize: compact ? 16 : 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: onOpenOrderHistory,
+                tooltip: '訂單列表',
+                icon: const Icon(
+                  Icons.receipt_long_rounded,
+                  color: Color(0xFF9AB0C7),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 4),
           Text(
@@ -1959,6 +2008,486 @@ class _CurrentOrderPanel extends StatelessWidget {
   }
 }
 
+class _OrderHistorySheet extends StatelessWidget {
+  const _OrderHistorySheet({required this.controller});
+
+  final SessionController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final detail = controller.selectedOrderDetail;
+        final orders = controller.orderHistory;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    '訂單列表',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: controller.orderHistoryLoading
+                      ? null
+                      : () => controller.loadOrderHistory(),
+                  icon: controller.orderHistoryLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.refresh_rounded),
+                ),
+              ],
+            ),
+            if (controller.orderHistoryMessage.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              _BannerMessage(
+                color: const Color(0x332B3548),
+                borderColor: const Color(0xFF3F506B),
+                message: controller.orderHistoryMessage,
+              ),
+            ],
+            const SizedBox(height: 14),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final wide = constraints.maxWidth >= 900;
+                  final listPane = _OrderHistoryList(
+                    controller: controller,
+                    orders: orders,
+                  );
+                  final detailPane = _OrderHistoryDetail(
+                    controller: controller,
+                    detail: detail,
+                  );
+
+                  if (wide) {
+                    return Row(
+                      children: [
+                        Expanded(flex: 11, child: listPane),
+                        const SizedBox(width: 16),
+                        Expanded(flex: 10, child: detailPane),
+                      ],
+                    );
+                  }
+
+                  return ListView(
+                    children: [
+                      SizedBox(height: 360, child: listPane),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        height: detail == null ? 180 : 520,
+                        child: detailPane,
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _OrderHistoryList extends StatelessWidget {
+  const _OrderHistoryList({
+    required this.controller,
+    required this.orders,
+  });
+
+  final SessionController controller;
+  final List<PosOrderSummary> orders;
+
+  @override
+  Widget build(BuildContext context) {
+    if (controller.orderHistoryLoading && orders.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (orders.isEmpty) {
+      return Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF111827),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFF243047)),
+        ),
+        alignment: Alignment.center,
+        child: const Text(
+          '目前沒有訂單紀錄',
+          style: TextStyle(color: Colors.white70),
+        ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF111827),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF243047)),
+      ),
+      child: ListView.separated(
+        padding: const EdgeInsets.all(14),
+        itemCount: orders.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        itemBuilder: (context, index) {
+          final order = orders[index];
+          final selected = controller.selectedOrderDetail?.id == order.id;
+          return InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: controller.orderActionLoading
+                ? null
+                : () => controller.loadOrderDetail(order.id),
+            child: Ink(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: selected
+                    ? const Color(0xFF1A2637)
+                    : const Color(0xFF0C1420),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: selected
+                      ? const Color(0xFF14F1FF)
+                      : const Color(0xFF243047),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          order.orderNumber,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      _OrderStatusChip(label: _orderStatusLabel(order.status)),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '${_currency(order.totalAmount)} ・ ${_paymentStatusLabel(order.paymentStatus)}',
+                    style: const TextStyle(color: Color(0xFF9AB0C7)),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _formatOrderDateTime(order.orderedAt),
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
+                  if (order.testOrder) ...[
+                    const SizedBox(height: 8),
+                    const _OrderTestBadge(),
+                  ],
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _OrderHistoryDetail extends StatelessWidget {
+  const _OrderHistoryDetail({
+    required this.controller,
+    required this.detail,
+  });
+
+  final SessionController controller;
+  final PosOrderDetail? detail;
+
+  @override
+  Widget build(BuildContext context) {
+    if (detail == null) {
+      return Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF111827),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFF243047)),
+        ),
+        alignment: Alignment.center,
+        child: const Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            '選擇一筆訂單後可查看明細與執行取消',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white70),
+          ),
+        ),
+      );
+    }
+
+    final canCancel = detail!.canVoidUnpaid || detail!.canCashRefund;
+    final cancelLabel = detail!.canVoidUnpaid ? '取消未付款訂單' : '退款並回補庫存';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF111827),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF243047)),
+      ),
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  detail!.orderNumber,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              if (detail!.testOrder) const _OrderTestBadge(),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${detail!.storeCode} ・ ${_formatOrderDateTime(detail!.orderedAt)}',
+            style: const TextStyle(color: Color(0xFF9AB0C7)),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _OrderStatusChip(label: _orderStatusLabel(detail!.status)),
+              _OrderStatusChip(
+                label: _paymentStatusLabel(detail!.paymentStatus),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _OrderDetailRow(label: '小計', value: _currency(detail!.subtotalAmount)),
+          _OrderDetailRow(label: '優惠', value: _currency(detail!.discountAmount)),
+          _OrderDetailRow(label: '合計', value: _currency(detail!.totalAmount)),
+          _OrderDetailRow(label: '實收', value: _currency(detail!.paidAmount)),
+          _OrderDetailRow(
+            label: '已退款',
+            value: _currency(detail!.refundedAmount),
+          ),
+          if ((detail!.note ?? '').trim().isNotEmpty)
+            _OrderDetailRow(label: '備註', value: detail!.note!.trim()),
+          const SizedBox(height: 16),
+          const Text(
+            '品項',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ...detail!.items.map(
+            (item) => Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0C1420),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFF243047)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      item.productName,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                  Text(
+                    'x${item.quantity}',
+                    style: const TextStyle(color: Color(0xFF9AB0C7)),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    _currency(item.lineTotalAmount),
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          if (!canCancel)
+            _BannerMessage(
+              color: const Color(0x332B3548),
+              borderColor: const Color(0xFF3F506B),
+              message: detail!.isComplimentary
+                  ? '招待訂單目前不支援從 POS 直接取消'
+                  : '此訂單目前不可取消或已完成退款',
+            ),
+          if (canCancel) ...[
+            SizedBox(
+              height: 52,
+              child: FilledButton.icon(
+                onPressed: controller.orderActionLoading
+                    ? null
+                    : () => _confirmCancel(context, detail!),
+                icon: controller.orderActionLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.cancel_rounded),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFB74B57),
+                  foregroundColor: Colors.white,
+                ),
+                label: Text(cancelLabel),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              '退款會回補可售庫存，並保留訂單紀錄。',
+              style: TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmCancel(BuildContext context, PosOrderDetail detail) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF111827),
+        title: const Text('確認取消訂單'),
+        content: Text(
+          detail.canVoidUnpaid
+              ? '要取消訂單 ${detail.orderNumber} 嗎？'
+              : '要退款訂單 ${detail.orderNumber} 並回補庫存嗎？',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('返回'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('確認'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    await controller.cancelOrderFromHistory(
+      order: detail,
+      reason: 'POS order cancellation',
+    );
+  }
+}
+
+class _OrderDetailRow extends StatelessWidget {
+  const _OrderDetailRow({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 72,
+            child: Text(
+              label,
+              style: const TextStyle(color: Color(0xFF9AB0C7)),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OrderStatusChip extends StatelessWidget {
+  const _OrderStatusChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A2637),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFF2F415C)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _OrderTestBadge extends StatelessWidget {
+  const _OrderTestBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0x33FBBF24),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0x66FBBF24)),
+      ),
+      child: const Text(
+        '測試訂單',
+        style: TextStyle(
+          color: Color(0xFFFDE68A),
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
 String _paymentMethodLabel(String value) {
   switch (value.trim().toUpperCase()) {
     case 'CASH':
@@ -1970,6 +2499,53 @@ String _paymentMethodLabel(String value) {
     default:
       return value.isEmpty ? '未指定' : value;
   }
+}
+
+String _paymentStatusLabel(String value) {
+  switch (value.trim().toUpperCase()) {
+    case 'PAID':
+      return '已付款';
+    case 'PARTIALLY_PAID':
+      return '部分付款';
+    case 'UNPAID':
+      return '未付款';
+    case 'PARTIALLY_REFUNDED':
+      return '部分退款';
+    case 'REFUNDED':
+      return '已退款';
+    case 'VOIDED':
+      return '已取消';
+    default:
+      return value.isEmpty ? '-' : value;
+  }
+}
+
+String _orderStatusLabel(String value) {
+  switch (value.trim().toUpperCase()) {
+    case 'CREATED':
+      return '已建立';
+    case 'PAID':
+      return '已完成';
+    case 'PARTIALLY_REFUNDED':
+      return '部分退款';
+    case 'REFUNDED':
+      return '已退款';
+    case 'VOIDED':
+      return '已取消';
+    default:
+      return value.isEmpty ? '-' : value;
+  }
+}
+
+String _formatOrderDateTime(DateTime? value) {
+  if (value == null) {
+    return '-';
+  }
+
+  final local = value.toLocal();
+  String two(int number) => number.toString().padLeft(2, '0');
+  return '${local.year}/${two(local.month)}/${two(local.day)} '
+      '${two(local.hour)}:${two(local.minute)}';
 }
 
 class _DiscountSheet extends StatefulWidget {

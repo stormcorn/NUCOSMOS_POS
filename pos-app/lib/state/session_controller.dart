@@ -50,10 +50,13 @@ class SessionController extends ChangeNotifier {
   bool checkoutLoading = false;
   bool quickReceiveLoading = false;
   bool quickReceiveSaving = false;
+  bool orderHistoryLoading = false;
+  bool orderActionLoading = false;
 
   String errorMessage = '';
   String checkoutMessage = '';
   String quickReceiveMessage = '';
+  String orderHistoryMessage = '';
 
   String _apiBaseUrl;
   String get apiBaseUrl => _apiBaseUrl;
@@ -92,6 +95,8 @@ class SessionController extends ChangeNotifier {
   String? selectedCategoryCode;
   List<PosCartLine> cart = const [];
   OrderReceipt? lastCompletedOrder;
+  List<PosOrderSummary> orderHistory = const [];
+  PosOrderDetail? selectedOrderDetail;
   List<QuickReceiveItem> receiveMaterials = const [];
   List<QuickReceiveItem> receiveManufacturedItems = const [];
   List<QuickReceiveItem> receivePackagingItems = const [];
@@ -503,6 +508,143 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> loadOrderHistory({bool notify = true}) async {
+    final token = accessToken;
+    if (token == null || token.isEmpty) {
+      orderHistory = const [];
+      selectedOrderDetail = null;
+      if (notify) {
+        notifyListeners();
+      }
+      return;
+    }
+
+    orderHistoryLoading = true;
+    orderHistoryMessage = '';
+    if (notify) {
+      notifyListeners();
+    }
+
+    try {
+      final page = await _runWithApiFallback(
+        () => _orderService.listOrders(accessToken: token),
+      );
+      orderHistory = page.items;
+      if (selectedOrderDetail != null &&
+          !page.items.any((item) => item.id == selectedOrderDetail!.id)) {
+        selectedOrderDetail = null;
+      }
+    } on ApiException catch (error) {
+      orderHistoryMessage = error.message;
+    } on Exception {
+      orderHistoryMessage = '無法載入訂單列表';
+    } catch (_) {
+      orderHistoryMessage = '無法載入訂單列表';
+    } finally {
+      orderHistoryLoading = false;
+      if (notify) {
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<void> loadOrderDetail(String orderId) async {
+    final token = accessToken;
+    if (token == null || token.isEmpty) {
+      orderHistoryMessage = '請先重新登入後再查看訂單';
+      notifyListeners();
+      return;
+    }
+
+    orderActionLoading = true;
+    orderHistoryMessage = '';
+    notifyListeners();
+
+    try {
+      selectedOrderDetail = await _runWithApiFallback(
+        () => _orderService.getOrderDetail(
+          accessToken: token,
+          orderId: orderId,
+        ),
+      );
+    } on ApiException catch (error) {
+      orderHistoryMessage = error.message;
+    } on Exception {
+      orderHistoryMessage = '無法載入訂單明細';
+    } catch (_) {
+      orderHistoryMessage = '無法載入訂單明細';
+    } finally {
+      orderActionLoading = false;
+      notifyListeners();
+    }
+  }
+
+  void clearSelectedOrderDetail() {
+    selectedOrderDetail = null;
+    orderHistoryMessage = '';
+    notifyListeners();
+  }
+
+  Future<OrderReceipt?> cancelOrderFromHistory({
+    required PosOrderDetail order,
+    String? reason,
+  }) async {
+    final token = accessToken;
+    if (token == null || token.isEmpty) {
+      orderHistoryMessage = '請先重新登入後再取消訂單';
+      notifyListeners();
+      return null;
+    }
+
+    orderActionLoading = true;
+    orderHistoryMessage = '';
+    notifyListeners();
+
+    try {
+      final result = order.canVoidUnpaid
+          ? await _runWithApiFallback(
+              () => _orderService.cancelUnpaidOrder(
+                accessToken: token,
+                orderId: order.id,
+                reason: reason,
+              ),
+            )
+          : order.canCashRefund
+              ? await _runWithApiFallback(
+                  () => _orderService.refundCashOrder(
+                    accessToken: token,
+                    order: order,
+                    reason: reason,
+                  ),
+                )
+              : throw ApiException(
+                  order.isComplimentary
+                      ? '招待訂單目前不支援從 POS 直接取消'
+                      : '目前僅支援未付款訂單取消與現金訂單退款',
+                  400,
+                );
+
+      orderHistoryMessage = order.canVoidUnpaid
+          ? '訂單 ${order.orderNumber} 已取消'
+          : '訂單 ${order.orderNumber} 已退款並回補庫存';
+      await loadOrderHistory(notify: false);
+      await loadOrderDetail(order.id);
+      return result;
+    } on ApiException catch (error) {
+      orderHistoryMessage = error.message;
+      return null;
+    } on Exception {
+      orderHistoryMessage = '取消訂單失敗';
+      return null;
+    } catch (_) {
+      orderHistoryMessage = '取消訂單失敗';
+      return null;
+    } finally {
+      orderActionLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<OrderReceipt?> checkout() async {
     final complimentary = _discount?.type == CheckoutDiscountType.complimentary;
     return _checkoutWithPayment(
@@ -701,7 +843,10 @@ class SessionController extends ChangeNotifier {
     errorMessage = '';
     checkoutMessage = '';
     quickReceiveMessage = '';
+    orderHistoryMessage = '';
     lastCompletedOrder = null;
+    orderHistory = const [];
+    selectedOrderDetail = null;
     selectedCategoryCode = null;
 
     final prefs = await SharedPreferences.getInstance();

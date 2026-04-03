@@ -187,3 +187,283 @@ class OrderReceipt {
     return '';
   }
 }
+
+class OrderListPage {
+  const OrderListPage({
+    required this.items,
+    required this.page,
+    required this.size,
+    required this.totalElements,
+    required this.totalPages,
+    required this.hasNext,
+  });
+
+  final List<PosOrderSummary> items;
+  final int page;
+  final int size;
+  final int totalElements;
+  final int totalPages;
+  final bool hasNext;
+
+  factory OrderListPage.fromJson(Map<String, dynamic> json) {
+    final rawItems = json['items'];
+    final items = rawItems is List
+        ? rawItems
+            .whereType<Map>()
+            .map((item) => PosOrderSummary.fromJson(item.cast<String, dynamic>()))
+            .toList(growable: false)
+        : const <PosOrderSummary>[];
+
+    return OrderListPage(
+      items: items,
+      page: (json['page'] as num?)?.toInt() ?? 0,
+      size: (json['size'] as num?)?.toInt() ?? items.length,
+      totalElements: (json['totalElements'] as num?)?.toInt() ?? items.length,
+      totalPages: (json['totalPages'] as num?)?.toInt() ?? 1,
+      hasNext: json['hasNext'] as bool? ?? false,
+    );
+  }
+}
+
+class PosOrderSummary {
+  const PosOrderSummary({
+    required this.id,
+    required this.orderNumber,
+    required this.testOrder,
+    required this.status,
+    required this.paymentStatus,
+    required this.storeCode,
+    required this.deviceCode,
+    required this.createdByEmployeeCode,
+    required this.itemCount,
+    required this.totalAmount,
+    required this.paidAmount,
+    required this.refundedAmount,
+    required this.orderedAt,
+    required this.closedAt,
+  });
+
+  final String id;
+  final String orderNumber;
+  final bool testOrder;
+  final String status;
+  final String paymentStatus;
+  final String storeCode;
+  final String? deviceCode;
+  final String createdByEmployeeCode;
+  final int itemCount;
+  final double totalAmount;
+  final double paidAmount;
+  final double refundedAmount;
+  final DateTime? orderedAt;
+  final DateTime? closedAt;
+
+  bool get isCancelled => status == 'VOIDED' || paymentStatus == 'VOIDED';
+  bool get isFullyRefunded =>
+      status == 'REFUNDED' || paymentStatus == 'REFUNDED';
+
+  factory PosOrderSummary.fromJson(Map<String, dynamic> json) {
+    return PosOrderSummary(
+      id: json['id']?.toString() ?? '',
+      orderNumber: json['orderNumber'] as String? ?? '',
+      testOrder: json['testOrder'] as bool? ?? false,
+      status: json['status'] as String? ?? '',
+      paymentStatus: json['paymentStatus'] as String? ?? '',
+      storeCode: json['storeCode'] as String? ?? '',
+      deviceCode: json['deviceCode'] as String?,
+      createdByEmployeeCode: json['createdByEmployeeCode'] as String? ?? '',
+      itemCount: (json['itemCount'] as num?)?.toInt() ?? 0,
+      totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0,
+      paidAmount: (json['paidAmount'] as num?)?.toDouble() ?? 0,
+      refundedAmount: (json['refundedAmount'] as num?)?.toDouble() ?? 0,
+      orderedAt: _parseDateTime(json['orderedAt']),
+      closedAt: _parseDateTime(json['closedAt']),
+    );
+  }
+}
+
+class PosOrderDetail {
+  const PosOrderDetail({
+    required this.id,
+    required this.orderNumber,
+    required this.testOrder,
+    required this.status,
+    required this.paymentStatus,
+    required this.storeCode,
+    required this.deviceCode,
+    required this.createdByEmployeeCode,
+    required this.itemCount,
+    required this.subtotalAmount,
+    required this.discountType,
+    required this.discountValue,
+    required this.discountAmount,
+    required this.totalAmount,
+    required this.paidAmount,
+    required this.changeAmount,
+    required this.refundedAmount,
+    required this.note,
+    required this.discountNote,
+    required this.orderedAt,
+    required this.closedAt,
+    required this.voidedAt,
+    required this.voidNote,
+    required this.redeemCode,
+    required this.redeemUrl,
+    required this.items,
+    required this.payments,
+  });
+
+  final String id;
+  final String orderNumber;
+  final bool testOrder;
+  final String status;
+  final String paymentStatus;
+  final String storeCode;
+  final String? deviceCode;
+  final String createdByEmployeeCode;
+  final int itemCount;
+  final double subtotalAmount;
+  final String? discountType;
+  final double? discountValue;
+  final double discountAmount;
+  final double totalAmount;
+  final double paidAmount;
+  final double changeAmount;
+  final double refundedAmount;
+  final String? note;
+  final String? discountNote;
+  final DateTime? orderedAt;
+  final DateTime? closedAt;
+  final DateTime? voidedAt;
+  final String? voidNote;
+  final String? redeemCode;
+  final String? redeemUrl;
+  final List<PosOrderItemDetail> items;
+  final List<PosPaymentDetail> payments;
+
+  double get refundableAmount {
+    final remaining = paidAmount - refundedAmount;
+    return remaining > 0 ? remaining : 0;
+  }
+
+  bool get canVoidUnpaid => paymentStatus == 'UNPAID' && status != 'VOIDED';
+  bool get canCashRefund =>
+      refundableAmount > 0 &&
+      payments.any((payment) =>
+          payment.paymentMethod == 'CASH' &&
+          (payment.status == 'CAPTURED' || payment.status == 'REFUNDED'));
+
+  bool get isComplimentary =>
+      payments.any((payment) => payment.paymentMethod == 'OTHER');
+
+  PosPaymentDetail? get latestRefundableCashPayment {
+    for (final payment in payments.reversed) {
+      if (payment.paymentMethod == 'CASH' &&
+          (payment.status == 'CAPTURED' || payment.status == 'REFUNDED')) {
+        return payment;
+      }
+    }
+    return null;
+  }
+
+  factory PosOrderDetail.fromJson(Map<String, dynamic> json) {
+    final rawItems = json['items'];
+    final rawPayments = json['payments'];
+
+    return PosOrderDetail(
+      id: json['id']?.toString() ?? '',
+      orderNumber: json['orderNumber'] as String? ?? '',
+      testOrder: json['testOrder'] as bool? ?? false,
+      status: json['status'] as String? ?? '',
+      paymentStatus: json['paymentStatus'] as String? ?? '',
+      storeCode: json['storeCode'] as String? ?? '',
+      deviceCode: json['deviceCode'] as String?,
+      createdByEmployeeCode: json['createdByEmployeeCode'] as String? ?? '',
+      itemCount: (json['itemCount'] as num?)?.toInt() ?? 0,
+      subtotalAmount: (json['subtotalAmount'] as num?)?.toDouble() ?? 0,
+      discountType: json['discountType'] as String?,
+      discountValue: (json['discountValue'] as num?)?.toDouble(),
+      discountAmount: (json['discountAmount'] as num?)?.toDouble() ?? 0,
+      totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0,
+      paidAmount: (json['paidAmount'] as num?)?.toDouble() ?? 0,
+      changeAmount: (json['changeAmount'] as num?)?.toDouble() ?? 0,
+      refundedAmount: (json['refundedAmount'] as num?)?.toDouble() ?? 0,
+      note: json['note'] as String?,
+      discountNote: json['discountNote'] as String?,
+      orderedAt: _parseDateTime(json['orderedAt']),
+      closedAt: _parseDateTime(json['closedAt']),
+      voidedAt: _parseDateTime(json['voidedAt']),
+      voidNote: json['voidNote'] as String?,
+      redeemCode: json['redeemCode'] as String?,
+      redeemUrl: json['redeemUrl'] as String?,
+      items: rawItems is List
+          ? rawItems
+              .whereType<Map>()
+              .map((item) =>
+                  PosOrderItemDetail.fromJson(item.cast<String, dynamic>()))
+              .toList(growable: false)
+          : const <PosOrderItemDetail>[],
+      payments: rawPayments is List
+          ? rawPayments
+              .whereType<Map>()
+              .map((item) =>
+                  PosPaymentDetail.fromJson(item.cast<String, dynamic>()))
+              .toList(growable: false)
+          : const <PosPaymentDetail>[],
+    );
+  }
+}
+
+class PosOrderItemDetail {
+  const PosOrderItemDetail({
+    required this.id,
+    required this.productName,
+    required this.quantity,
+    required this.lineTotalAmount,
+  });
+
+  final String id;
+  final String productName;
+  final int quantity;
+  final double lineTotalAmount;
+
+  factory PosOrderItemDetail.fromJson(Map<String, dynamic> json) {
+    return PosOrderItemDetail(
+      id: json['id']?.toString() ?? '',
+      productName: json['productName'] as String? ?? '',
+      quantity: (json['quantity'] as num?)?.toInt() ?? 0,
+      lineTotalAmount: (json['lineTotalAmount'] as num?)?.toDouble() ?? 0,
+    );
+  }
+}
+
+class PosPaymentDetail {
+  const PosPaymentDetail({
+    required this.id,
+    required this.paymentMethod,
+    required this.status,
+    required this.amount,
+  });
+
+  final String id;
+  final String paymentMethod;
+  final String status;
+  final double amount;
+
+  factory PosPaymentDetail.fromJson(Map<String, dynamic> json) {
+    return PosPaymentDetail(
+      id: json['id']?.toString() ?? '',
+      paymentMethod: json['paymentMethod'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      amount: (json['amount'] as num?)?.toDouble() ?? 0,
+    );
+  }
+}
+
+DateTime? _parseDateTime(Object? value) {
+  final raw = value?.toString();
+  if (raw == null || raw.isEmpty) {
+    return null;
+  }
+  return DateTime.tryParse(raw)?.toLocal();
+}
