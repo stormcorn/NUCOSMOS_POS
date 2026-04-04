@@ -320,152 +320,170 @@ class _PosHomeScreenState extends State<PosHomeScreen>
 
         return Scaffold(
           body: SafeArea(
-            child: Row(
-              children: [
-                _NavigationRail(
-                  salesActive: _workspace == _PosWorkspace.sales,
-                  receiveActive: _workspace == _PosWorkspace.quickReceive,
-                  showQuickReceive: controller.canUseQuickReceive,
-                  onOpenSales: _openSalesWorkspace,
-                  onOpenQuickReceive: _openQuickReceiveWorkspace,
-                  onOpenOrderHistory: _openOrderHistorySheet,
-                  onOpenPrinter: _openPrinterSheet,
-                  onLogout: controller.logout,
-                  onRefresh: () => controller.loadProducts(),
-                ),
-                Expanded(
-                  child: Container(
-                    color: const Color(0xFF171F2E),
-                    child: _workspace == _PosWorkspace.quickReceive
-                        ? _QuickReceiveWorkspace(
-                            controller: controller,
-                            items: receiveItems,
-                            selectedItem: selectedReceiveItem,
-                            receiveType: _quickReceiveType,
-                            wideLayout: layout.wideLayout,
-                            desktopLayout: layout.desktopLayout,
-                            contentPadding: layout.contentPadding,
-                            listPaneHeight: layout.quickReceiveListHeight,
-                            searchValue: _quickReceiveSearch,
-                            onSearchChanged: (value) {
-                              setState(() {
-                                _quickReceiveSearch = value;
-                              });
-                            },
-                            onTypeChanged: _setQuickReceiveType,
-                            onItemSelected: (item) {
-                              setState(() {
-                                _selectedReceiveItem = item;
-                              });
-                            },
-                            onCreateItem: _createQuickReceiveItem,
-                            onSubmit: _submitQuickReceive,
-                          )
-                        : layout.wideLayout
-                            ? Row(
-                                children: [
-                                  SizedBox(
-                                    width: layout.categoryWidth,
-                                    child: _CategorySidebar(
-                                        controller: controller),
-                                  ),
-                                  Expanded(
-                                    child: Padding(
-                                      padding: EdgeInsets.fromLTRB(
-                                        layout.contentPadding,
-                                        16,
-                                        layout.contentPadding,
-                                        16,
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          _HeaderSection(
-                                            title: selectedCategoryName,
-                                            subtitle:
-                                                'Select your favorite beverages',
-                                            sessionController: controller,
-                                            compact: !layout.desktopLayout,
-                                          ),
-                                          SizedBox(
-                                            height:
-                                                layout.desktopLayout ? 16 : 12,
-                                          ),
-                                          Expanded(
-                                            child: ProductGrid(
-                                              products:
-                                                  controller.filteredProducts,
-                                              onAddProduct: _handleAddProduct,
-                                              apiBaseUrl: controller.apiBaseUrl,
-                                              accessToken:
-                                                  controller.accessToken,
-                                              compactTabletMode: layout
-                                                  .isCompactLandscapeTablet,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(
-                                    width: layout.cartWidth,
-                                    child: _CurrentOrderPanel(
-                                      controller: controller,
-                                      onCheckout: _checkoutCash,
-                                      onOpenDiscount: _openDiscountSheet,
-                                      onOpenOrderHistory: _openOrderHistorySheet,
-                                      compact: !layout.desktopLayout,
-                                    ),
-                                  ),
-                                ],
+            child: Center(
+              child: SizedBox(
+                width: layout.canvasWidth,
+                child: Row(
+                  children: [
+                    _NavigationRail(
+                      salesActive: _workspace == _PosWorkspace.sales,
+                      receiveActive: _workspace == _PosWorkspace.quickReceive,
+                      showQuickReceive: controller.canUseQuickReceive,
+                      onOpenSales: _openSalesWorkspace,
+                      onOpenQuickReceive: _openQuickReceiveWorkspace,
+                      onOpenOrderHistory: _openOrderHistorySheet,
+                      onOpenPrinter: _openPrinterSheet,
+                      onLogout: controller.logout,
+                      onRefresh: () => controller.loadProducts(),
+                    ),
+                    Expanded(
+                      child: Container(
+                        color: const Color(0xFF171F2E),
+                        child: _workspace == _PosWorkspace.quickReceive
+                            ? _QuickReceiveWorkspace(
+                                controller: controller,
+                                items: receiveItems,
+                                selectedItem: selectedReceiveItem,
+                                receiveType: _quickReceiveType,
+                                wideLayout: layout.wideLayout,
+                                desktopLayout: layout.desktopLayout,
+                                contentPadding: layout.contentPadding,
+                                listPaneWidth: layout.quickReceiveListWidth,
+                                listPaneHeight: layout.quickReceiveListHeight,
+                                searchValue: _quickReceiveSearch,
+                                onSearchChanged: (value) {
+                                  setState(() {
+                                    _quickReceiveSearch = value;
+                                  });
+                                },
+                                onTypeChanged: _setQuickReceiveType,
+                                onItemSelected: (item) {
+                                  setState(() {
+                                    _selectedReceiveItem = item;
+                                  });
+                                },
+                                onCreateItem: _createQuickReceiveItem,
+                                onSubmit: _submitQuickReceive,
                               )
-                            : Column(
-                                children: [
-                                  Expanded(
-                                    child: ListView(
-                                      padding: const EdgeInsets.fromLTRB(
-                                        18,
-                                        20,
-                                        18,
-                                        24,
+                            : layout.wideLayout
+                                ? Row(
+                                    children: [
+                                      SizedBox(
+                                        width: layout.categoryWidth,
+                                        child: _CategorySidebar(
+                                          controller: controller,
+                                        ),
                                       ),
-                                      children: [
-                                        _HeaderSection(
-                                          title: selectedCategoryName,
-                                          subtitle:
-                                              'Select your favorite beverages',
-                                          sessionController: controller,
-                                          compact: true,
+                                      Expanded(
+                                        child: Padding(
+                                          padding: EdgeInsets.fromLTRB(
+                                            layout.contentPadding,
+                                            16,
+                                            layout.contentPadding,
+                                            16,
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              _HeaderSection(
+                                                title: selectedCategoryName,
+                                                subtitle:
+                                                    'Select your favorite beverages',
+                                                sessionController: controller,
+                                                compact: !layout.desktopLayout,
+                                              ),
+                                              SizedBox(
+                                                height: layout.desktopLayout
+                                                    ? 16
+                                                    : 12,
+                                              ),
+                                              Expanded(
+                                                child: ProductGrid(
+                                                  products: controller
+                                                      .filteredProducts,
+                                                  onAddProduct:
+                                                      _handleAddProduct,
+                                                  apiBaseUrl:
+                                                      controller.apiBaseUrl,
+                                                  accessToken:
+                                                      controller.accessToken,
+                                                  compactTabletMode: layout
+                                                      .isCompactLandscapeTablet,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                        const SizedBox(height: 18),
-                                        _CategoryChips(controller: controller),
-                                        const SizedBox(height: 18),
-                                        ProductGrid(
-                                          products: controller.filteredProducts,
-                                          onAddProduct: _handleAddProduct,
-                                          apiBaseUrl: controller.apiBaseUrl,
-                                          accessToken: controller.accessToken,
-                                          embedInParentScroll: true,
-                                          compactTabletMode:
-                                              layout.isCompactLandscapeTablet,
-                                        ),
-                                        const SizedBox(height: 18),
-                                        _CurrentOrderPanel(
+                                      ),
+                                      SizedBox(
+                                        width: layout.cartWidth,
+                                        child: _CurrentOrderPanel(
                                           controller: controller,
                                           onCheckout: _checkoutCash,
                                           onOpenDiscount: _openDiscountSheet,
-                                          onOpenOrderHistory: _openOrderHistorySheet,
-                                          compact: true,
+                                          onOpenOrderHistory:
+                                              _openOrderHistorySheet,
+                                          compact: !layout.desktopLayout,
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
+                                  )
+                                : Column(
+                                    children: [
+                                      Expanded(
+                                        child: ListView(
+                                          padding: const EdgeInsets.fromLTRB(
+                                            18,
+                                            20,
+                                            18,
+                                            24,
+                                          ),
+                                          children: [
+                                            _HeaderSection(
+                                              title: selectedCategoryName,
+                                              subtitle:
+                                                  'Select your favorite beverages',
+                                              sessionController: controller,
+                                              compact: true,
+                                            ),
+                                            const SizedBox(height: 18),
+                                            _CategoryChips(
+                                              controller: controller,
+                                            ),
+                                            const SizedBox(height: 18),
+                                            ProductGrid(
+                                              products:
+                                                  controller.filteredProducts,
+                                              onAddProduct: _handleAddProduct,
+                                              apiBaseUrl:
+                                                  controller.apiBaseUrl,
+                                              accessToken:
+                                                  controller.accessToken,
+                                              embedInParentScroll: true,
+                                              compactTabletMode: layout
+                                                  .isCompactLandscapeTablet,
+                                            ),
+                                            const SizedBox(height: 18),
+                                            _CurrentOrderPanel(
+                                              controller: controller,
+                                              onCheckout: _checkoutCash,
+                                              onOpenDiscount:
+                                                  _openDiscountSheet,
+                                              onOpenOrderHistory:
+                                                  _openOrderHistorySheet,
+                                              compact: true,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                  ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         );
@@ -861,6 +879,7 @@ class _QuickReceiveWorkspace extends StatelessWidget {
     required this.wideLayout,
     required this.desktopLayout,
     required this.contentPadding,
+    required this.listPaneWidth,
     required this.listPaneHeight,
     required this.searchValue,
     required this.onSearchChanged,
@@ -877,6 +896,7 @@ class _QuickReceiveWorkspace extends StatelessWidget {
   final bool wideLayout;
   final bool desktopLayout;
   final double contentPadding;
+  final double listPaneWidth;
   final double listPaneHeight;
   final String searchValue;
   final ValueChanged<String> onSearchChanged;
@@ -941,7 +961,7 @@ class _QuickReceiveWorkspace extends StatelessWidget {
               child: Row(
                 children: [
                   SizedBox(
-                    width: desktopLayout ? 390 : 342,
+                    width: listPaneWidth,
                     child: listPane,
                   ),
                   const SizedBox(width: 16),

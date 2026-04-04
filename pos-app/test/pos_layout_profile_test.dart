@@ -10,6 +10,7 @@ void main() {
     expect(profile.isLandscape, isTrue);
     expect(profile.isCompactLandscapeTablet, isTrue);
     expect(profile.wideLayout, isTrue);
+    expect(profile.canvasWidth, 1280.0);
     expect(profile.quickReceiveListHeight, inInclusiveRange(280.0, 360.0));
   });
 
