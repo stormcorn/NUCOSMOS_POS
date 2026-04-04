@@ -160,3 +160,33 @@ df -h
 docker system df
 du -xh /var/lib/docker --max-depth=1 2>/dev/null | sort -h
 ```
+
+## Optional admin cache cleanup
+
+The admin web can expose an `ADMIN`-only "Docker cache cleanup" action, but it is intentionally
+disabled by default.
+
+To enable it on the VPS:
+
+```env
+DOCKER_MAINTENANCE_ENABLED=true
+DOCKER_BINARY_PATH=/usr/bin/docker
+DOCKER_SOCKET_PATH=/var/run/docker.sock
+```
+
+This feature is intentionally limited to the following safe commands:
+
+- `docker builder prune -af`
+- `docker image prune -af`
+- `docker container prune -f`
+
+It must never run:
+
+- `docker volume prune`
+- arbitrary shell commands
+
+Security note:
+
+- enabling this feature mounts `/var/run/docker.sock` into the backend container
+- only `ADMIN` users should have access to the cleanup button
+- POS should remain monitor-only for disk status and should not get host-maintenance controls

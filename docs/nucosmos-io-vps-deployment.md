@@ -72,6 +72,9 @@ FRONTEND_ORIGIN=https://nucosmos.io
 VITE_API_BASE_URL=
 ADMIN_WEB_PORT=8080
 APACHE_VHOST_TARGET=/etc/apache2/conf.d/includes/post_virtualhost_global.conf
+DOCKER_MAINTENANCE_ENABLED=false
+DOCKER_BINARY_PATH=/usr/bin/docker
+DOCKER_SOCKET_PATH=/var/run/docker.sock
 ```
 
 Set `ADMIN_WEB_PORT=8080` because host Apache will reverse proxy traffic from ports `80/443`.
@@ -252,3 +255,17 @@ docker container prune -f
 ```
 
 Do not run `docker volume prune` on this VPS unless database backups have been verified.
+
+If you want the admin web to expose the guarded cleanup button, set:
+
+```env
+DOCKER_MAINTENANCE_ENABLED=true
+```
+
+That feature is intentionally restricted to `ADMIN` users and only runs:
+
+- `docker builder prune -af`
+- `docker image prune -af`
+- `docker container prune -f`
+
+It does not run `docker volume prune`.

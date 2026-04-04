@@ -59,3 +59,8 @@ app:
       path: ${SYSTEM_STORAGE_PATH:/}
       warning-free-percent: ${SYSTEM_STORAGE_WARNING_FREE_PERCENT:15}
       critical-free-percent: ${SYSTEM_STORAGE_CRITICAL_FREE_PERCENT:5}
+  maintenance:
+    docker-cache:
+      enabled: ${DOCKER_MAINTENANCE_ENABLED:false}
+      docker-binary: ${DOCKER_BINARY_PATH:/usr/bin/docker}
+      socket-path: ${DOCKER_SOCKET_PATH:/var/run/docker.sock}

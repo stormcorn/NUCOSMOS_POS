@@ -43,8 +43,12 @@ services:
       VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID}
       VITE_FIREBASE_MEASUREMENT_ID: ${VITE_FIREBASE_MEASUREMENT_ID}
       JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Xms128m -Xmx384m -XX:MaxMetaspaceSize=192m}
+      DOCKER_MAINTENANCE_ENABLED: ${DOCKER_MAINTENANCE_ENABLED:-false}
+      DOCKER_BINARY_PATH: ${DOCKER_BINARY_PATH:-/usr/bin/docker}
+      DOCKER_SOCKET_PATH: ${DOCKER_SOCKET_PATH:-/var/run/docker.sock}
     volumes:
       - ${FIREBASE_ADMIN_CREDENTIALS_PATH}:/run/secrets/firebase-admin.json:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "127.0.0.1:${BACKEND_PUBLIC_PORT:-8081}:8081"
 

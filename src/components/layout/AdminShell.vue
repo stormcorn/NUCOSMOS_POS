@@ -56,6 +56,8 @@ const pageSubtitle = computed(() => {
   return findNavigationEntry(route.path)?.description ?? "查看目前頁面的摘要、狀態與最近操作。";
 });
 
+const isAdmin = computed(() => authStore.activeRole === "ADMIN");
+
 const storageCardTone = computed(() => {
   if (systemStore.isStorageCritical) {
     return "border-rose-400/30 bg-rose-400/10";
@@ -90,11 +92,47 @@ const storageDetail = computed(() => {
   return `${status.freePercent.toFixed(1)}% free of ${formatBytes(status.totalBytes)}`;
 });
 
+const maintenanceAvailabilityLabel = computed(() => {
+  const status = systemStore.maintenanceStatus;
+  if (!status) {
+    return systemStore.maintenanceErrorMessage || "Loading cleanup status";
+  }
+  return status.summary;
+});
+
+const maintenanceActionLabel = computed(() =>
+  systemStore.maintenanceActionLoading ? "Cleaning..." : "Clean Docker cache",
+);
+
+async function handleDockerCleanup() {
+  if (!isAdmin.value) {
+    return;
+  }
+
+  const confirmed = window.confirm(
+    "This only removes Docker build cache, dangling images, and stopped containers. It will not remove volumes. Continue?",
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await systemStore.runDockerCacheCleanup();
+    await systemStore.loadDockerMaintenanceStatus();
+  } catch {
+    // Store-level error state is already shown in the panel.
+  }
+}
+
 async function refreshStorageStatus() {
   if (!authStore.isAuthenticated) {
     return;
   }
   await systemStore.loadStorageStatus();
+  if (isAdmin.value) {
+    await systemStore.loadDockerMaintenanceStatus();
+  }
 }
 
 function startStorageRefresh() {
@@ -547,6 +585,70 @@ watch(
         >
           {{ systemStore.storageStatus.message }} · Please clean disk space before the VPS reaches 100%.
         </div>
+
+        <section
+          v-if="isAdmin"
+          class="mb-6 rounded-[1.5rem] border border-white/10 bg-slate-950/45 px-4 py-4 backdrop-blur-md"
+        >
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div class="min-w-0">
+              <p class="text-xs uppercase tracking-[0.28em] text-brand-aqua/70">Maintenance</p>
+              <h3 class="mt-2 text-lg font-semibold text-white">Docker cache cleanup</h3>
+              <p class="mt-2 text-sm text-slate-400">
+                Safe cleanup only removes Docker build cache, dangling images, and stopped containers. Volumes are never touched.
+              </p>
+              <p class="mt-3 text-sm text-slate-300">{{ maintenanceAvailabilityLabel }}</p>
+              <p v-if="systemStore.maintenanceStatus" class="mt-2 text-xs text-slate-500">
+                Binary: {{ systemStore.maintenanceStatus.dockerBinaryPath }} | Socket: {{ systemStore.maintenanceStatus.dockerSocketPath }}
+              </p>
+            </div>
+
+            <div class="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[240px]">
+              <button
+                class="rounded-2xl border border-brand-aqua/30 bg-brand-aqua/10 px-4 py-3 text-sm font-semibold text-brand-aqua transition hover:border-brand-aqua/50 hover:bg-brand-aqua/15 disabled:cursor-not-allowed disabled:opacity-50"
+                type="button"
+                :disabled="systemStore.maintenanceActionLoading || !systemStore.maintenanceStatus?.available"
+                @click="handleDockerCleanup"
+              >
+                {{ maintenanceActionLabel }}
+              </button>
+              <button
+                class="rounded-2xl border border-white/10 px-4 py-3 text-sm text-slate-200 transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                type="button"
+                :disabled="systemStore.maintenanceLoading"
+                @click="systemStore.loadDockerMaintenanceStatus"
+              >
+                Refresh cleanup status
+              </button>
+            </div>
+          </div>
+
+          <div
+            v-if="systemStore.maintenanceErrorMessage"
+            class="mt-4 rounded-2xl border border-rose-400/20 bg-rose-400/10 px-4 py-3 text-sm text-rose-100"
+          >
+            {{ systemStore.maintenanceErrorMessage }}
+          </div>
+
+          <div
+            v-if="systemStore.cleanupResult"
+            class="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100"
+          >
+            <div class="font-medium">{{ systemStore.cleanupResult.summary }}</div>
+            <div class="mt-1 text-xs text-emerald-200/80">Executed at {{ new Date(systemStore.cleanupResult.executedAt).toLocaleString() }}</div>
+          </div>
+
+          <div class="mt-4 grid gap-4 xl:grid-cols-2">
+            <div class="rounded-2xl border border-white/8 bg-slate-950/55 p-4">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Current Docker usage</p>
+              <pre class="mt-3 overflow-x-auto whitespace-pre-wrap break-words text-xs leading-6 text-slate-300">{{ systemStore.maintenanceStatus?.details || "No data yet." }}</pre>
+            </div>
+            <div class="rounded-2xl border border-white/8 bg-slate-950/55 p-4">
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Last cleanup log</p>
+              <pre class="mt-3 overflow-x-auto whitespace-pre-wrap break-words text-xs leading-6 text-slate-300">{{ systemStore.cleanupResult?.cleanupLog || "No cleanup has been run yet." }}</pre>
+            </div>
+          </div>
+        </section>
 
         <div class="min-w-0">
           <slot />
