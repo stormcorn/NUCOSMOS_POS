@@ -6,7 +6,9 @@
     <title>NUCOSMOS 2F 空間租借 | Space Booking</title>
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap");
+
       * { box-sizing: border-box; }
+
       body {
         margin: 0;
         font-family: "Noto Sans TC", sans-serif;
@@ -15,8 +17,11 @@
           radial-gradient(circle at top, rgba(84, 224, 200, 0.18), transparent 34%),
           linear-gradient(180deg, #04111c, #020814 58%, #03070f);
       }
+
       a { color: inherit; }
+
       .shell { width: min(1180px, calc(100vw - 24px)); margin: 20px auto 48px; }
+
       .hero, .panel {
         border: 1px solid rgba(255,255,255,0.1);
         background: rgba(6, 14, 28, 0.8);
@@ -24,7 +29,9 @@
         border-radius: 28px;
         box-shadow: 0 18px 80px rgba(0, 0, 0, 0.28);
       }
+
       .hero { padding: 32px; }
+
       .eyebrow {
         font-family: "Rajdhani", sans-serif;
         color: #57e4c9;
@@ -32,30 +39,35 @@
         text-transform: uppercase;
         font-size: 12px;
       }
+
       h1 {
         margin: 16px 0 0;
         font-family: "Orbitron", sans-serif;
         font-size: clamp(28px, 5vw, 52px);
         line-height: 1.05;
       }
+
       .lead {
         margin-top: 16px;
         max-width: 780px;
         color: #aebdd2;
         line-height: 1.9;
       }
+
       .stats {
         margin-top: 24px;
         display: grid;
         gap: 12px;
         grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       }
-      .stat, .slot, .note {
+
+      .stat, .slot-card, .note, .calendar-day, .picker-card {
         border: 1px solid rgba(255,255,255,0.08);
         border-radius: 20px;
         background: rgba(255,255,255,0.04);
         padding: 16px;
       }
+
       .stat small {
         display: block;
         color: #7d90ac;
@@ -63,37 +75,50 @@
         letter-spacing: 0.18em;
         font-size: 11px;
       }
+
       .stat strong {
         display: block;
         margin-top: 8px;
         font-size: 20px;
       }
+
       .grid {
         margin-top: 22px;
         display: grid;
         gap: 18px;
         grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
       }
+
       .panel { padding: 24px; }
       .panel h2 { margin: 0; font-size: 24px; }
       .panel p.sub { margin: 8px 0 0; color: #9eb0c8; line-height: 1.8; }
-      .toolbar, .row {
+
+      .row {
         display: grid;
         gap: 12px;
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
+
       input, textarea, select, button {
         width: 100%;
         font: inherit;
         border-radius: 18px;
       }
+
       input, textarea, select {
         border: 1px solid rgba(255,255,255,0.1);
         background: rgba(8, 15, 29, 0.94);
         color: #eef4ff;
         padding: 14px 16px;
       }
+
+      input[readonly] {
+        color: #b5c4d8;
+        background: rgba(10, 17, 32, 0.86);
+      }
+
       textarea { min-height: 96px; resize: vertical; }
+
       button {
         border: 1px solid rgba(87, 228, 201, 0.38);
         background: rgba(87, 228, 201, 0.14);
@@ -102,21 +127,31 @@
         font-weight: 700;
         cursor: pointer;
       }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+
+      .button-secondary {
+        border-color: rgba(255,255,255,0.12);
+        background: rgba(255,255,255,0.04);
+        color: #d6e5f8;
+      }
+
       .message, .error {
         margin-top: 16px;
         border-radius: 18px;
         padding: 14px 16px;
         line-height: 1.8;
       }
+
       .message { background: rgba(87, 228, 201, 0.12); border: 1px solid rgba(87, 228, 201, 0.24); color: #dbfff8; }
       .error { background: rgba(251, 113, 133, 0.12); border: 1px solid rgba(251, 113, 133, 0.22); color: #ffd0d8; }
-      .days { margin-top: 18px; display: grid; gap: 14px; }
-      .day h3 { margin: 0 0 10px; font-size: 16px; }
-      .slots { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-      .slot.available { border-color: rgba(74, 222, 128, 0.25); background: rgba(74, 222, 128, 0.1); color: #d6ffe4; }
-      .slot.unavailable { border-color: rgba(251, 113, 133, 0.22); background: rgba(251, 113, 133, 0.1); color: #ffd1d9; }
+
       .rules { margin-top: 18px; display: grid; gap: 12px; }
       .note { color: #bfcbdb; line-height: 1.8; }
+
       .top-nav {
         display: flex;
         justify-content: space-between;
@@ -124,6 +159,7 @@
         gap: 12px;
         margin-bottom: 12px;
       }
+
       .top-link {
         text-decoration: none;
         border: 1px solid rgba(255,255,255,0.12);
@@ -132,12 +168,185 @@
         background: rgba(255,255,255,0.04);
         font-size: 14px;
       }
+
+      .calendar-toolbar {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        margin-top: 18px;
+      }
+
+      .calendar-month {
+        text-align: center;
+        font-size: 18px;
+        font-weight: 700;
+        color: #f4f8ff;
+      }
+
+      .calendar-head,
+      .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .calendar-head {
+        margin-top: 18px;
+      }
+
+      .calendar-head div {
+        text-align: center;
+        color: #7d90ac;
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .calendar-grid {
+        margin-top: 10px;
+      }
+
+      .calendar-spacer {
+        min-height: 110px;
+      }
+
+      .calendar-day {
+        min-height: 110px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: space-between;
+        color: #dce8f8;
+        transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+      }
+
+      .calendar-day.available {
+        border-color: rgba(74, 222, 128, 0.22);
+        background: rgba(74, 222, 128, 0.08);
+      }
+
+      .calendar-day.partial {
+        border-color: rgba(251, 191, 36, 0.22);
+        background: rgba(251, 191, 36, 0.08);
+      }
+
+      .calendar-day.unavailable {
+        border-color: rgba(148, 163, 184, 0.16);
+        background: rgba(148, 163, 184, 0.06);
+        color: #93a4bd;
+      }
+
+      .calendar-day.selected {
+        border-color: rgba(87, 228, 201, 0.5);
+        background: rgba(87, 228, 201, 0.14);
+        box-shadow: 0 0 0 1px rgba(87, 228, 201, 0.14);
+      }
+
+      .calendar-day:hover {
+        transform: translateY(-1px);
+      }
+
+      .calendar-day strong {
+        font-size: 18px;
+      }
+
+      .calendar-day small {
+        color: inherit;
+        opacity: 0.78;
+        line-height: 1.5;
+      }
+
+      .calendar-day button {
+        border: 0;
+        background: transparent;
+        padding: 0;
+        text-align: left;
+        color: inherit;
+      }
+
+      .picker-card {
+        margin-top: 18px;
+      }
+
+      .picker-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 12px;
+      }
+
+      .picker-header strong {
+        font-size: 18px;
+      }
+
+      .slot-grid {
+        margin-top: 14px;
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+      }
+
+      .slot-card {
+        padding: 14px;
+      }
+
+      .slot-card.available {
+        border-color: rgba(74, 222, 128, 0.25);
+        background: rgba(74, 222, 128, 0.1);
+        color: #d6ffe4;
+      }
+
+      .slot-card.unavailable {
+        border-color: rgba(251, 113, 133, 0.22);
+        background: rgba(251, 113, 133, 0.1);
+        color: #ffd1d9;
+      }
+
+      .slot-card.selected {
+        border-color: rgba(87, 228, 201, 0.46);
+        background: rgba(87, 228, 201, 0.16);
+        color: #d6fff7;
+      }
+
+      .slot-card button {
+        border: 0;
+        background: transparent;
+        padding: 0;
+        color: inherit;
+        text-align: left;
+      }
+
+      .slot-card small {
+        display: block;
+        margin-top: 8px;
+        opacity: 0.8;
+      }
+
       @media (max-width: 900px) {
-        .grid, .toolbar, .row { grid-template-columns: 1fr; }
+        .grid, .row { grid-template-columns: 1fr; }
         .shell { width: calc(100vw - 14px); }
         .hero, .panel { border-radius: 22px; }
         .hero { padding: 22px; }
         .panel { padding: 18px; }
+        .calendar-toolbar {
+          grid-template-columns: 1fr;
+        }
+        .calendar-head,
+        .calendar-grid {
+          gap: 8px;
+        }
+        .calendar-day,
+        .calendar-spacer {
+          min-height: 88px;
+        }
+        .calendar-day {
+          padding: 10px;
+        }
+        .calendar-day strong {
+          font-size: 16px;
+        }
       }
     </style>
   </head>
@@ -162,19 +371,38 @@
 
       <div class="grid">
         <section class="panel">
-          <p class="eyebrow">Availability 公開時段</p>
-          <h2>公開可預約時段 / Availability</h2>
-          <p class="sub">先看可用時段，再送出預約申請。第一版採審核制，送出後會由 NUCOSMOS 確認。<br />Check available slots first, then send a booking request. Phase 1 uses a manual review flow.</p>
+          <p class="eyebrow">Availability Calendar</p>
+          <h2>可預約月曆 / Availability Calendar</h2>
+          <p class="sub">先看整月可預約日期，再點選單日查看可租借時段。之後可直接對接 Google Calendar 類型的月曆流程。<br />Browse the month first, then pick a day to view available time slots.</p>
 
-          <div class="toolbar" style="margin-top:18px;">
-            <input id="from-date" type="date" />
-            <input id="to-date" type="date" />
+          <div class="calendar-toolbar">
+            <button id="prev-month" class="button-secondary" type="button">上個月 / Prev</button>
+            <div id="calendar-month-label" class="calendar-month">--</div>
+            <button id="next-month" class="button-secondary" type="button">下個月 / Next</button>
           </div>
-          <button id="refresh-availability" style="margin-top:12px;">重新查詢時段 / Refresh Availability</button>
 
           <div id="availability-message" class="message" style="display:none;"></div>
           <div id="availability-error" class="error" style="display:none;"></div>
-          <div id="availability-days" class="days"></div>
+
+          <div class="calendar-head">
+            <div>Sun 日</div>
+            <div>Mon 一</div>
+            <div>Tue 二</div>
+            <div>Wed 三</div>
+            <div>Thu 四</div>
+            <div>Fri 五</div>
+            <div>Sat 六</div>
+          </div>
+
+          <div id="calendar-grid" class="calendar-grid"></div>
+
+          <div class="picker-card">
+            <div class="picker-header">
+              <strong id="selected-day-label">請先選擇日期 / Select a day</strong>
+              <span id="selected-day-hint" class="sub" style="margin:0;">月曆上選一天後，這裡會顯示當天時段。 / Pick a day to view slots.</span>
+            </div>
+            <div id="selected-day-slots" class="slot-grid"></div>
+          </div>
 
           <div class="rules">
             <div class="note" id="house-rules">載入場地規則中... / Loading house rules...</div>
@@ -185,7 +413,7 @@
         <section class="panel">
           <p class="eyebrow">Booking Request 預約申請</p>
           <h2>送出預約申請 / Booking Request</h2>
-          <p class="sub">請填寫預約時段、聯絡方式與用途。若時段可行，我們會再與你確認。<br />Please fill in your requested time, contact details, and purpose. We will confirm with you after review.</p>
+          <p class="sub">請先從左側月曆選擇日期，再選開始與結束時段。若時段可行，我們會再與你確認。<br />Please pick a date from the calendar first, then choose the booking time range.</p>
 
           <div class="row" style="margin-top:18px;">
             <input id="customer-name" type="text" placeholder="姓名 Name" />
@@ -193,9 +421,14 @@
           </div>
           <input id="customer-email" type="email" placeholder="Email（選填 Optional）" style="margin-top:12px;" />
           <input id="customer-purpose" type="text" placeholder="活動用途 Purpose（講座、聚會、拍攝等）" style="margin-top:12px;" />
+          <input id="selected-date" type="text" readonly placeholder="請先選擇日期 / Select a date first" style="margin-top:12px;" />
           <div class="row" style="margin-top:12px;">
-            <input id="booking-start" type="datetime-local" />
-            <input id="booking-end" type="datetime-local" />
+            <select id="booking-start">
+              <option value="">請先選擇開始時段 / Select start time</option>
+            </select>
+            <select id="booking-end">
+              <option value="">請先選擇結束時段 / Select end time</option>
+            </select>
           </div>
           <input id="attendee-count" type="number" min="1" placeholder="預計人數 Attendee Count" style="margin-top:12px;" />
           <textarea id="booking-note" placeholder="備註 Notes（選填 Optional）" style="margin-top:12px;"></textarea>
@@ -209,6 +442,7 @@
 
     <script>
       const slug = "2f-event-space";
+
       const els = {
         description: document.getElementById("space-description"),
         rate: document.getElementById("space-rate"),
@@ -217,14 +451,18 @@
         location: document.getElementById("space-location"),
         houseRules: document.getElementById("house-rules"),
         cancelPolicy: document.getElementById("cancel-policy"),
-        availabilityDays: document.getElementById("availability-days"),
         availabilityMessage: document.getElementById("availability-message"),
         availabilityError: document.getElementById("availability-error"),
         bookingMessage: document.getElementById("booking-message"),
         bookingError: document.getElementById("booking-error"),
-        fromDate: document.getElementById("from-date"),
-        toDate: document.getElementById("to-date"),
-        refreshAvailability: document.getElementById("refresh-availability"),
+        prevMonth: document.getElementById("prev-month"),
+        nextMonth: document.getElementById("next-month"),
+        monthLabel: document.getElementById("calendar-month-label"),
+        calendarGrid: document.getElementById("calendar-grid"),
+        selectedDayLabel: document.getElementById("selected-day-label"),
+        selectedDayHint: document.getElementById("selected-day-hint"),
+        selectedDaySlots: document.getElementById("selected-day-slots"),
+        selectedDate: document.getElementById("selected-date"),
         submitBooking: document.getElementById("submit-booking"),
       };
 
@@ -237,6 +475,14 @@
         end: document.getElementById("booking-end"),
         attendees: document.getElementById("attendee-count"),
         note: document.getElementById("booking-note"),
+      };
+
+      const state = {
+        space: null,
+        availability: null,
+        monthCursor: startOfMonth(new Date()),
+        selectedDate: "",
+        selectedStart: "",
       };
 
       function setMessage(el, text) {
@@ -255,19 +501,256 @@
       }
 
       function currency(value, code = "TWD") {
-        return new Intl.NumberFormat("zh-TW", { style: "currency", currency: code, maximumFractionDigits: 0 }).format(value || 0);
+        return new Intl.NumberFormat("zh-TW", {
+          style: "currency",
+          currency: code,
+          maximumFractionDigits: 0,
+        }).format(value || 0);
       }
 
-      function formatTime(value) {
-        return new Intl.DateTimeFormat("zh-TW", { hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+      function startOfMonth(date) {
+        return new Date(date.getFullYear(), date.getMonth(), 1);
+      }
+
+      function endOfMonth(date) {
+        return new Date(date.getFullYear(), date.getMonth() + 1, 0);
+      }
+
+      function pad(value) {
+        return String(value).padStart(2, "0");
+      }
+
+      function formatDateKey(date) {
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+      }
+
+      function formatMonthLabel(date) {
+        const zh = new Intl.DateTimeFormat("zh-TW", { year: "numeric", month: "long" }).format(date);
+        const en = new Intl.DateTimeFormat("en-US", { year: "numeric", month: "long" }).format(date);
+        return `${zh} / ${en}`;
+      }
+
+      function formatDateLabel(dateKey) {
+        const date = new Date(`${dateKey}T00:00:00+08:00`);
+        const zh = new Intl.DateTimeFormat("zh-TW", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          weekday: "long",
+        }).format(date);
+        const en = new Intl.DateTimeFormat("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          weekday: "long",
+        }).format(date);
+        return `${zh} / ${en}`;
+      }
+
+      function timeLabel(value) {
+        return value.slice(11, 16);
       }
 
       function withOffset(value) {
         return `${value}:00+08:00`;
       }
 
+      function slotDurationMinutes(slot) {
+        return Math.round((new Date(slot.endAt) - new Date(slot.startAt)) / 60000);
+      }
+
+      function isAvailableSlot(slot) {
+        return slot.status === "AVAILABLE";
+      }
+
+      function dayLookup() {
+        const map = new Map();
+        (state.availability?.days || []).forEach((day) => map.set(day.date, day));
+        return map;
+      }
+
+      function getSelectedDay() {
+        return dayLookup().get(state.selectedDate) || null;
+      }
+
+      function availableStartSlots(day) {
+        return (day?.slots || []).filter(isAvailableSlot);
+      }
+
+      function resetBookingTimeSelection() {
+        state.selectedStart = "";
+        form.start.innerHTML = '<option value="">請先選擇開始時段 / Select start time</option>';
+        form.end.innerHTML = '<option value="">請先選擇結束時段 / Select end time</option>';
+      }
+
+      function populateStartOptions(day) {
+        resetBookingTimeSelection();
+        const starts = availableStartSlots(day);
+        starts.forEach((slot) => {
+          const option = document.createElement("option");
+          option.value = slot.startAt.slice(0, 16);
+          option.textContent = `${timeLabel(slot.startAt)} 開始 / Start`;
+          form.start.appendChild(option);
+        });
+      }
+
+      function populateEndOptions(day, startValue) {
+        form.end.innerHTML = '<option value="">請先選擇結束時段 / Select end time</option>';
+        if (!day || !startValue) {
+          return;
+        }
+
+        const slots = day.slots || [];
+        const startIndex = slots.findIndex((slot) => slot.startAt.slice(0, 16) === startValue);
+        if (startIndex === -1 || !isAvailableSlot(slots[startIndex])) {
+          return;
+        }
+
+        let accumulated = 0;
+        const minimumMinutes = (state.space?.minimumHours || 1) * 60;
+
+        for (let index = startIndex; index < slots.length; index += 1) {
+          const slot = slots[index];
+          if (!isAvailableSlot(slot)) {
+            break;
+          }
+          if (index > startIndex && slots[index - 1].endAt !== slot.startAt) {
+            break;
+          }
+
+          accumulated += slotDurationMinutes(slot);
+          if (accumulated >= minimumMinutes) {
+            const option = document.createElement("option");
+            option.value = slot.endAt.slice(0, 16);
+            option.textContent = `${timeLabel(slot.endAt)} 結束 / End`;
+            form.end.appendChild(option);
+          }
+        }
+
+        if (form.end.options.length > 1) {
+          form.end.selectedIndex = 1;
+        }
+      }
+
+      function selectStartSlot(startValue) {
+        const day = getSelectedDay();
+        if (!day) {
+          return;
+        }
+        state.selectedStart = startValue;
+        form.start.value = startValue;
+        populateEndOptions(day, startValue);
+        renderSelectedDaySlots();
+      }
+
+      function renderSelectedDaySlots() {
+        const day = getSelectedDay();
+        els.selectedDaySlots.innerHTML = "";
+
+        if (!day) {
+          els.selectedDayLabel.textContent = "請先選擇日期 / Select a day";
+          els.selectedDayHint.textContent = "月曆上選一天後，這裡會顯示當天時段。 / Pick a day to view slots.";
+          els.selectedDate.value = "";
+          resetBookingTimeSelection();
+          return;
+        }
+
+        els.selectedDayLabel.textContent = formatDateLabel(day.date);
+        els.selectedDayHint.textContent = "先點選可租借開始時段，再到右側選擇結束時段。 / Pick a start slot first, then choose the end time.";
+        els.selectedDate.value = formatDateLabel(day.date);
+        populateStartOptions(day);
+        if (state.selectedStart) {
+          form.start.value = state.selectedStart;
+          populateEndOptions(day, state.selectedStart);
+        }
+
+        day.slots.forEach((slot) => {
+          const wrapper = document.createElement("div");
+          const startValue = slot.startAt.slice(0, 16);
+          const selected = state.selectedStart === startValue;
+          wrapper.className = `slot-card ${isAvailableSlot(slot) ? "available" : "unavailable"}${selected ? " selected" : ""}`;
+
+          const button = document.createElement("button");
+          button.type = "button";
+          button.disabled = !isAvailableSlot(slot);
+          button.innerHTML = `<strong>${timeLabel(slot.startAt)} - ${timeLabel(slot.endAt)}</strong><small>${slot.label}</small>`;
+          if (isAvailableSlot(slot)) {
+            button.addEventListener("click", () => selectStartSlot(startValue));
+          }
+
+          wrapper.appendChild(button);
+          els.selectedDaySlots.appendChild(wrapper);
+        });
+      }
+
+      function chooseDefaultSelectedDate() {
+        const days = state.availability?.days || [];
+        if (!days.length) {
+          state.selectedDate = "";
+          return;
+        }
+        const stillExists = days.some((day) => day.date === state.selectedDate);
+        if (stillExists) {
+          return;
+        }
+        const firstAvailable = days.find((day) => day.slots.some(isAvailableSlot));
+        state.selectedDate = firstAvailable?.date || days[0].date;
+      }
+
+      function renderCalendar() {
+        els.monthLabel.textContent = formatMonthLabel(state.monthCursor);
+        els.calendarGrid.innerHTML = "";
+
+        const firstDay = startOfMonth(state.monthCursor);
+        const lastDay = endOfMonth(state.monthCursor);
+        const firstWeekday = firstDay.getDay();
+        const dayMap = dayLookup();
+
+        for (let i = 0; i < firstWeekday; i += 1) {
+          const spacer = document.createElement("div");
+          spacer.className = "calendar-spacer";
+          els.calendarGrid.appendChild(spacer);
+        }
+
+        for (let day = 1; day <= lastDay.getDate(); day += 1) {
+          const cellDate = new Date(firstDay.getFullYear(), firstDay.getMonth(), day);
+          const key = formatDateKey(cellDate);
+          const availabilityDay = dayMap.get(key);
+          const availableCount = availabilityDay ? availabilityDay.slots.filter(isAvailableSlot).length : 0;
+          const totalCount = availabilityDay ? availabilityDay.slots.length : 0;
+
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "calendar-day";
+
+          if (availableCount > 0) {
+            button.classList.add(availableCount === totalCount ? "available" : "partial");
+          } else {
+            button.classList.add("unavailable");
+          }
+          if (state.selectedDate === key) {
+            button.classList.add("selected");
+          }
+
+          button.innerHTML = `
+            <strong>${day}</strong>
+            <small>${availableCount > 0 ? `可預約 ${availableCount} 格 / ${availableCount} slot(s)` : "無可用時段 / No slots"}</small>
+          `;
+
+          button.addEventListener("click", () => {
+            state.selectedDate = key;
+            state.selectedStart = "";
+            renderCalendar();
+            renderSelectedDaySlots();
+          });
+
+          els.calendarGrid.appendChild(button);
+        }
+      }
+
       async function loadSpace() {
         const space = await requestJson(`/api/v1/public/spaces/${slug}`);
+        state.space = space;
         els.description.textContent = space.description || "NUCOSMOS 2F 適合講座、工作坊、聚會與品牌活動。 / Ideal for talks, workshops, gatherings, and brand events.";
         els.rate.textContent = `${currency(space.hourlyRate, space.currencyCode)} / 小時 per hour`;
         els.capacity.textContent = `${space.capacity} 人 people`;
@@ -280,23 +763,16 @@
       async function loadAvailability() {
         try {
           setMessage(els.availabilityError, "");
-          setMessage(els.availabilityMessage, "載入可預約時段中... / Loading availability...");
-          const data = await requestJson(`/api/v1/public/spaces/${slug}/availability?from=${els.fromDate.value}&to=${els.toDate.value}`);
-          els.availabilityDays.innerHTML = "";
-          data.days.forEach((day) => {
-            const section = document.createElement("section");
-            section.className = "day";
-            section.innerHTML = `<h3>${day.date}</h3><div class="slots"></div>`;
-            const slotsRoot = section.querySelector(".slots");
-            day.slots.forEach((slot) => {
-              const slotEl = document.createElement("div");
-              slotEl.className = `slot ${slot.status === "AVAILABLE" ? "available" : "unavailable"}`;
-              slotEl.innerHTML = `<strong>${formatTime(slot.startAt)} - ${formatTime(slot.endAt)}</strong><div style="margin-top:8px;font-size:12px;opacity:.8;">${slot.label}</div>`;
-              slotsRoot.appendChild(slotEl);
-            });
-            els.availabilityDays.appendChild(section);
-          });
-          setMessage(els.availabilityMessage, `已載入 ${data.days.length} 天時段。 / Loaded ${data.days.length} day(s).`);
+          setMessage(els.availabilityMessage, "載入月曆時段中... / Loading monthly availability...");
+
+          const from = formatDateKey(startOfMonth(state.monthCursor));
+          const to = formatDateKey(endOfMonth(state.monthCursor));
+          state.availability = await requestJson(`/api/v1/public/spaces/${slug}/availability?from=${from}&to=${to}`);
+
+          chooseDefaultSelectedDate();
+          renderCalendar();
+          renderSelectedDaySlots();
+          setMessage(els.availabilityMessage, `已載入 ${formatMonthLabel(state.monthCursor)} 時段。 / Loaded ${formatMonthLabel(state.monthCursor)}.`);
         } catch (error) {
           setMessage(els.availabilityMessage, "");
           setMessage(els.availabilityError, error instanceof Error ? error.message : "載入時段失敗 / Failed to load availability");
@@ -305,8 +781,16 @@
 
       async function submitBooking() {
         try {
+          if (!state.selectedDate) {
+            throw new Error("請先從月曆選擇日期。 / Please select a date from the calendar first.");
+          }
+          if (!form.start.value || !form.end.value) {
+            throw new Error("請先選擇開始與結束時段。 / Please choose both start and end times.");
+          }
+
           setMessage(els.bookingError, "");
           setMessage(els.bookingMessage, "送出申請中... / Submitting booking request...");
+
           const result = await requestJson(`/api/v1/public/spaces/${slug}/booking-requests`, {
             method: "POST",
             body: JSON.stringify({
@@ -320,6 +804,7 @@
               endAt: withOffset(form.end.value),
             }),
           });
+
           setMessage(els.bookingMessage, `${result.message} / Booking No. ${result.bookingNumber}`);
           await loadAvailability();
         } catch (error) {
@@ -328,23 +813,34 @@
         }
       }
 
-      function initDates() {
-        const today = new Date();
-        const later = new Date(today.getTime() + 6 * 24 * 60 * 60 * 1000);
-        const pad = (value) => String(value).padStart(2, "0");
-        const fmt = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-        els.fromDate.value = fmt(today);
-        els.toDate.value = fmt(later);
-        form.start.value = `${fmt(today)}T10:00`;
-        form.end.value = `${fmt(today)}T12:00`;
+      function initForm() {
         form.attendees.value = "10";
       }
 
-      els.refreshAvailability.addEventListener("click", loadAvailability);
+      els.prevMonth.addEventListener("click", async () => {
+        state.monthCursor = new Date(state.monthCursor.getFullYear(), state.monthCursor.getMonth() - 1, 1);
+        state.selectedDate = "";
+        state.selectedStart = "";
+        await loadAvailability();
+      });
+
+      els.nextMonth.addEventListener("click", async () => {
+        state.monthCursor = new Date(state.monthCursor.getFullYear(), state.monthCursor.getMonth() + 1, 1);
+        state.selectedDate = "";
+        state.selectedStart = "";
+        await loadAvailability();
+      });
+
+      form.start.addEventListener("change", () => {
+        state.selectedStart = form.start.value;
+        populateEndOptions(getSelectedDay(), form.start.value);
+        renderSelectedDaySlots();
+      });
+
       els.submitBooking.addEventListener("click", submitBooking);
 
       (async () => {
-        initDates();
+        initForm();
         await loadSpace();
         await loadAvailability();
       })();
