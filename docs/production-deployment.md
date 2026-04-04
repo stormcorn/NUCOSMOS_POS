@@ -32,6 +32,7 @@ Recommended target:
 - Apache without cPanel account: [nucosmos-io-apache-without-cpanel.md](/c:/NUCOSMOS_POS/docs/nucosmos-io-apache-without-cpanel.md)
 - SFTP upload package: [sftp-deployment-package.md](/c:/NUCOSMOS_POS/docs/sftp-deployment-package.md)
 - 2026-03-28 outage and recovery record: [2026-03-28-vps-recovery-incident.md](/c:/NUCOSMOS_POS/docs/2026-03-28-vps-recovery-incident.md)
+- 2026-04-04 disk-space recovery SOP: [2026-04-04-postgres-disk-space-recovery.md](/c:/NUCOSMOS_POS/docs/2026-04-04-postgres-disk-space-recovery.md)
 
 ## Local validation already completed
 
@@ -142,3 +143,20 @@ Recommended production JVM settings:
 ```
 
 These values are now reflected in the production compose defaults.
+
+## VPS disk-space guardrail
+
+This VPS also needs an explicit disk-space operating rule:
+
+- keep at least `10 GB` free on `/`
+- if root free space falls under roughly `15%`, clean Docker build cache before the next deploy
+- if `postgres` becomes unhealthy and logs show `No space left on device`, follow:
+  - [2026-04-04-postgres-disk-space-recovery.md](/c:/NUCOSMOS_POS/docs/2026-04-04-postgres-disk-space-recovery.md)
+
+Typical triage commands:
+
+```bash
+df -h
+docker system df
+du -xh /var/lib/docker --max-depth=1 2>/dev/null | sort -h
+```

@@ -9,6 +9,7 @@ import '../models/product_summary.dart';
 import '../models/pos_layout_profile.dart';
 import '../models/quick_receive_models.dart';
 import '../models/receipt_footer_template.dart';
+import '../models/system_status.dart';
 import '../state/printer_controller.dart';
 import '../state/session_controller.dart';
 import '../widgets/adaptive_scroll_body.dart';
@@ -75,6 +76,7 @@ class _PosHomeScreenState extends State<PosHomeScreen>
           !widget.controller.quickReceiveSaving) {
         await widget.controller.loadQuickReceiveCatalog(showLoading: false);
       }
+      await widget.controller.loadStorageStatus(notify: false);
       return;
     }
 
@@ -83,12 +85,14 @@ class _PosHomeScreenState extends State<PosHomeScreen>
           !widget.controller.orderActionLoading) {
         await widget.controller.loadOrderHistory(notify: false);
       }
+      await widget.controller.loadStorageStatus(notify: false);
       return;
     }
 
     if (!widget.controller.catalogLoading) {
       await widget.controller.loadProducts(showLoading: false);
     }
+    await widget.controller.loadStorageStatus(notify: false);
   }
 
   Future<void> _handleAddProduct(ProductSummary product) async {
@@ -688,6 +692,17 @@ class _HeaderSection extends StatelessWidget {
             color: const Color(0xFF122A27),
             borderColor: const Color(0xFF14F1FF),
             message: sessionController.checkoutMessage,
+          ),
+        ],
+        if (sessionController.storageStatus != null) ...[
+          const SizedBox(height: 12),
+          _StorageStatusBanner(status: sessionController.storageStatus!),
+        ] else if (sessionController.storageStatusMessage.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _BannerMessage(
+            color: const Color(0x332B3548),
+            borderColor: const Color(0xFF3F506B),
+            message: sessionController.storageStatusMessage,
           ),
         ],
       ],
@@ -2235,6 +2250,17 @@ class _OrderHistorySheet extends StatelessWidget {
                 color: const Color(0x332B3548),
                 borderColor: const Color(0xFF3F506B),
                 message: controller.orderHistoryMessage,
+              ),
+            ],
+            if (controller.storageStatus != null) ...[
+              const SizedBox(height: 10),
+              _StorageStatusBanner(status: controller.storageStatus!),
+            ] else if (controller.storageStatusMessage.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              _BannerMessage(
+                color: const Color(0x332B3548),
+                borderColor: const Color(0xFF3F506B),
+                message: controller.storageStatusMessage,
               ),
             ],
             const SizedBox(height: 14),
@@ -3834,6 +3860,61 @@ class _BannerMessage extends StatelessWidget {
   }
 }
 
+class _StorageStatusBanner extends StatelessWidget {
+  const _StorageStatusBanner({required this.status});
+
+  final StorageStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final critical = status.isCritical;
+    final warning = status.isWarning;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: critical
+            ? const Color(0xFF35161B)
+            : warning
+                ? const Color(0xFF33270F)
+                : const Color(0xFF10251F),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: critical
+              ? const Color(0xFFB74B57)
+              : warning
+                  ? const Color(0xFFE7B44C)
+                  : const Color(0xFF3CCB9B),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            critical
+                ? Icons.warning_rounded
+                : warning
+                    ? Icons.sd_storage_rounded
+                    : Icons.check_circle_rounded,
+            color: critical
+                ? const Color(0xFFFF8A93)
+                : warning
+                    ? const Color(0xFFFFD166)
+                    : const Color(0xFF68F3C6),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '${status.message} · ${_formatStorageBytes(status.usableBytes)} free',
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _TotalRow extends StatelessWidget {
   const _TotalRow({
     required this.label,
@@ -3876,6 +3957,24 @@ class _TotalRow extends StatelessWidget {
 }
 
 String _currency(double value) => '\$${value.toStringAsFixed(2)}';
+
+String _formatStorageBytes(int bytes) {
+  if (bytes <= 0) {
+    return '0 B';
+  }
+
+  const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+  double value = bytes.toDouble();
+  var unitIndex = 0;
+
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+
+  final fractionDigits = unitIndex <= 1 ? 0 : 1;
+  return '${value.toStringAsFixed(fractionDigits)} ${units[unitIndex]}';
+}
 
 class _CustomizationSheet extends StatefulWidget {
   const _CustomizationSheet({required this.product});

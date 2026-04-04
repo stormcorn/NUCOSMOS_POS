@@ -54,3 +54,8 @@ app:
     jwt:
       secret-base64: ${JWT_SECRET_BASE64:bmV2ZXItc2hpcC10aGlzLWRlZmF1bHQtc2VjcmV0LWluLXByb2QtdXNlLWFuLWVudi12YXI=}
       access-token-minutes: ${JWT_ACCESS_TOKEN_MINUTES:480}
+  monitoring:
+    storage:
+      path: ${SYSTEM_STORAGE_PATH:/}
+      warning-free-percent: ${SYSTEM_STORAGE_WARNING_FREE_PERCENT:15}
+      critical-free-percent: ${SYSTEM_STORAGE_CRITICAL_FREE_PERCENT:5}

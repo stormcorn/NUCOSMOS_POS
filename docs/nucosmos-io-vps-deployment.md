@@ -232,3 +232,23 @@ docker compose --env-file deployment/.env.prod -f deployment/docker-compose.prod
 See the full incident record:
 
 - [2026-03-28-vps-recovery-incident.md](/c:/NUCOSMOS_POS/docs/2026-03-28-vps-recovery-incident.md)
+- [2026-04-04-postgres-disk-space-recovery.md](/c:/NUCOSMOS_POS/docs/2026-04-04-postgres-disk-space-recovery.md)
+
+## 12. Disk-space preflight check
+
+Before production deploys, run:
+
+```bash
+df -h
+docker system df
+```
+
+If root disk free space is low, clear Docker cache before trying to restart PostgreSQL or redeploy:
+
+```bash
+docker builder prune -af
+docker image prune -af
+docker container prune -f
+```
+
+Do not run `docker volume prune` on this VPS unless database backups have been verified.

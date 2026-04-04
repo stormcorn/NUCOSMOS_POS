@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 
 import { fetchNavigationPreference, saveNavigationPreference } from "@/api/auth";
@@ -11,6 +11,8 @@ import {
 } from "@/config/admin-navigation";
 import { useAuthStore } from "@/stores/auth";
 import { useStoreContextStore } from "@/stores/store-context";
+import { useSystemStore } from "@/stores/system";
+import { formatBytes } from "@/utils/format";
 
 const LOCAL_STORAGE_KEY = "nucosmos-admin-navigation-order";
 
@@ -23,6 +25,9 @@ const authStore = useAuthStore();
 const route = useRoute();
 const router = useRouter();
 const storeContextStore = useStoreContextStore();
+const systemStore = useSystemStore();
+const STORAGE_REFRESH_INTERVAL_MS = 60_000;
+let storageTimer: number | null = null;
 
 const navigationItems = ref<AdminNavigationItem[]>(cloneAdminNavigationItems());
 const draggingRootTo = ref<string | null>(null);
@@ -50,6 +55,61 @@ const visibleNavigationItems = computed(() =>
 const pageSubtitle = computed(() => {
   return findNavigationEntry(route.path)?.description ?? "查看目前頁面的摘要、狀態與最近操作。";
 });
+
+const storageCardTone = computed(() => {
+  if (systemStore.isStorageCritical) {
+    return "border-rose-400/30 bg-rose-400/10";
+  }
+  if (systemStore.hasStorageWarning) {
+    return "border-amber-300/30 bg-amber-200/10";
+  }
+  return "border-emerald-400/20 bg-emerald-400/10";
+});
+
+const storageLevelLabel = computed(() => {
+  const level = systemStore.storageStatus?.level;
+  if (level === "CRITICAL") return "Critical";
+  if (level === "WARNING") return "Warning";
+  if (level === "OK") return "Healthy";
+  return "--";
+});
+
+const storageSummary = computed(() => {
+  const status = systemStore.storageStatus;
+  if (!status) {
+    return "--";
+  }
+  return `${formatBytes(status.usableBytes)} free`;
+});
+
+const storageDetail = computed(() => {
+  const status = systemStore.storageStatus;
+  if (!status) {
+    return systemStore.errorMessage || "Loading disk status";
+  }
+  return `${status.freePercent.toFixed(1)}% free of ${formatBytes(status.totalBytes)}`;
+});
+
+async function refreshStorageStatus() {
+  if (!authStore.isAuthenticated) {
+    return;
+  }
+  await systemStore.loadStorageStatus();
+}
+
+function startStorageRefresh() {
+  stopStorageRefresh();
+  storageTimer = window.setInterval(() => {
+    void refreshStorageStatus();
+  }, STORAGE_REFRESH_INTERVAL_MS);
+}
+
+function stopStorageRefresh() {
+  if (storageTimer !== null) {
+    window.clearInterval(storageTimer);
+    storageTimer = null;
+  }
+}
 
 function hasAnySavedOrder(order: PersistedNavigationOrder) {
   return order.rootOrder.length > 0 || Object.values(order.childOrders).some((children) => children.length > 0);
@@ -265,13 +325,27 @@ onMounted(() => {
   loadPersistedOrder();
   void syncNavigationPreference();
   void ensureStores();
+  if (authStore.isAuthenticated) {
+    void refreshStorageStatus();
+    startStorageRefresh();
+  }
+});
+
+onUnmounted(() => {
+  stopStorageRefresh();
 });
 
 watch(
   () => authStore.isAuthenticated,
-  () => {
+  (authenticated) => {
     void syncNavigationPreference();
     void ensureStores();
+    if (authenticated) {
+      void refreshStorageStatus();
+      startStorageRefresh();
+      return;
+    }
+    stopStorageRefresh();
   },
 );
 
@@ -423,7 +497,7 @@ watch(
             <p class="mt-2 max-w-2xl text-sm text-slate-400">{{ pageSubtitle }}</p>
           </div>
 
-          <div class="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+          <div class="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
             <div class="rounded-2xl border border-white/8 bg-slate-950/50 px-4 py-3">
               <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Store Focus</p>
               <p class="mt-2 text-base font-semibold text-white">
@@ -452,8 +526,27 @@ watch(
                 </button>
               </div>
             </div>
+            <div class="rounded-2xl border px-4 py-3" :class="storageCardTone">
+              <p class="text-xs uppercase tracking-[0.24em] text-slate-500">Storage</p>
+              <p class="mt-2 text-base font-semibold text-white">{{ storageSummary }}</p>
+              <p class="text-sm text-slate-400">{{ storageDetail }}</p>
+              <p
+                class="mt-2 text-xs"
+                :class="systemStore.isStorageCritical ? 'text-rose-200' : systemStore.hasStorageWarning ? 'text-amber-200' : 'text-emerald-200'"
+              >
+                {{ storageLevelLabel }}
+              </p>
+            </div>
           </div>
         </header>
+
+        <div
+          v-if="systemStore.storageStatus && systemStore.hasStorageWarning"
+          class="mb-6 rounded-[1.5rem] border px-4 py-4 text-sm"
+          :class="systemStore.isStorageCritical ? 'border-rose-400/30 bg-rose-400/10 text-rose-100' : 'border-amber-300/30 bg-amber-200/10 text-amber-50'"
+        >
+          {{ systemStore.storageStatus.message }} · Please clean disk space before the VPS reaches 100%.
+        </div>
 
         <div class="min-w-0">
           <slot />

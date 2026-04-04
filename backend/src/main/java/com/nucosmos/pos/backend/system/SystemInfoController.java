@@ -14,9 +14,14 @@ import java.util.Map;
 public class SystemInfoController {
 
     private final String appName;
+    private final StorageStatusService storageStatusService;
 
-    public SystemInfoController(@Value("${spring.application.name}") String appName) {
+    public SystemInfoController(
+            @Value("${spring.application.name}") String appName,
+            StorageStatusService storageStatusService
+    ) {
         this.appName = appName;
+        this.storageStatusService = storageStatusService;
     }
 
     @GetMapping("/info")
@@ -27,5 +32,10 @@ public class SystemInfoController {
                 "serverTime", Instant.now(),
                 "javaVersion", System.getProperty("java.version")
         ));
+    }
+
+    @GetMapping("/storage")
+    public ApiResponse<StorageStatusResponse> storage() {
+        return ApiResponse.ok(storageStatusService.getStorageStatus());
     }
 }

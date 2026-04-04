@@ -6,6 +6,7 @@ import '../models/auth_models.dart';
 import '../models/order_models.dart';
 import '../models/product_summary.dart';
 import '../models/quick_receive_models.dart';
+import '../models/system_status.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../services/device_identity_service.dart';
@@ -52,11 +53,13 @@ class SessionController extends ChangeNotifier {
   bool quickReceiveSaving = false;
   bool orderHistoryLoading = false;
   bool orderActionLoading = false;
+  bool storageStatusLoading = false;
 
   String errorMessage = '';
   String checkoutMessage = '';
   String quickReceiveMessage = '';
   String orderHistoryMessage = '';
+  String storageStatusMessage = '';
   DateTime? orderHistoryFrom;
   DateTime? orderHistoryTo;
 
@@ -99,6 +102,7 @@ class SessionController extends ChangeNotifier {
   OrderReceipt? lastCompletedOrder;
   List<PosOrderSummary> orderHistory = const [];
   PosOrderDetail? selectedOrderDetail;
+  StorageStatus? storageStatus;
   List<QuickReceiveItem> receiveMaterials = const [];
   List<QuickReceiveItem> receiveManufacturedItems = const [];
   List<QuickReceiveItem> receivePackagingItems = const [];
@@ -212,6 +216,7 @@ class SessionController extends ChangeNotifier {
       );
       await loadProducts(showLoading: false);
       await loadCurrentStoreReceiptSettings(notify: false);
+      await loadStorageStatus(notify: false);
       if (canUseQuickReceive) {
         await loadQuickReceiveCatalog(showLoading: false);
       }
@@ -262,6 +267,7 @@ class SessionController extends ChangeNotifier {
 
       await loadProducts(showLoading: false);
       await loadCurrentStoreReceiptSettings(notify: false);
+      await loadStorageStatus(notify: false);
       if (canUseQuickReceive) {
         await loadQuickReceiveCatalog(showLoading: false);
       } else {
@@ -321,6 +327,41 @@ class SessionController extends ChangeNotifier {
     } finally {
       catalogLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> loadStorageStatus({bool notify = true}) async {
+    final token = accessToken;
+    if (token == null || token.isEmpty) {
+      storageStatus = null;
+      storageStatusMessage = '';
+      if (notify) {
+        notifyListeners();
+      }
+      return;
+    }
+
+    storageStatusLoading = true;
+    if (notify) {
+      notifyListeners();
+    }
+
+    try {
+      storageStatus = await _runWithApiFallback(
+        () => _authService.fetchStorageStatus(token),
+      );
+      storageStatusMessage = '';
+    } on ApiException catch (error) {
+      storageStatusMessage = error.message;
+    } on Exception {
+      storageStatusMessage = '無法取得伺服器磁碟狀態';
+    } catch (_) {
+      storageStatusMessage = '無法取得伺服器磁碟狀態';
+    } finally {
+      storageStatusLoading = false;
+      if (notify) {
+        notifyListeners();
+      }
     }
   }
 
@@ -956,6 +997,8 @@ class SessionController extends ChangeNotifier {
     session = null;
     products = const [];
     cart = const [];
+    storageStatus = null;
+    storageStatusMessage = '';
     receiveMaterials = const [];
     receiveManufacturedItems = const [];
     receivePackagingItems = const [];

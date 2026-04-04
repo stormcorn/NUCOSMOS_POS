@@ -1,5 +1,6 @@
 import '../models/api_envelope.dart';
 import '../models/auth_models.dart';
+import '../models/system_status.dart';
 import 'api_client.dart';
 
 class AuthService {
@@ -64,6 +65,18 @@ class AuthService {
 
   Future<void> healthCheck() async {
     await _apiClient.get('/api/v1/health');
+  }
+
+  Future<StorageStatus> fetchStorageStatus(String accessToken) async {
+    final json = await _apiClient.get(
+      '/api/v1/system/storage',
+      accessToken: accessToken,
+    );
+
+    return ApiEnvelope<StorageStatus>.fromJson(
+      json,
+      StorageStatus.fromJson,
+    ).data;
   }
 
   Future<StoreReceiptSettings> fetchCurrentStoreReceiptSettings(
