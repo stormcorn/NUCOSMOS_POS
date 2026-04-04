@@ -24,6 +24,7 @@ import ReportsView from "@/views/ReportsView.vue";
 import ReplenishmentView from "@/views/ReplenishmentView.vue";
 import RolePermissionsView from "@/views/RolePermissionsView.vue";
 import ShiftsView from "@/views/ShiftsView.vue";
+import SpaceBookingView from "@/views/SpaceBookingView.vue";
 import SuppliersView from "@/views/SuppliersView.vue";
 import UsersAccessView from "@/views/UsersAccessView.vue";
 
@@ -216,6 +217,16 @@ const router = createRouter({
         title: "Roles",
         requiresAuth: true,
         permissionKeys: [PERMISSIONS.ROLES_VIEW],
+      },
+    },
+    {
+      path: "/settings/space-booking",
+      name: "settings-space-booking",
+      component: SpaceBookingView,
+      meta: {
+        title: "Space Booking",
+        requiresAuth: true,
+        permissionKeys: [PERMISSIONS.SETTINGS_VIEW],
       },
     },
     {
