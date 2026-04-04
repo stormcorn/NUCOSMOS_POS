@@ -190,8 +190,7 @@ public class SpaceBookingService {
         if ("CONFIRMED".equals(status)) {
             booking.approve(requireUser(user.userId()), request.internalNote());
         }
-        spaceBookingRepository.save(booking);
-        return toAdminResponse(booking);
+        return saveAndReloadBooking(user.storeCode(), booking);
     }
 
     public AdminSpaceBookingResponse approveBooking(
@@ -202,7 +201,7 @@ public class SpaceBookingService {
         SpaceBookingEntity booking = requireBooking(user.storeCode(), bookingId);
         ensureBookingCanStayActive(booking.getSpaceResource(), booking.getStartAt(), booking.getEndAt(), booking.getId());
         booking.approve(requireUser(user.userId()), request.internalNote());
-        return toAdminResponse(spaceBookingRepository.save(booking));
+        return saveAndReloadBooking(user.storeCode(), booking);
     }
 
     public AdminSpaceBookingResponse rejectBooking(
@@ -212,7 +211,7 @@ public class SpaceBookingService {
     ) {
         SpaceBookingEntity booking = requireBooking(user.storeCode(), bookingId);
         booking.reject(request.internalNote());
-        return toAdminResponse(spaceBookingRepository.save(booking));
+        return saveAndReloadBooking(user.storeCode(), booking);
     }
 
     public AdminSpaceBookingResponse cancelBooking(
@@ -222,7 +221,12 @@ public class SpaceBookingService {
     ) {
         SpaceBookingEntity booking = requireBooking(user.storeCode(), bookingId);
         booking.cancel(request.internalNote());
-        return toAdminResponse(spaceBookingRepository.save(booking));
+        return saveAndReloadBooking(user.storeCode(), booking);
+    }
+
+    private AdminSpaceBookingResponse saveAndReloadBooking(String storeCode, SpaceBookingEntity booking) {
+        SpaceBookingEntity savedBooking = spaceBookingRepository.save(booking);
+        return toAdminResponse(requireBooking(storeCode, savedBooking.getId()));
     }
 
     public List<AdminSpaceBlockoutResponse> listBlockouts(AuthenticatedUser user, LocalDate from, LocalDate to) {
