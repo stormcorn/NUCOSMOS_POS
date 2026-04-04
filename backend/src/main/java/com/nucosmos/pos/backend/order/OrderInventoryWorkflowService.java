@@ -184,6 +184,18 @@ public class OrderInventoryWorkflowService {
         order.applyRefundedCostOfGoods(totalRefundedCogs);
     }
 
+    @Transactional
+    public void rollbackCommittedOrderInventory(OrderEntity order, UserEntity actor) {
+        if (!order.isInventoryCommitted()) {
+            return;
+        }
+
+        OffsetDateTime occurredAt = OffsetDateTime.now();
+        restoreProductInventory(order, actor, occurredAt);
+        restoreMaterialInventory(order, actor, occurredAt);
+        restorePackagingInventory(order, actor, occurredAt);
+    }
+
     private BigDecimal consumeMaterialsForOrderItem(
             OrderItemEntity orderItem,
             UserEntity actor,
@@ -318,6 +330,143 @@ public class OrderInventoryWorkflowService {
         return new ConsumptionResult(totalCost, averageUnitCost);
     }
 
+    private void restoreProductInventory(OrderEntity order, UserEntity actor, OffsetDateTime occurredAt) {
+        for (OrderItemEntity item : order.getItems()) {
+            if (item.getQuantity() <= 0) {
+                continue;
+            }
+
+            inventoryService.recordSystemMovement(
+                    order.getStore(),
+                    item.getProduct(),
+                    actor,
+                    InventoryMovementType.REFUND_IN,
+                    item.getQuantity(),
+                    null,
+                    "TEST_ORDER_DELETE",
+                    "Inventory restored from deleted test order",
+                    "TEST_ORDER_DELETE",
+                    order.getId()
+            );
+        }
+    }
+
+    private void restoreMaterialInventory(OrderEntity order, UserEntity actor, OffsetDateTime occurredAt) {
+        Map<UUID, MaterialRestoreEntry> restoreByMaterialId = new HashMap<>();
+        for (MaterialMovementEntity movement : materialMovementRepository
+                .findAllByReferenceTypeAndReferenceIdOrderByOccurredAtAscCreatedAtAsc("ORDER", order.getId())) {
+            if (!SupplyMovementType.CONSUME_OUT.name().equals(movement.getMovementType())) {
+                continue;
+            }
+            restoreByMaterialId.merge(
+                    movement.getMaterial().getId(),
+                    new MaterialRestoreEntry(movement.getMaterial(), movement.getQuantity(), movement.getUnitCost()),
+                    (left, right) -> left.add(right.quantity(), right.unitCost())
+            );
+        }
+
+        for (MaterialRestoreEntry entry : restoreByMaterialId.values()) {
+            restoreMaterialLots(entry.material(), entry.quantity());
+            int quantityAfter = entry.material().getQuantityOnHand() + entry.quantity();
+            entry.material().applyMovement(entry.quantity(), null);
+            materialMovementRepository.save(new MaterialMovementEntity(
+                    entry.material(),
+                    actor,
+                    SupplyMovementType.RETURN_IN.name(),
+                    entry.quantity(),
+                    entry.quantity(),
+                    quantityAfter,
+                    entry.unitCost(),
+                    "Restored from deleted test order",
+                    "TEST_ORDER_DELETE",
+                    order.getId(),
+                    occurredAt
+            ));
+        }
+    }
+
+    private void restorePackagingInventory(OrderEntity order, UserEntity actor, OffsetDateTime occurredAt) {
+        Map<UUID, PackagingRestoreEntry> restoreByPackagingId = new HashMap<>();
+        for (PackagingMovementEntity movement : packagingMovementRepository
+                .findAllByReferenceTypeAndReferenceIdOrderByOccurredAtAscCreatedAtAsc("ORDER", order.getId())) {
+            if (!SupplyMovementType.CONSUME_OUT.name().equals(movement.getMovementType())) {
+                continue;
+            }
+            restoreByPackagingId.merge(
+                    movement.getPackagingItem().getId(),
+                    new PackagingRestoreEntry(movement.getPackagingItem(), movement.getQuantity(), movement.getUnitCost()),
+                    (left, right) -> left.add(right.quantity(), right.unitCost())
+            );
+        }
+
+        for (PackagingRestoreEntry entry : restoreByPackagingId.values()) {
+            restorePackagingLots(entry.packagingItem(), entry.quantity());
+            int quantityAfter = entry.packagingItem().getQuantityOnHand() + entry.quantity();
+            entry.packagingItem().applyMovement(entry.quantity(), null);
+            packagingMovementRepository.save(new PackagingMovementEntity(
+                    entry.packagingItem(),
+                    actor,
+                    SupplyMovementType.RETURN_IN.name(),
+                    entry.quantity(),
+                    entry.quantity(),
+                    quantityAfter,
+                    entry.unitCost(),
+                    "Restored from deleted test order",
+                    "TEST_ORDER_DELETE",
+                    order.getId(),
+                    occurredAt
+            ));
+        }
+    }
+
+    private void restoreMaterialLots(MaterialItemEntity material, int quantity) {
+        int remaining = quantity;
+        List<MaterialStockLotEntity> lots = materialStockLotRepository
+                .findAllByMaterial_IdOrderByExpiryDateAscReceivedAtAscCreatedAtAsc(material.getId())
+                .stream()
+                .sorted(Comparator
+                        .comparing(MaterialStockLotEntity::getReceivedAt, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(MaterialStockLotEntity::getCreatedAt)
+                        .reversed())
+                .toList();
+
+        for (MaterialStockLotEntity lot : lots) {
+            if (remaining <= 0) {
+                break;
+            }
+            int restorable = Math.min(remaining, lot.getReceivedQuantity() - lot.getRemainingQuantity());
+            if (restorable <= 0) {
+                continue;
+            }
+            lot.restore(restorable);
+            remaining -= restorable;
+        }
+    }
+
+    private void restorePackagingLots(PackagingItemEntity packagingItem, int quantity) {
+        int remaining = quantity;
+        List<PackagingStockLotEntity> lots = packagingStockLotRepository
+                .findAllByPackagingItem_IdOrderByExpiryDateAscReceivedAtAscCreatedAtAsc(packagingItem.getId())
+                .stream()
+                .sorted(Comparator
+                        .comparing(PackagingStockLotEntity::getReceivedAt, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(PackagingStockLotEntity::getCreatedAt)
+                        .reversed())
+                .toList();
+
+        for (PackagingStockLotEntity lot : lots) {
+            if (remaining <= 0) {
+                break;
+            }
+            int restorable = Math.min(remaining, lot.getReceivedQuantity() - lot.getRemainingQuantity());
+            if (restorable <= 0) {
+                continue;
+            }
+            lot.restore(restorable);
+            remaining -= restorable;
+        }
+    }
+
     private ConsumptionResult consumePackagingLots(PackagingItemEntity packagingItem, int quantity) {
         List<PackagingStockLotEntity> lots = packagingStockLotRepository
                 .findAllByPackagingItem_IdAndRemainingQuantityGreaterThanOrderByExpiryDateAscReceivedAtAscCreatedAtAsc(packagingItem.getId(), 0)
@@ -365,5 +514,33 @@ public class OrderInventoryWorkflowService {
             BigDecimal totalCost,
             BigDecimal averageUnitCost
     ) {
+    }
+
+    private record MaterialRestoreEntry(
+            MaterialItemEntity material,
+            int quantity,
+            BigDecimal unitCost
+    ) {
+        private MaterialRestoreEntry add(int additionalQuantity, BigDecimal fallbackUnitCost) {
+            return new MaterialRestoreEntry(
+                    material,
+                    quantity + additionalQuantity,
+                    unitCost != null ? unitCost : fallbackUnitCost
+            );
+        }
+    }
+
+    private record PackagingRestoreEntry(
+            PackagingItemEntity packagingItem,
+            int quantity,
+            BigDecimal unitCost
+    ) {
+        private PackagingRestoreEntry add(int additionalQuantity, BigDecimal fallbackUnitCost) {
+            return new PackagingRestoreEntry(
+                    packagingItem,
+                    quantity + additionalQuantity,
+                    unitCost != null ? unitCost : fallbackUnitCost
+            );
+        }
     }
 }

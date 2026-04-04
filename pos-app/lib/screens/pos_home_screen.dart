@@ -14,7 +14,7 @@ import '../state/session_controller.dart';
 import '../widgets/adaptive_scroll_body.dart';
 import '../widgets/product_grid.dart';
 
-enum _PosWorkspace { sales, quickReceive }
+enum _PosWorkspace { sales, quickReceive, orderHistory }
 
 class PosHomeScreen extends StatefulWidget {
   const PosHomeScreen({
@@ -74,6 +74,14 @@ class _PosHomeScreenState extends State<PosHomeScreen>
           !widget.controller.quickReceiveLoading &&
           !widget.controller.quickReceiveSaving) {
         await widget.controller.loadQuickReceiveCatalog(showLoading: false);
+      }
+      return;
+    }
+
+    if (_workspace == _PosWorkspace.orderHistory) {
+      if (!widget.controller.orderHistoryLoading &&
+          !widget.controller.orderActionLoading) {
+        await widget.controller.loadOrderHistory(notify: false);
       }
       return;
     }
@@ -256,28 +264,15 @@ class _PosHomeScreenState extends State<PosHomeScreen>
     );
   }
 
-  Future<void> _openOrderHistorySheet() async {
+  Future<void> _openOrderHistoryWorkspace() async {
     await widget.controller.loadOrderHistory();
     if (!mounted) {
       return;
     }
 
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF101827),
-      builder: (context) {
-        return SafeArea(
-          child: FractionallySizedBox(
-            heightFactor: 0.94,
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: _OrderHistorySheet(controller: widget.controller),
-            ),
-          ),
-        );
-      },
-    );
+    setState(() {
+      _workspace = _PosWorkspace.orderHistory;
+    });
   }
 
   Future<List<PosCartSelection>?> _openCustomizationSheet(
@@ -328,10 +323,12 @@ class _PosHomeScreenState extends State<PosHomeScreen>
                     _NavigationRail(
                       salesActive: _workspace == _PosWorkspace.sales,
                       receiveActive: _workspace == _PosWorkspace.quickReceive,
+                      orderHistoryActive:
+                          _workspace == _PosWorkspace.orderHistory,
                       showQuickReceive: controller.canUseQuickReceive,
                       onOpenSales: _openSalesWorkspace,
                       onOpenQuickReceive: _openQuickReceiveWorkspace,
-                      onOpenOrderHistory: _openOrderHistorySheet,
+                      onOpenOrderHistory: _openOrderHistoryWorkspace,
                       onOpenPrinter: _openPrinterSheet,
                       onLogout: controller.logout,
                       onRefresh: () => controller.loadProducts(),
@@ -365,6 +362,15 @@ class _PosHomeScreenState extends State<PosHomeScreen>
                                 onCreateItem: _createQuickReceiveItem,
                                 onSubmit: _submitQuickReceive,
                               )
+                            : _workspace == _PosWorkspace.orderHistory
+                                ? Padding(
+                                    padding: EdgeInsets.all(
+                                      layout.contentPadding,
+                                    ),
+                                    child: _OrderHistorySheet(
+                                      controller: controller,
+                                    ),
+                                  )
                             : layout.wideLayout
                                 ? Row(
                                     children: [
@@ -423,7 +429,7 @@ class _PosHomeScreenState extends State<PosHomeScreen>
                                           onCheckout: _checkoutCash,
                                           onOpenDiscount: _openDiscountSheet,
                                           onOpenOrderHistory:
-                                              _openOrderHistorySheet,
+                                              _openOrderHistoryWorkspace,
                                           compact: !layout.desktopLayout,
                                         ),
                                       ),
@@ -471,7 +477,7 @@ class _PosHomeScreenState extends State<PosHomeScreen>
                                               onOpenDiscount:
                                                   _openDiscountSheet,
                                               onOpenOrderHistory:
-                                                  _openOrderHistorySheet,
+                                                  _openOrderHistoryWorkspace,
                                               compact: true,
                                             ),
                                           ],
@@ -511,6 +517,7 @@ class _NavigationRail extends StatelessWidget {
   const _NavigationRail({
     required this.salesActive,
     required this.receiveActive,
+    required this.orderHistoryActive,
     required this.showQuickReceive,
     required this.onOpenSales,
     required this.onOpenQuickReceive,
@@ -522,6 +529,7 @@ class _NavigationRail extends StatelessWidget {
 
   final bool salesActive;
   final bool receiveActive;
+  final bool orderHistoryActive;
   final bool showQuickReceive;
   final VoidCallback onOpenSales;
   final VoidCallback onOpenQuickReceive;
@@ -570,6 +578,7 @@ class _NavigationRail extends StatelessWidget {
             ),
           _RailButton(
             icon: Icons.receipt_long_rounded,
+            active: orderHistoryActive,
             onTap: onOpenOrderHistory,
           ),
           _RailButton(
@@ -1030,18 +1039,22 @@ class _QuickReceiveListPane extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: QuickReceiveItemType.values
-                  .map(
-                    (type) => _TypeToggleChip(
-                      label: type.label,
-                      active: receiveType == type,
-                      onTap: () => onTypeChanged(type),
-                    ),
-                  )
-                  .toList(growable: false),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: QuickReceiveItemType.values
+                    .map(
+                      (type) => Padding(
+                        padding: const EdgeInsets.only(right: 10),
+                        child: _TypeToggleChip(
+                          label: type.label,
+                          active: receiveType == type,
+                          onTap: () => onTypeChanged(type),
+                        ),
+                      ),
+                    )
+                    .toList(growable: false),
+              ),
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -2204,6 +2217,11 @@ class _OrderHistoryList extends StatelessWidget {
                   if (order.testOrder) ...[
                     const SizedBox(height: 8),
                     const _OrderTestBadge(),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Test order · excluded from sales and inventory totals',
+                      style: TextStyle(color: Color(0xFF9AB0C7), fontSize: 12),
+                    ),
                   ],
                 ],
               ),
@@ -2340,6 +2358,15 @@ class _OrderHistoryDetail extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
+          if (detail!.testOrder) ...[
+            const _BannerMessage(
+              color: Color(0x3314F1FF),
+              borderColor: Color(0xFF2F7C88),
+              message:
+                  'This order is marked as a test order and is excluded from sales and inventory totals.',
+            ),
+            const SizedBox(height: 12),
+          ],
           if (!canCancel)
             _BannerMessage(
               color: const Color(0x332B3548),
@@ -2373,6 +2400,29 @@ class _OrderHistoryDetail extends StatelessWidget {
             const Text(
               '退款會回補可售庫存，並保留訂單紀錄。',
               style: TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+          ],
+          if (detail!.canDeleteTestOrder) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 52,
+              child: OutlinedButton.icon(
+                onPressed: controller.orderActionLoading
+                    ? null
+                    : () => _confirmDeleteTestOrder(context, detail!),
+                icon: controller.orderActionLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.delete_forever_rounded),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFFDA4AF),
+                  side: const BorderSide(color: Color(0xFFB74B57)),
+                ),
+                label: const Text('Delete Test Order'),
+              ),
             ),
           ],
         ],
@@ -2412,6 +2462,41 @@ class _OrderHistoryDetail extends StatelessWidget {
       order: detail,
       reason: 'POS order cancellation',
     );
+  }
+
+  Future<void> _confirmDeleteTestOrder(
+    BuildContext context,
+    PosOrderDetail detail,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF111827),
+        title: const Text('Delete test order'),
+        content: Text(
+          'Delete ${detail.orderNumber} and restore deducted stock? This action is only available for test orders.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Keep'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFB74B57),
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    await controller.deleteTestOrderFromHistory(order: detail);
   }
 }
 

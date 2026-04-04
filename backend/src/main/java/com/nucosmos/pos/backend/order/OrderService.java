@@ -422,6 +422,47 @@ public class OrderService {
         return toResponse(getOrderForStore(orderId, user.storeCode()));
     }
 
+    @Transactional
+    public DeleteTestOrderResponse deleteTestOrder(UUID orderId, AuthenticatedUser user) {
+        OrderEntity order = getOrderForStore(orderId, user.storeCode());
+        if (!order.isTestOrder()) {
+            throw new BadRequestException("Only test orders can be deleted");
+        }
+        if (!order.getRefunds().isEmpty()) {
+            throw new BadRequestException("Refunded test orders cannot be deleted from POS");
+        }
+
+        UserEntity actor = userRepository.findById(user.userId())
+                .orElseThrow(() -> new BadRequestException("Authenticated user is not available"));
+
+        for (PaymentEntity payment : order.getPayments()) {
+            if (!PaymentMethod.CARD.name().equals(payment.getPaymentMethod())) {
+                continue;
+            }
+
+            if ("AUTHORIZED".equals(payment.getStatus()) && payment.getCardTerminalTxnId() != null) {
+                cardTerminalService.voidTransaction(new CardVoidCommand(
+                        order,
+                        user,
+                        payment.getCardTerminalTxnId(),
+                        "Delete test order"
+                ));
+                payment.voidCardAuthorization(OffsetDateTime.now());
+                continue;
+            }
+
+            if (!"VOIDED".equals(payment.getStatus()) && !"REFUNDED".equals(payment.getStatus())) {
+                throw new BadRequestException("Captured card test orders must be handled before deletion");
+            }
+        }
+
+        boolean inventoryRestored = order.isInventoryCommitted();
+        orderInventoryWorkflowService.rollbackCommittedOrderInventory(order, actor);
+        orderRepository.delete(order);
+
+        return new DeleteTestOrderResponse(orderId, order.getOrderNumber(), inventoryRestored);
+    }
+
     @Transactional(readOnly = true)
     public PagedResponse<OrderSummaryResponse> listOrders(
             AuthenticatedUser user,

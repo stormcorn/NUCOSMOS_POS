@@ -115,4 +115,13 @@ public class OrderController {
         AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
         return ApiResponse.ok(orderService.cancelOrder(orderId, user, request));
     }
+
+    @PostMapping("/{orderId}/delete-test")
+    public ApiResponse<DeleteTestOrderResponse> deleteTestOrder(
+            @PathVariable UUID orderId,
+            Authentication authentication
+    ) {
+        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+        return ApiResponse.ok(orderService.deleteTestOrder(orderId, user));
+    }
 }

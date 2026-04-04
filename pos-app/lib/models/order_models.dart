@@ -353,6 +353,8 @@ class PosOrderDetail {
           payment.paymentMethod == 'CASH' &&
           (payment.status == 'CAPTURED' || payment.status == 'REFUNDED'));
 
+  bool get canDeleteTestOrder => testOrder;
+
   bool get isComplimentary =>
       payments.any((payment) => payment.paymentMethod == 'OTHER');
 

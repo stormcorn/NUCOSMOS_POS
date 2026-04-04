@@ -18,4 +18,10 @@ public interface PackagingMovementRepository extends JpaRepository<PackagingMove
             java.time.OffsetDateTime from,
             java.time.OffsetDateTime to
     );
+
+    @EntityGraph(attributePaths = {"packagingItem"})
+    List<PackagingMovementEntity> findAllByReferenceTypeAndReferenceIdOrderByOccurredAtAscCreatedAtAsc(
+            String referenceType,
+            UUID referenceId
+    );
 }

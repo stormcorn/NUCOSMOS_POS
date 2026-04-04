@@ -652,6 +652,46 @@ class SessionController extends ChangeNotifier {
     }
   }
 
+  Future<bool> deleteTestOrderFromHistory({
+    required PosOrderDetail order,
+  }) async {
+    final token = accessToken;
+    if (token == null || token.isEmpty) {
+      orderHistoryMessage = '請先重新登入後再刪除測試訂單';
+      notifyListeners();
+      return false;
+    }
+
+    orderActionLoading = true;
+    orderHistoryMessage = '';
+    notifyListeners();
+
+    try {
+      await _runWithApiFallback(
+        () => _orderService.deleteTestOrder(
+          accessToken: token,
+          orderId: order.id,
+        ),
+      );
+      orderHistoryMessage = '測試訂單 ${order.orderNumber} 已刪除';
+      selectedOrderDetail = null;
+      await loadOrderHistory(notify: false);
+      return true;
+    } on ApiException catch (error) {
+      orderHistoryMessage = error.message;
+      return false;
+    } on Exception {
+      orderHistoryMessage = '刪除測試訂單失敗';
+      return false;
+    } catch (_) {
+      orderHistoryMessage = '刪除測試訂單失敗';
+      return false;
+    } finally {
+      orderActionLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<OrderReceipt?> checkout() async {
     final complimentary = _discount?.type == CheckoutDiscountType.complimentary;
     return _checkoutWithPayment(

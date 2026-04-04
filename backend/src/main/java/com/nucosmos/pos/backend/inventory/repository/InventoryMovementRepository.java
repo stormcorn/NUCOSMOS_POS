@@ -24,4 +24,10 @@ public interface InventoryMovementRepository extends JpaRepository<InventoryMove
             java.time.OffsetDateTime from,
             java.time.OffsetDateTime to
     );
+
+    @EntityGraph(attributePaths = {"product", "product.category"})
+    List<InventoryMovementEntity> findAllByReferenceTypeAndReferenceIdOrderByOccurredAtAscCreatedAtAsc(
+            String referenceType,
+            UUID referenceId
+    );
 }

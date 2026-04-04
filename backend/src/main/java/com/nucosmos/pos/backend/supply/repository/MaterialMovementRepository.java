@@ -18,4 +18,10 @@ public interface MaterialMovementRepository extends JpaRepository<MaterialMoveme
             java.time.OffsetDateTime from,
             java.time.OffsetDateTime to
     );
+
+    @EntityGraph(attributePaths = {"material"})
+    List<MaterialMovementEntity> findAllByReferenceTypeAndReferenceIdOrderByOccurredAtAscCreatedAtAsc(
+            String referenceType,
+            UUID referenceId
+    );
 }

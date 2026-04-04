@@ -14,4 +14,6 @@ public interface MaterialStockLotRepository extends JpaRepository<MaterialStockL
             UUID materialId,
             int remainingQuantity
     );
+
+    List<MaterialStockLotEntity> findAllByMaterial_IdOrderByExpiryDateAscReceivedAtAscCreatedAtAsc(UUID materialId);
 }

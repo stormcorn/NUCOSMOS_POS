@@ -149,4 +149,15 @@ class OrderService {
 
     return ApiEnvelope<OrderReceipt>.fromJson(json, OrderReceipt.fromJson).data;
   }
+
+  Future<void> deleteTestOrder({
+    required String accessToken,
+    required String orderId,
+  }) async {
+    await _apiClient.post(
+      '/api/v1/orders/$orderId/delete-test',
+      accessToken: accessToken,
+      body: const <String, dynamic>{},
+    );
+  }
 }

@@ -14,4 +14,6 @@ public interface PackagingStockLotRepository extends JpaRepository<PackagingStoc
             UUID packagingItemId,
             int remainingQuantity
     );
+
+    List<PackagingStockLotEntity> findAllByPackagingItem_IdOrderByExpiryDateAscReceivedAtAscCreatedAtAsc(UUID packagingItemId);
 }
