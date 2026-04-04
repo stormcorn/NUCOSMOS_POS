@@ -99,7 +99,7 @@ async function loadSelectedBooking(bookingId: string) {
   try {
     selectedBooking.value = await fetchAdminBooking(bookingId);
   } catch (error) {
-    setError(error, "Failed to load booking detail.");
+    setError(error, "載入預約詳情失敗。");
   }
 }
 
@@ -130,7 +130,7 @@ async function loadWorkspace() {
       }
     }
   } catch (error) {
-    setError(error, "Failed to load space booking workspace.");
+    setError(error, "載入空間租借工作台失敗。");
   } finally {
     loading.value = false;
   }
@@ -145,7 +145,7 @@ async function bootstrap() {
     selectedSpaceId.value = nextSpaces[0]?.id ?? "";
     await loadWorkspace();
   } catch (error) {
-    setError(error, "Failed to load spaces.");
+    setError(error, "載入空間資料失敗。");
   } finally {
     loading.value = false;
   }
@@ -172,11 +172,11 @@ async function submitManualBooking() {
       source: "MANUAL",
       status: "CONFIRMED",
     });
-    successMessage.value = `Manual booking ${booking.bookingNumber} created.`;
+    successMessage.value = `已建立人工預約 ${booking.bookingNumber}。`;
     selectedBooking.value = booking;
     await loadWorkspace();
   } catch (error) {
-    setError(error, "Failed to create booking.");
+    setError(error, "建立預約失敗。");
   } finally {
     saving.value = false;
   }
@@ -196,10 +196,10 @@ async function submitBlockout() {
       startAt: asOffsetDateTime(blockoutForm.startAt),
       endAt: asOffsetDateTime(blockoutForm.endAt),
     });
-    successMessage.value = "Blockout created.";
+    successMessage.value = "已建立封鎖時段。";
     await loadWorkspace();
   } catch (error) {
-    setError(error, "Failed to create blockout.");
+    setError(error, "建立封鎖時段失敗。");
   } finally {
     saving.value = false;
   }
@@ -209,7 +209,7 @@ async function runDecision(action: "approve" | "reject" | "cancel") {
   if (!selectedBooking.value) {
     return;
   }
-  const note = window.prompt("Internal note", selectedBooking.value.internalNote ?? "") ?? "";
+  const note = window.prompt("內部備註", selectedBooking.value.internalNote ?? "") ?? "";
   saving.value = true;
   clearMessages();
   try {
@@ -219,27 +219,31 @@ async function runDecision(action: "approve" | "reject" | "cancel") {
       : action === "reject"
         ? await rejectAdminBooking(bookingId, note)
         : await cancelAdminBooking(bookingId, note);
-    successMessage.value = `Booking ${action}d successfully.`;
+    successMessage.value = action === "approve"
+      ? "預約已審核通過。"
+      : action === "reject"
+        ? "預約已拒絕。"
+        : "預約已取消。";
     await loadWorkspace();
   } catch (error) {
-    setError(error, `Failed to ${action} booking.`);
+    setError(error, action === "approve" ? "審核通過失敗。" : action === "reject" ? "拒絕預約失敗。" : "取消預約失敗。");
   } finally {
     saving.value = false;
   }
 }
 
 async function removeBlockout(blockoutId: string) {
-  if (!window.confirm("Delete this blockout?")) {
+  if (!window.confirm("確定要刪除此封鎖時段嗎？")) {
     return;
   }
   saving.value = true;
   clearMessages();
   try {
     await deleteAdminBlockout(blockoutId);
-    successMessage.value = "Blockout deleted.";
+    successMessage.value = "封鎖時段已刪除。";
     await loadWorkspace();
   } catch (error) {
-    setError(error, "Failed to delete blockout.");
+    setError(error, "刪除封鎖時段失敗。");
   } finally {
     saving.value = false;
   }
@@ -255,9 +259,9 @@ onMounted(() => {
     <article class="rounded-[2rem] border border-white/10 bg-slate-950/55 p-6 shadow-soft shadow-black/20">
       <div class="flex flex-col gap-4 border-b border-white/8 pb-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p class="text-xs uppercase tracking-[0.32em] text-brand-aqua/70">Venue Booking</p>
-          <h2 class="mt-2 text-3xl font-semibold text-white">2F Space Booking</h2>
-          <p class="mt-2 text-sm text-slate-400">Review requests, manage unavailable periods, and monitor the public availability calendar.</p>
+          <p class="text-xs uppercase tracking-[0.32em] text-brand-aqua/70">活動空間租借</p>
+          <h2 class="mt-2 text-3xl font-semibold text-white">2F 空間租借管理</h2>
+          <p class="mt-2 text-sm text-slate-400">在這裡審核預約申請、管理不可預約時段，並查看對外公開的可租借時段。</p>
         </div>
         <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <select v-model="selectedSpaceId" class="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none" @change="loadWorkspace">
@@ -266,13 +270,13 @@ onMounted(() => {
           <input v-model="filters.from" type="date" class="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none" />
           <input v-model="filters.to" type="date" class="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none" />
           <select v-model="filters.status" class="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none">
-            <option value="">All statuses</option>
-            <option value="PENDING">Pending</option>
-            <option value="CONFIRMED">Confirmed</option>
-            <option value="REJECTED">Rejected</option>
-            <option value="CANCELLED">Cancelled</option>
+            <option value="">全部狀態</option>
+            <option value="PENDING">待審核</option>
+            <option value="CONFIRMED">已確認</option>
+            <option value="REJECTED">已拒絕</option>
+            <option value="CANCELLED">已取消</option>
           </select>
-          <button class="rounded-2xl border border-brand-aqua/30 bg-brand-aqua/10 px-5 py-3 text-sm font-semibold text-brand-aqua transition hover:border-brand-aqua/50" @click="loadWorkspace">Refresh</button>
+          <button class="rounded-2xl border border-brand-aqua/30 bg-brand-aqua/10 px-5 py-3 text-sm font-semibold text-brand-aqua transition hover:border-brand-aqua/50" @click="loadWorkspace">重新整理</button>
         </div>
       </div>
 
@@ -284,11 +288,11 @@ onMounted(() => {
       <article class="rounded-[2rem] border border-white/10 bg-slate-950/55 p-6 shadow-soft shadow-black/20">
         <div class="flex items-center justify-between gap-3">
           <div>
-            <h3 class="text-xl font-semibold text-white">Availability</h3>
-            <p class="mt-1 text-sm text-slate-400">{{ selectedSpace?.name || "No space selected" }}</p>
+            <h3 class="text-xl font-semibold text-white">可預約時段</h3>
+            <p class="mt-1 text-sm text-slate-400">{{ selectedSpace?.name || "尚未選擇空間" }}</p>
           </div>
           <span v-if="selectedSpace" class="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-400">
-            {{ formatCurrency(selectedSpace.hourlyRate, selectedSpace.currencyCode) }}/hr
+            {{ formatCurrency(selectedSpace.hourlyRate, selectedSpace.currencyCode) }}/小時
           </span>
         </div>
 
@@ -296,7 +300,7 @@ onMounted(() => {
           <div v-for="day in availability.days" :key="day.date" class="rounded-[1.5rem] border border-white/8 bg-white/4 p-4">
             <div class="flex items-center justify-between gap-3">
               <div class="text-sm font-semibold text-white">{{ day.date }}</div>
-              <div class="text-xs text-slate-500">{{ day.slots.length }} slots</div>
+              <div class="text-xs text-slate-500">{{ day.slots.length }} 個時段</div>
             </div>
             <div class="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
               <div
@@ -312,12 +316,12 @@ onMounted(() => {
           </div>
         </div>
         <div v-else class="mt-6 rounded-[1.5rem] border border-dashed border-white/10 px-4 py-8 text-sm text-slate-400">
-          {{ loading ? "Loading availability..." : "Select a space to view availability." }}
+          {{ loading ? "載入時段中..." : "請先選擇空間以查看可預約時段。" }}
         </div>
       </article>
 
       <article class="rounded-[2rem] border border-white/10 bg-slate-950/55 p-6 shadow-soft shadow-black/20">
-        <h3 class="text-xl font-semibold text-white">Bookings</h3>
+        <h3 class="text-xl font-semibold text-white">預約申請</h3>
         <div class="mt-6 space-y-3">
           <button
             v-for="booking in bookings"
@@ -339,7 +343,7 @@ onMounted(() => {
         </div>
 
         <div class="mt-8">
-          <h4 class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Blockouts</h4>
+          <h4 class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">封鎖時段</h4>
           <div class="mt-4 space-y-3">
             <div v-for="blockout in blockouts" :key="blockout.id" class="rounded-[1.5rem] border border-white/8 bg-white/4 px-4 py-4">
               <div class="flex items-start justify-between gap-3">
@@ -347,7 +351,7 @@ onMounted(() => {
                   <div class="font-semibold text-white">{{ blockout.title }}</div>
                   <div class="mt-1 text-xs text-slate-400">{{ formatDateTime(blockout.startAt) }} → {{ formatDateTime(blockout.endAt) }}</div>
                 </div>
-                <button class="rounded-xl border border-brand-coral/20 px-3 py-2 text-xs text-brand-coral" @click="removeBlockout(blockout.id)">Delete</button>
+                <button class="rounded-xl border border-brand-coral/20 px-3 py-2 text-xs text-brand-coral" @click="removeBlockout(blockout.id)">刪除</button>
               </div>
               <p v-if="blockout.reason" class="mt-2 text-sm text-slate-300">{{ blockout.reason }}</p>
             </div>
@@ -357,57 +361,57 @@ onMounted(() => {
 
       <aside class="space-y-6">
         <article class="rounded-[2rem] border border-white/10 bg-slate-950/55 p-6 shadow-soft shadow-black/20">
-          <h3 class="text-xl font-semibold text-white">Booking Detail</h3>
+          <h3 class="text-xl font-semibold text-white">預約詳情</h3>
           <div v-if="selectedBooking" class="mt-6 space-y-4">
             <div class="rounded-[1.5rem] border border-white/8 bg-white/4 p-4 text-sm text-slate-300">
               <div class="font-semibold text-white">{{ selectedBooking.bookingNumber }}</div>
-              <div class="mt-2">Customer: {{ selectedBooking.customerName }} / {{ selectedBooking.customerPhone }}</div>
-              <div>Email: {{ selectedBooking.customerEmail || "-" }}</div>
-              <div>Purpose: {{ selectedBooking.purpose || "-" }}</div>
-              <div>Time: {{ formatDateTime(selectedBooking.startAt) }} → {{ formatDateTime(selectedBooking.endAt) }}</div>
-              <div>Total: {{ formatCurrency(selectedBooking.subtotalAmount) }}</div>
-              <div>Status: {{ selectedBooking.status }}</div>
-              <div>Internal note: {{ selectedBooking.internalNote || "-" }}</div>
+              <div class="mt-2">聯絡人：{{ selectedBooking.customerName }} / {{ selectedBooking.customerPhone }}</div>
+              <div>Email：{{ selectedBooking.customerEmail || "-" }}</div>
+              <div>用途：{{ selectedBooking.purpose || "-" }}</div>
+              <div>時段：{{ formatDateTime(selectedBooking.startAt) }} → {{ formatDateTime(selectedBooking.endAt) }}</div>
+              <div>金額：{{ formatCurrency(selectedBooking.subtotalAmount) }}</div>
+              <div>狀態：{{ selectedBooking.status }}</div>
+              <div>內部備註：{{ selectedBooking.internalNote || "-" }}</div>
             </div>
             <div class="grid gap-3 sm:grid-cols-3">
-              <button class="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-200" :disabled="saving" @click="runDecision('approve')">Approve</button>
-              <button class="rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm font-semibold text-amber-100" :disabled="saving" @click="runDecision('reject')">Reject</button>
-              <button class="rounded-2xl border border-brand-coral/20 bg-brand-coral/10 px-4 py-3 text-sm font-semibold text-brand-coral" :disabled="saving" @click="runDecision('cancel')">Cancel</button>
+              <button class="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-200" :disabled="saving" @click="runDecision('approve')">審核通過</button>
+              <button class="rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm font-semibold text-amber-100" :disabled="saving" @click="runDecision('reject')">拒絕預約</button>
+              <button class="rounded-2xl border border-brand-coral/20 bg-brand-coral/10 px-4 py-3 text-sm font-semibold text-brand-coral" :disabled="saving" @click="runDecision('cancel')">取消預約</button>
             </div>
           </div>
           <div v-else class="mt-6 rounded-[1.5rem] border border-dashed border-white/10 px-4 py-8 text-sm text-slate-400">
-            Select a booking from the list to review it.
+            請先從左側清單選一筆預約，再進行審核。
           </div>
         </article>
 
         <article class="rounded-[2rem] border border-white/10 bg-slate-950/55 p-6 shadow-soft shadow-black/20">
-          <h3 class="text-xl font-semibold text-white">Manual Booking</h3>
+          <h3 class="text-xl font-semibold text-white">人工建立預約</h3>
           <div class="mt-6 space-y-4">
-            <input v-model="manualBookingForm.customerName" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="Customer name" />
-            <input v-model="manualBookingForm.customerPhone" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="Phone number" />
-            <input v-model="manualBookingForm.customerEmail" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="Email (optional)" />
-            <input v-model="manualBookingForm.purpose" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="Purpose" />
-            <input v-model="manualBookingForm.attendeeCount" type="number" min="1" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="Attendee count" />
+            <input v-model="manualBookingForm.customerName" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="聯絡人姓名" />
+            <input v-model="manualBookingForm.customerPhone" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="手機號碼" />
+            <input v-model="manualBookingForm.customerEmail" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="Email（選填）" />
+            <input v-model="manualBookingForm.purpose" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="活動用途" />
+            <input v-model="manualBookingForm.attendeeCount" type="number" min="1" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="預計人數" />
             <div class="grid gap-3 sm:grid-cols-2">
               <input v-model="manualBookingForm.startAt" type="datetime-local" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" />
               <input v-model="manualBookingForm.endAt" type="datetime-local" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" />
             </div>
-            <textarea v-model="manualBookingForm.note" rows="2" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="Customer note" />
-            <textarea v-model="manualBookingForm.internalNote" rows="2" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="Internal note" />
-            <button class="w-full rounded-2xl border border-brand-aqua/30 bg-brand-aqua/10 px-4 py-3 text-sm font-semibold text-brand-aqua" :disabled="saving" @click="submitManualBooking">Create confirmed booking</button>
+            <textarea v-model="manualBookingForm.note" rows="2" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="客戶備註" />
+            <textarea v-model="manualBookingForm.internalNote" rows="2" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="內部備註" />
+            <button class="w-full rounded-2xl border border-brand-aqua/30 bg-brand-aqua/10 px-4 py-3 text-sm font-semibold text-brand-aqua" :disabled="saving" @click="submitManualBooking">建立已確認預約</button>
           </div>
         </article>
 
         <article class="rounded-[2rem] border border-white/10 bg-slate-950/55 p-6 shadow-soft shadow-black/20">
-          <h3 class="text-xl font-semibold text-white">Blockout</h3>
+          <h3 class="text-xl font-semibold text-white">建立封鎖時段</h3>
           <div class="mt-6 space-y-4">
-            <input v-model="blockoutForm.title" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="Blockout title" />
-            <textarea v-model="blockoutForm.reason" rows="2" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="Reason" />
+            <input v-model="blockoutForm.title" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="封鎖標題" />
+            <textarea v-model="blockoutForm.reason" rows="2" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="原因說明" />
             <div class="grid gap-3 sm:grid-cols-2">
               <input v-model="blockoutForm.startAt" type="datetime-local" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" />
               <input v-model="blockoutForm.endAt" type="datetime-local" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" />
             </div>
-            <button class="w-full rounded-2xl border border-white/10 px-4 py-3 text-sm font-semibold text-slate-100" :disabled="saving" @click="submitBlockout">Create blockout</button>
+            <button class="w-full rounded-2xl border border-white/10 px-4 py-3 text-sm font-semibold text-slate-100" :disabled="saving" @click="submitBlockout">建立封鎖時段</button>
           </div>
         </article>
       </aside>
