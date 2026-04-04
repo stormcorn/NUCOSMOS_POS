@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NUCOSMOS 2F Space Booking</title>
+    <title>NUCOSMOS 2F 空間租借 | Space Booking</title>
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap");
       * { box-sizing: border-box; }
@@ -144,62 +144,62 @@
   <body>
     <main class="shell">
       <div class="top-nav">
-        <a class="top-link" href="/">返回 NUCOSMOS 首頁</a>
-        <a class="top-link" href="/redeem/">會員登入 / 收據兌獎</a>
+        <a class="top-link" href="/">返回 NUCOSMOS 首頁 / Back to NUCOSMOS</a>
+        <a class="top-link" href="/redeem/">會員登入 / 收據兌獎 / Member Login</a>
       </div>
 
       <section class="hero">
         <p class="eyebrow">2F Event Space</p>
-        <h1>NUCOSMOS 2F 空間租借</h1>
-        <p id="space-description" class="lead">Loading space details...</p>
+        <h1>NUCOSMOS 2F 空間租借 / Space Booking</h1>
+        <p id="space-description" class="lead">載入空間資訊中... / Loading space details...</p>
         <div class="stats">
-          <div class="stat"><small>Price</small><strong id="space-rate">--</strong></div>
-          <div class="stat"><small>Capacity</small><strong id="space-capacity">--</strong></div>
-          <div class="stat"><small>Booking Rule</small><strong id="space-rule">--</strong></div>
-          <div class="stat"><small>Location</small><strong id="space-location">--</strong></div>
+          <div class="stat"><small>價格 Price</small><strong id="space-rate">--</strong></div>
+          <div class="stat"><small>容納 Capacity</small><strong id="space-capacity">--</strong></div>
+          <div class="stat"><small>預約規則 Booking Rule</small><strong id="space-rule">--</strong></div>
+          <div class="stat"><small>地點 Location</small><strong id="space-location">--</strong></div>
         </div>
       </section>
 
       <div class="grid">
         <section class="panel">
-          <p class="eyebrow">Availability</p>
-          <h2>公開可預約時段</h2>
-          <p class="sub">先看可用時段，再送出預約申請。第一版採審核制，送出後會由 NUCOSMOS 確認。</p>
+          <p class="eyebrow">Availability 公開時段</p>
+          <h2>公開可預約時段 / Availability</h2>
+          <p class="sub">先看可用時段，再送出預約申請。第一版採審核制，送出後會由 NUCOSMOS 確認。<br />Check available slots first, then send a booking request. Phase 1 uses a manual review flow.</p>
 
           <div class="toolbar" style="margin-top:18px;">
             <input id="from-date" type="date" />
             <input id="to-date" type="date" />
           </div>
-          <button id="refresh-availability" style="margin-top:12px;">重新查詢時段</button>
+          <button id="refresh-availability" style="margin-top:12px;">重新查詢時段 / Refresh Availability</button>
 
           <div id="availability-message" class="message" style="display:none;"></div>
           <div id="availability-error" class="error" style="display:none;"></div>
           <div id="availability-days" class="days"></div>
 
           <div class="rules">
-            <div class="note" id="house-rules">載入規則中…</div>
-            <div class="note" id="cancel-policy">載入取消政策中…</div>
+            <div class="note" id="house-rules">載入場地規則中... / Loading house rules...</div>
+            <div class="note" id="cancel-policy">載入取消政策中... / Loading cancellation policy...</div>
           </div>
         </section>
 
         <section class="panel">
-          <p class="eyebrow">Booking Request</p>
-          <h2>送出預約申請</h2>
-          <p class="sub">請填寫預約時段、聯絡方式與用途。若時段可行，我們會再與你確認。</p>
+          <p class="eyebrow">Booking Request 預約申請</p>
+          <h2>送出預約申請 / Booking Request</h2>
+          <p class="sub">請填寫預約時段、聯絡方式與用途。若時段可行，我們會再與你確認。<br />Please fill in your requested time, contact details, and purpose. We will confirm with you after review.</p>
 
           <div class="row" style="margin-top:18px;">
-            <input id="customer-name" type="text" placeholder="姓名" />
-            <input id="customer-phone" type="tel" placeholder="手機號碼" />
+            <input id="customer-name" type="text" placeholder="姓名 Name" />
+            <input id="customer-phone" type="tel" placeholder="手機號碼 Phone Number" />
           </div>
-          <input id="customer-email" type="email" placeholder="Email（選填）" style="margin-top:12px;" />
-          <input id="customer-purpose" type="text" placeholder="活動用途（講座、聚會、拍攝等）" style="margin-top:12px;" />
+          <input id="customer-email" type="email" placeholder="Email（選填 Optional）" style="margin-top:12px;" />
+          <input id="customer-purpose" type="text" placeholder="活動用途 Purpose（講座、聚會、拍攝等）" style="margin-top:12px;" />
           <div class="row" style="margin-top:12px;">
             <input id="booking-start" type="datetime-local" />
             <input id="booking-end" type="datetime-local" />
           </div>
-          <input id="attendee-count" type="number" min="1" placeholder="預計人數" style="margin-top:12px;" />
-          <textarea id="booking-note" placeholder="備註（選填）" style="margin-top:12px;"></textarea>
-          <button id="submit-booking" style="margin-top:12px;">送出預約申請</button>
+          <input id="attendee-count" type="number" min="1" placeholder="預計人數 Attendee Count" style="margin-top:12px;" />
+          <textarea id="booking-note" placeholder="備註 Notes（選填 Optional）" style="margin-top:12px;"></textarea>
+          <button id="submit-booking" style="margin-top:12px;">送出預約申請 / Submit Booking Request</button>
 
           <div id="booking-message" class="message" style="display:none;"></div>
           <div id="booking-error" class="error" style="display:none;"></div>
@@ -268,19 +268,19 @@
 
       async function loadSpace() {
         const space = await requestJson(`/api/v1/public/spaces/${slug}`);
-        els.description.textContent = space.description || "NUCOSMOS 2F 適合講座、工作坊、聚會與品牌活動。";
-        els.rate.textContent = `${currency(space.hourlyRate, space.currencyCode)} / hour`;
-        els.capacity.textContent = `${space.capacity} people`;
-        els.rule.textContent = `Min ${space.minimumHours} hours · ${space.bookingIntervalMinutes} min interval`;
+        els.description.textContent = space.description || "NUCOSMOS 2F 適合講座、工作坊、聚會與品牌活動。 / Ideal for talks, workshops, gatherings, and brand events.";
+        els.rate.textContent = `${currency(space.hourlyRate, space.currencyCode)} / 小時 per hour`;
+        els.capacity.textContent = `${space.capacity} 人 people`;
+        els.rule.textContent = `至少 ${space.minimumHours} 小時 / Min ${space.minimumHours} hours · 每 ${space.bookingIntervalMinutes} 分鐘一格 / ${space.bookingIntervalMinutes}-minute interval`;
         els.location.textContent = space.locationLabel || "NUCOSMOS 2F";
-        els.houseRules.textContent = `場地規則：${space.houseRulesText || "請先與 NUCOSMOS 確認特殊活動需求。"}`;
-        els.cancelPolicy.textContent = `取消政策：${space.cancellationPolicyText || "第一版採人工確認，實際取消規則將於確認時告知。"}`;
+        els.houseRules.textContent = `場地規則 House Rules：${space.houseRulesText || "請先與 NUCOSMOS 確認特殊活動需求。 Please confirm any special event needs with NUCOSMOS first."}`;
+        els.cancelPolicy.textContent = `取消政策 Cancellation Policy：${space.cancellationPolicyText || "第一版採人工確認，實際取消規則將於確認時告知。 Phase 1 uses manual confirmation; detailed cancellation rules will be confirmed with you."}`;
       }
 
       async function loadAvailability() {
         try {
           setMessage(els.availabilityError, "");
-          setMessage(els.availabilityMessage, "載入可預約時段中...");
+          setMessage(els.availabilityMessage, "載入可預約時段中... / Loading availability...");
           const data = await requestJson(`/api/v1/public/spaces/${slug}/availability?from=${els.fromDate.value}&to=${els.toDate.value}`);
           els.availabilityDays.innerHTML = "";
           data.days.forEach((day) => {
@@ -296,17 +296,17 @@
             });
             els.availabilityDays.appendChild(section);
           });
-          setMessage(els.availabilityMessage, `已載入 ${data.days.length} 天時段。`);
+          setMessage(els.availabilityMessage, `已載入 ${data.days.length} 天時段。 / Loaded ${data.days.length} day(s).`);
         } catch (error) {
           setMessage(els.availabilityMessage, "");
-          setMessage(els.availabilityError, error instanceof Error ? error.message : "載入時段失敗");
+          setMessage(els.availabilityError, error instanceof Error ? error.message : "載入時段失敗 / Failed to load availability");
         }
       }
 
       async function submitBooking() {
         try {
           setMessage(els.bookingError, "");
-          setMessage(els.bookingMessage, "送出申請中...");
+          setMessage(els.bookingMessage, "送出申請中... / Submitting booking request...");
           const result = await requestJson(`/api/v1/public/spaces/${slug}/booking-requests`, {
             method: "POST",
             body: JSON.stringify({
@@ -320,11 +320,11 @@
               endAt: withOffset(form.end.value),
             }),
           });
-          setMessage(els.bookingMessage, `${result.message} Booking No. ${result.bookingNumber}`);
+          setMessage(els.bookingMessage, `${result.message} / Booking No. ${result.bookingNumber}`);
           await loadAvailability();
         } catch (error) {
           setMessage(els.bookingMessage, "");
-          setMessage(els.bookingError, error instanceof Error ? error.message : "送出預約申請失敗");
+          setMessage(els.bookingError, error instanceof Error ? error.message : "送出預約申請失敗 / Failed to submit booking request");
         }
       }
 

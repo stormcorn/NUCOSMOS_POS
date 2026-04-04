@@ -122,6 +122,12 @@
         z-index: 2;
       }
 
+      .top-links {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
       .member-link {
         display: inline-flex;
         align-items: center;
@@ -329,6 +335,11 @@
           justify-content: space-between;
         }
 
+        .top-links {
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+
         .member-link {
           min-height: 40px;
           padding: 0 14px;
@@ -376,7 +387,10 @@
       <div class="orbit o3"></div>
 
       <div class="top-actions">
-        <a class="member-link" href="/redeem/">會員登入 / 收據兌獎</a>
+        <div class="top-links">
+          <a class="member-link" href="/space/">活動空間租借</a>
+          <a class="member-link" href="/redeem/">會員登入 / 收據兌獎</a>
+        </div>
         <div class="badge"><span>NU<br />COS<br />MOS</span></div>
       </div>
 
@@ -389,7 +403,6 @@
         No. 246, Sec. 1, Taiwan Blvd., Central Dist., Taichung City 400
       </div>
       <div class="actions">
-        <a class="action-link" href="/space/">2F SPACE BOOKING</a>
         <a class="action-link" href="https://www.facebook.com/share/1GtNyZkhHp/" target="_blank" rel="noreferrer">FACEBOOK</a>
         <a class="action-link" href="https://www.instagram.com/nucosmos.246?igsh=eHZvd3M1anYzdGxq" target="_blank" rel="noreferrer">INSTAGRAM</a>
       </div>
