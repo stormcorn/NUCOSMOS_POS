@@ -1,6 +1,6 @@
 import { apiRequest } from "@/api/http";
 import type { PagedResponse } from "@/types/api";
-import type { OrderDetail, OrderSummary } from "@/types/order";
+import type { BulkDeleteTestOrdersResult, OrderDetail, OrderSummary } from "@/types/order";
 
 export type OrderListQuery = {
   status?: string;
@@ -19,4 +19,11 @@ export function fetchOrders(query: OrderListQuery) {
 
 export function fetchOrderDetail(orderId: string) {
   return apiRequest<OrderDetail>(`/api/v1/orders/${orderId}`);
+}
+
+export function bulkDeleteTestOrders(from: string, to: string) {
+  return apiRequest<BulkDeleteTestOrdersResult>("/api/v1/orders/delete-test-range", {
+    method: "POST",
+    body: { from, to },
+  });
 }

@@ -428,39 +428,55 @@ public class OrderService {
         if (!order.isTestOrder()) {
             throw new BadRequestException("Only test orders can be deleted");
         }
-        if (!order.getRefunds().isEmpty()) {
-            throw new BadRequestException("Refunded test orders cannot be deleted from POS");
-        }
 
         UserEntity actor = userRepository.findById(user.userId())
                 .orElseThrow(() -> new BadRequestException("Authenticated user is not available"));
 
-        for (PaymentEntity payment : order.getPayments()) {
-            if (!PaymentMethod.CARD.name().equals(payment.getPaymentMethod())) {
+        return deleteTestOrder(order, user, actor);
+    }
+
+    @Transactional
+    public BulkDeleteTestOrdersResponse deleteTestOrdersInRange(
+            AuthenticatedUser user,
+            BulkDeleteTestOrdersRequest request
+    ) {
+        validateDateRange(request.from(), request.to());
+
+        UserEntity actor = userRepository.findById(user.userId())
+                .orElseThrow(() -> new BadRequestException("Authenticated user is not available"));
+
+        List<OrderEntity> orders = orderRepository
+                .findAllByStore_CodeAndTestOrderTrueAndOrderedAtBetweenOrderByOrderedAtAsc(
+                        user.storeCode(),
+                        request.from(),
+                        request.to()
+                );
+
+        int deletedCount = 0;
+        int inventoryRestoredCount = 0;
+        List<String> skippedOrderNumbers = new ArrayList<>();
+        for (OrderEntity order : orders) {
+            if (!canDeleteTestOrder(order)) {
+                skippedOrderNumbers.add(order.getOrderNumber());
                 continue;
             }
 
-            if ("AUTHORIZED".equals(payment.getStatus()) && payment.getCardTerminalTxnId() != null) {
-                cardTerminalService.voidTransaction(new CardVoidCommand(
-                        order,
-                        user,
-                        payment.getCardTerminalTxnId(),
-                        "Delete test order"
-                ));
-                payment.voidCardAuthorization(OffsetDateTime.now());
-                continue;
-            }
-
-            if (!"VOIDED".equals(payment.getStatus()) && !"REFUNDED".equals(payment.getStatus())) {
-                throw new BadRequestException("Captured card test orders must be handled before deletion");
+            DeleteTestOrderResponse response = deleteTestOrder(order, user, actor);
+            deletedCount += 1;
+            if (response.inventoryRestored()) {
+                inventoryRestoredCount += 1;
             }
         }
 
-        boolean inventoryRestored = order.isInventoryCommitted();
-        orderInventoryWorkflowService.rollbackCommittedOrderInventory(order, actor);
-        orderRepository.delete(order);
-
-        return new DeleteTestOrderResponse(orderId, order.getOrderNumber(), inventoryRestored);
+        return new BulkDeleteTestOrdersResponse(
+                request.from(),
+                request.to(),
+                orders.size(),
+                deletedCount,
+                inventoryRestoredCount,
+                skippedOrderNumbers.size(),
+                List.copyOf(skippedOrderNumbers)
+        );
     }
 
     @Transactional(readOnly = true)
@@ -720,6 +736,60 @@ public class OrderService {
             throw new NotFoundException("Order not found");
         }
         return order;
+    }
+
+    private DeleteTestOrderResponse deleteTestOrder(
+            OrderEntity order,
+            AuthenticatedUser user,
+            UserEntity actor
+    ) {
+        if (!canDeleteTestOrder(order)) {
+            throw new BadRequestException("This test order cannot be deleted automatically");
+        }
+
+        for (PaymentEntity payment : order.getPayments()) {
+            if (!PaymentMethod.CARD.name().equals(payment.getPaymentMethod())) {
+                continue;
+            }
+
+            if ("AUTHORIZED".equals(payment.getStatus()) && payment.getCardTerminalTxnId() != null) {
+                cardTerminalService.voidTransaction(new CardVoidCommand(
+                        order,
+                        user,
+                        payment.getCardTerminalTxnId(),
+                        "Delete test order"
+                ));
+                payment.voidCardAuthorization(OffsetDateTime.now());
+            }
+        }
+
+        boolean inventoryRestored = order.isInventoryCommitted();
+        orderInventoryWorkflowService.rollbackCommittedOrderInventory(order, actor);
+        orderRepository.delete(order);
+
+        return new DeleteTestOrderResponse(order.getId(), order.getOrderNumber(), inventoryRestored);
+    }
+
+    private boolean canDeleteTestOrder(OrderEntity order) {
+        if (!order.isTestOrder() || !order.getRefunds().isEmpty()) {
+            return false;
+        }
+
+        for (PaymentEntity payment : order.getPayments()) {
+            if (!PaymentMethod.CARD.name().equals(payment.getPaymentMethod())) {
+                continue;
+            }
+
+            if ("AUTHORIZED".equals(payment.getStatus())) {
+                continue;
+            }
+
+            if (!"VOIDED".equals(payment.getStatus()) && !"REFUNDED".equals(payment.getStatus())) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private PaymentAmounts normalizePayment(PaymentRequest request, BigDecimal remainingAmount, PaymentMethod paymentMethod) {

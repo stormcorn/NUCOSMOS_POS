@@ -33,6 +33,12 @@ public interface OrderRepository extends JpaRepository<OrderEntity, UUID>, JpaSp
             OffsetDateTime to
     );
 
+    List<OrderEntity> findAllByStore_CodeAndTestOrderTrueAndOrderedAtBetweenOrderByOrderedAtAsc(
+            String storeCode,
+            OffsetDateTime from,
+            OffsetDateTime to
+    );
+
     List<OrderEntity> findAllByStore_CodeAndDevice_IdAndOrderedAtBetweenOrderByOrderedAtAsc(
             String storeCode,
             UUID deviceId,

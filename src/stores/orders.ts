@@ -1,9 +1,9 @@
 import { computed, ref } from "vue";
 import { defineStore } from "pinia";
 
-import { fetchOrderDetail, fetchOrders } from "@/api/orders";
+import { bulkDeleteTestOrders, fetchOrderDetail, fetchOrders } from "@/api/orders";
 import { ApiError } from "@/api/http";
-import type { OrderDetail, OrderSummary } from "@/types/order";
+import type { BulkDeleteTestOrdersResult, OrderDetail, OrderSummary } from "@/types/order";
 
 export const useOrderStore = defineStore("orders", () => {
   const items = ref<OrderSummary[]>([]);
@@ -17,9 +17,13 @@ export const useOrderStore = defineStore("orders", () => {
   const detail = ref<OrderDetail | null>(null);
   const detailLoading = ref(false);
   const detailErrorMessage = ref("");
+  const actionMessage = ref("");
+  const bulkDeleting = ref(false);
 
   const statusFilter = ref("");
   const paymentStatusFilter = ref("");
+  const fromFilter = ref("");
+  const toFilter = ref("");
 
   const recentOrders = computed(() => items.value.slice(0, 5));
 
@@ -33,6 +37,8 @@ export const useOrderStore = defineStore("orders", () => {
         size: size.value,
         status: statusFilter.value || undefined,
         paymentStatus: paymentStatusFilter.value || undefined,
+        from: normalizeDateTimeFilter(fromFilter.value),
+        to: normalizeDateTimeFilter(toFilter.value),
       });
 
       items.value = response.items;
@@ -68,12 +74,60 @@ export const useOrderStore = defineStore("orders", () => {
     detailErrorMessage.value = "";
   }
 
+  async function deleteTestOrdersInRange() {
+    if (!fromFilter.value || !toFilter.value) {
+      throw new ApiError(400, "請先選擇開始與結束時間");
+    }
+
+    bulkDeleting.value = true;
+    actionMessage.value = "";
+    errorMessage.value = "";
+
+    try {
+      const result = await bulkDeleteTestOrders(
+        normalizeDateTimeFilter(fromFilter.value) ?? fromFilter.value,
+        normalizeDateTimeFilter(toFilter.value) ?? toFilter.value,
+      );
+      actionMessage.value = buildBulkDeleteMessage(result);
+      await loadOrders();
+      if (detail.value?.testOrder) {
+        detail.value = null;
+      }
+      return result;
+    } catch (error) {
+      errorMessage.value = error instanceof ApiError ? error.message : "無法刪除測試訂單";
+      throw error;
+    } finally {
+      bulkDeleting.value = false;
+    }
+  }
+
+  function buildBulkDeleteMessage(result: BulkDeleteTestOrdersResult) {
+    const restored = result.inventoryRestoredCount > 0 ? `，回補庫存 ${result.inventoryRestoredCount} 筆` : "";
+    const skipped = result.skippedCount > 0
+      ? `，略過 ${result.skippedCount} 筆：${result.skippedOrderNumbers.join("、")}`
+      : "";
+    return `已刪除 ${result.deletedCount} / ${result.matchedCount} 筆測試訂單${restored}${skipped}`;
+  }
+
+  function normalizeDateTimeFilter(value: string) {
+    if (!value) {
+      return undefined;
+    }
+
+    return new Date(value).toISOString();
+  }
+
   return {
+    actionMessage,
+    bulkDeleting,
     clearDetail,
     detail,
     detailErrorMessage,
+    deleteTestOrdersInRange,
     detailLoading,
     errorMessage,
+    fromFilter,
     hasNext,
     items,
     loadOrderDetail,
@@ -85,6 +139,7 @@ export const useOrderStore = defineStore("orders", () => {
     setPage,
     size,
     statusFilter,
+    toFilter,
     totalElements,
     totalPages,
   };

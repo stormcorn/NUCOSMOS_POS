@@ -225,6 +225,42 @@ class OrderListPage {
   }
 }
 
+class BulkDeleteTestOrdersResult {
+  const BulkDeleteTestOrdersResult({
+    required this.from,
+    required this.to,
+    required this.matchedCount,
+    required this.deletedCount,
+    required this.inventoryRestoredCount,
+    required this.skippedCount,
+    required this.skippedOrderNumbers,
+  });
+
+  final DateTime? from;
+  final DateTime? to;
+  final int matchedCount;
+  final int deletedCount;
+  final int inventoryRestoredCount;
+  final int skippedCount;
+  final List<String> skippedOrderNumbers;
+
+  factory BulkDeleteTestOrdersResult.fromJson(Map<String, dynamic> json) {
+    final rawSkipped = json['skippedOrderNumbers'];
+    return BulkDeleteTestOrdersResult(
+      from: _parseDateTime(json['from']),
+      to: _parseDateTime(json['to']),
+      matchedCount: (json['matchedCount'] as num?)?.toInt() ?? 0,
+      deletedCount: (json['deletedCount'] as num?)?.toInt() ?? 0,
+      inventoryRestoredCount:
+          (json['inventoryRestoredCount'] as num?)?.toInt() ?? 0,
+      skippedCount: (json['skippedCount'] as num?)?.toInt() ?? 0,
+      skippedOrderNumbers: rawSkipped is List
+          ? rawSkipped.map((item) => item.toString()).toList(growable: false)
+          : const <String>[],
+    );
+  }
+}
+
 class PosOrderSummary {
   const PosOrderSummary({
     required this.id,

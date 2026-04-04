@@ -57,6 +57,8 @@ class SessionController extends ChangeNotifier {
   String checkoutMessage = '';
   String quickReceiveMessage = '';
   String orderHistoryMessage = '';
+  DateTime? orderHistoryFrom;
+  DateTime? orderHistoryTo;
 
   String _apiBaseUrl;
   String get apiBaseUrl => _apiBaseUrl;
@@ -534,7 +536,11 @@ class SessionController extends ChangeNotifier {
 
     try {
       final page = await _runWithApiFallback(
-        () => _orderService.listOrders(accessToken: token),
+        () => _orderService.listOrders(
+          accessToken: token,
+          from: orderHistoryFrom,
+          to: orderHistoryTo,
+        ),
       );
       orderHistory = page.items;
       if (selectedOrderDetail != null &&
@@ -590,6 +596,18 @@ class SessionController extends ChangeNotifier {
     selectedOrderDetail = null;
     orderHistoryMessage = '';
     notifyListeners();
+  }
+
+  void setOrderHistoryRange({
+    DateTime? from,
+    DateTime? to,
+    bool notify = true,
+  }) {
+    orderHistoryFrom = from;
+    orderHistoryTo = to;
+    if (notify) {
+      notifyListeners();
+    }
   }
 
   Future<OrderReceipt?> cancelOrderFromHistory({
@@ -686,6 +704,56 @@ class SessionController extends ChangeNotifier {
     } catch (_) {
       orderHistoryMessage = '刪除測試訂單失敗';
       return false;
+    } finally {
+      orderActionLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<BulkDeleteTestOrdersResult?> deleteTestOrdersInRange() async {
+    final token = accessToken;
+    if (token == null || token.isEmpty) {
+      orderHistoryMessage = '請先重新登入後再刪除測試訂單';
+      notifyListeners();
+      return null;
+    }
+    final from = orderHistoryFrom;
+    final to = orderHistoryTo;
+    if (from == null || to == null) {
+      orderHistoryMessage = '請先選擇日期區間';
+      notifyListeners();
+      return null;
+    }
+
+    orderActionLoading = true;
+    orderHistoryMessage = '';
+    notifyListeners();
+
+    try {
+      final result = await _runWithApiFallback(
+        () => _orderService.deleteTestOrdersInRange(
+          accessToken: token,
+          from: from,
+          to: to,
+        ),
+      );
+      final skipped = result.skippedCount > 0
+          ? '，略過 ${result.skippedCount} 筆'
+          : '';
+      orderHistoryMessage =
+          '已刪除 ${result.deletedCount} / ${result.matchedCount} 筆測試訂單$skipped';
+      selectedOrderDetail = null;
+      await loadOrderHistory(notify: false);
+      return result;
+    } on ApiException catch (error) {
+      orderHistoryMessage = error.message;
+      return null;
+    } on Exception {
+      orderHistoryMessage = '刪除測試訂單失敗';
+      return null;
+    } catch (_) {
+      orderHistoryMessage = '刪除測試訂單失敗';
+      return null;
     } finally {
       orderActionLoading = false;
       notifyListeners();

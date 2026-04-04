@@ -77,9 +77,15 @@ class OrderService {
     required String accessToken,
     int page = 0,
     int size = 50,
+    DateTime? from,
+    DateTime? to,
   }) async {
+    final fromQuery = from?.toUtc().toIso8601String();
+    final toQuery = to?.toUtc().toIso8601String();
     final json = await _apiClient.get(
-      '/api/v1/orders?page=$page&size=$size&sortBy=orderedAt&sortDirection=desc',
+      '/api/v1/orders?page=$page&size=$size&sortBy=orderedAt&sortDirection=desc'
+      '${fromQuery != null ? '&from=$fromQuery' : ''}'
+      '${toQuery != null ? '&to=$toQuery' : ''}',
       accessToken: accessToken,
     );
 
@@ -159,5 +165,25 @@ class OrderService {
       accessToken: accessToken,
       body: const <String, dynamic>{},
     );
+  }
+
+  Future<BulkDeleteTestOrdersResult> deleteTestOrdersInRange({
+    required String accessToken,
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    final json = await _apiClient.post(
+      '/api/v1/orders/delete-test-range',
+      accessToken: accessToken,
+      body: {
+        'from': from.toUtc().toIso8601String(),
+        'to': to.toUtc().toIso8601String(),
+      },
+    );
+
+    return ApiEnvelope<BulkDeleteTestOrdersResult>.fromJson(
+      json,
+      BulkDeleteTestOrdersResult.fromJson,
+    ).data;
   }
 }

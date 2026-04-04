@@ -124,4 +124,13 @@ public class OrderController {
         AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
         return ApiResponse.ok(orderService.deleteTestOrder(orderId, user));
     }
+
+    @PostMapping("/delete-test-range")
+    public ApiResponse<BulkDeleteTestOrdersResponse> deleteTestOrdersInRange(
+            Authentication authentication,
+            @Valid @RequestBody BulkDeleteTestOrdersRequest request
+    ) {
+        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+        return ApiResponse.ok(orderService.deleteTestOrdersInRange(user, request));
+    }
 }

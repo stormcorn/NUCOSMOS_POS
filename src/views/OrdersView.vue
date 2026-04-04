@@ -41,6 +41,19 @@ function refundDispositionLabel(value: string) {
 onMounted(() => {
   void orderStore.loadOrders();
 });
+
+async function deleteTestOrdersInRange() {
+  const confirmed = window.confirm("將刪除目前日期區間內所有測試訂單，並回補已扣除的庫存。確定要執行嗎？");
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await orderStore.deleteTestOrdersInRange();
+  } catch {
+    // store handles the error state
+  }
+}
 </script>
 
 <template>
@@ -50,6 +63,16 @@ onMounted(() => {
       <h3 class="mt-2 text-2xl font-semibold text-white">訂單列表</h3>
 
       <div class="mt-6 flex flex-wrap gap-3">
+        <input
+          v-model="orderStore.fromFilter"
+          type="datetime-local"
+          class="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none"
+        />
+        <input
+          v-model="orderStore.toFilter"
+          type="datetime-local"
+          class="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none"
+        />
         <select
           :value="orderStore.paymentStatusFilter"
           class="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none"
@@ -59,9 +82,24 @@ onMounted(() => {
             {{ option.label }}
           </option>
         </select>
+        <button
+          class="rounded-2xl border border-white/10 px-4 py-3 text-sm font-semibold text-slate-100 transition hover:border-brand-aqua/30 hover:text-white disabled:opacity-50"
+          :disabled="orderStore.loading"
+          @click="orderStore.loadOrders()"
+        >
+          套用區間
+        </button>
+        <button
+          class="rounded-2xl border border-brand-coral/30 px-4 py-3 text-sm font-semibold text-brand-coral transition hover:border-brand-coral/60 disabled:opacity-50"
+          :disabled="orderStore.bulkDeleting || !orderStore.fromFilter || !orderStore.toFilter"
+          @click="deleteTestOrdersInRange"
+        >
+          {{ orderStore.bulkDeleting ? "刪除中..." : "刪除區間測試訂單" }}
+        </button>
       </div>
 
       <p v-if="orderStore.errorMessage" class="mt-4 text-sm text-brand-coral">{{ orderStore.errorMessage }}</p>
+      <p v-if="orderStore.actionMessage" class="mt-4 text-sm text-emerald-300">{{ orderStore.actionMessage }}</p>
 
       <div class="mt-6 space-y-4">
         <article v-if="orderStore.loading" class="rounded-[1.5rem] border border-white/8 bg-white/4 p-4 text-sm text-slate-400">

@@ -2037,6 +2037,100 @@ class _OrderHistorySheet extends StatelessWidget {
 
   final SessionController controller;
 
+  Future<void> _pickDateRange(BuildContext context) async {
+    final now = DateTime.now();
+    final initialRange = controller.orderHistoryFrom != null &&
+            controller.orderHistoryTo != null
+        ? DateTimeRange(
+            start: controller.orderHistoryFrom!,
+            end: controller.orderHistoryTo!,
+          )
+        : DateTimeRange(
+            start: DateTime(now.year, now.month, now.day),
+            end: DateTime(now.year, now.month, now.day),
+          );
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(now.year - 2, 1, 1),
+      lastDate: DateTime(now.year + 2, 12, 31),
+      initialDateRange: initialRange,
+      helpText: 'Select order date range',
+    );
+    if (picked == null) {
+      return;
+    }
+
+    controller.setOrderHistoryRange(
+      from: DateTime(picked.start.year, picked.start.month, picked.start.day),
+      to: DateTime(
+        picked.end.year,
+        picked.end.month,
+        picked.end.day,
+        23,
+        59,
+        59,
+        999,
+      ),
+      notify: false,
+    );
+    await controller.loadOrderHistory();
+  }
+
+  Future<void> _confirmBulkDelete(BuildContext context) async {
+    if (controller.orderHistoryFrom == null || controller.orderHistoryTo == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a date range first.')),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF111827),
+        title: const Text('Delete test orders'),
+        content: const Text(
+          'Delete all test orders in the selected date range and restore deducted inventory?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Keep'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFB74B57),
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    await controller.deleteTestOrdersInRange();
+  }
+
+  String _rangeLabel() {
+    final from = controller.orderHistoryFrom;
+    final to = controller.orderHistoryTo;
+    if (from == null || to == null) {
+      return 'All dates';
+    }
+
+    String formatDay(DateTime value) {
+      final month = value.month.toString().padLeft(2, '0');
+      final day = value.day.toString().padLeft(2, '0');
+      return '${value.year}/$month/$day';
+    }
+
+    return '${formatDay(from)} - ${formatDay(to)}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -2071,6 +2165,67 @@ class _OrderHistorySheet extends StatelessWidget {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.refresh_rounded),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF111827),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFF243047)),
+                  ),
+                  child: Text(
+                    _rangeLabel(),
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => _pickDateRange(context),
+                  icon: const Icon(Icons.date_range_rounded),
+                  label: const Text('Date Range'),
+                ),
+                OutlinedButton(
+                  onPressed: controller.orderHistoryFrom == null &&
+                          controller.orderHistoryTo == null
+                      ? null
+                      : () async {
+                          controller.setOrderHistoryRange(
+                            from: null,
+                            to: null,
+                            notify: false,
+                          );
+                          await controller.loadOrderHistory();
+                        },
+                  child: const Text('Clear Range'),
+                ),
+                FilledButton.icon(
+                  onPressed: controller.orderActionLoading ||
+                          controller.orderHistoryFrom == null ||
+                          controller.orderHistoryTo == null
+                      ? null
+                      : () => _confirmBulkDelete(context),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFB74B57),
+                    foregroundColor: Colors.white,
+                  ),
+                  icon: controller.orderActionLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.delete_sweep_rounded),
+                  label: const Text('Delete Test Orders'),
                 ),
               ],
             ),

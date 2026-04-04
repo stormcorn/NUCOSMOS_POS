@@ -97,3 +97,13 @@ export type OrderDetail = {
   payments: PaymentDetail[];
   refunds: RefundDetail[];
 };
+
+export type BulkDeleteTestOrdersResult = {
+  from: string;
+  to: string;
+  matchedCount: number;
+  deletedCount: number;
+  inventoryRestoredCount: number;
+  skippedCount: number;
+  skippedOrderNumbers: string[];
+};
