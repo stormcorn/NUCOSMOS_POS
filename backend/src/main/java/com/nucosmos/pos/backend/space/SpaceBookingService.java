@@ -4,6 +4,7 @@ import com.nucosmos.pos.backend.auth.AuthenticatedUser;
 import com.nucosmos.pos.backend.auth.persistence.UserEntity;
 import com.nucosmos.pos.backend.auth.repository.UserRepository;
 import com.nucosmos.pos.backend.common.exception.BadRequestException;
+import com.nucosmos.pos.backend.order.persistence.ReceiptMemberEntity;
 import com.nucosmos.pos.backend.space.persistence.SpaceBlockoutEntity;
 import com.nucosmos.pos.backend.space.persistence.SpaceBookingEntity;
 import com.nucosmos.pos.backend.space.persistence.SpaceBookingPolicyEntity;
@@ -128,7 +129,7 @@ public class SpaceBookingService {
                 .toList();
     }
 
-    public PublicSpaceBookingResponse createPublicBookingRequest(String slug, PublicSpaceBookingRequest request) {
+    public PublicSpaceBookingResponse createPublicBookingRequest(String slug, PublicSpaceBookingRequest request, ReceiptMemberEntity member) {
         SpaceResourceEntity space = requireActiveSpace(slug);
         SpaceBookingEntity booking = createBooking(
                 space,
@@ -143,7 +144,8 @@ public class SpaceBookingService {
                 request.startAt(),
                 request.endAt(),
                 "OFFICIAL_WEB",
-                "PENDING"
+                "PENDING",
+                member
         );
         spaceBookingRepository.save(booking);
         return new PublicSpaceBookingResponse(
@@ -156,6 +158,48 @@ public class SpaceBookingService {
                 booking.getBalanceAmount(),
                 "Booking request received. The venue team will review this slot."
         );
+    }
+
+    public List<PublicSpaceMemberBookingResponse> listPublicMemberBookings(ReceiptMemberEntity member) {
+        return spaceBookingRepository.findAllByReceiptMember_IdOrderByStartAtDesc(member.getId()).stream()
+                .map(this::toPublicMemberBooking)
+                .toList();
+    }
+
+    public PublicSpaceMemberBookingResponse updatePublicMemberBooking(
+            ReceiptMemberEntity member,
+            UUID bookingId,
+            PublicSpaceMemberBookingUpdateRequest request
+    ) {
+        SpaceBookingEntity booking = requireMemberBooking(member.getId(), bookingId);
+        ensureMemberBookingEditable(booking);
+        validateWindow(booking.getSpaceResource(), request.startAt(), request.endAt());
+        validateAttendees(booking.getSpaceResource(), request.attendeeCount());
+        ensureBookingCanStayActive(booking.getSpaceResource(), request.startAt(), request.endAt(), booking.getId());
+
+        long minutes = Duration.between(request.startAt(), request.endAt()).toMinutes();
+        BigDecimal subtotal = requirePolicy(booking.getSpaceResource()).getHourlyRate()
+                .multiply(BigDecimal.valueOf(minutes))
+                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+
+        booking.updatePublicBooking(
+                blankToNull(request.purpose()),
+                blankToNull(request.eventLink()),
+                request.attendeeCount(),
+                blankToNull(request.note()),
+                request.startAt(),
+                request.endAt(),
+                subtotal,
+                subtotal
+        );
+        return toPublicMemberBooking(spaceBookingRepository.save(booking));
+    }
+
+    public PublicSpaceMemberBookingResponse cancelPublicMemberBooking(ReceiptMemberEntity member, UUID bookingId) {
+        SpaceBookingEntity booking = requireMemberBooking(member.getId(), bookingId);
+        ensureMemberBookingEditable(booking);
+        booking.cancel("Cancelled by member");
+        return toPublicMemberBooking(spaceBookingRepository.save(booking));
     }
 
     public List<AdminSpaceResourceResponse> listAdminSpaces(AuthenticatedUser user) {
@@ -206,7 +250,8 @@ public class SpaceBookingService {
                 request.startAt(),
                 request.endAt(),
                 source,
-                status
+                status,
+                null
         );
         if ("CONFIRMED".equals(status)) {
             booking.approve(requireUser(user.userId()), request.internalNote());
@@ -296,7 +341,8 @@ public class SpaceBookingService {
             OffsetDateTime startAt,
             OffsetDateTime endAt,
             String source,
-            String status
+            String status,
+            ReceiptMemberEntity member
     ) {
         validateWindow(space, startAt, endAt);
         validateAttendees(space, attendeeCount);
@@ -307,7 +353,7 @@ public class SpaceBookingService {
                 .multiply(BigDecimal.valueOf(minutes))
                 .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
 
-        return SpaceBookingEntity.create(
+        SpaceBookingEntity booking = SpaceBookingEntity.create(
                 space,
                 generateBookingNumber(space.getStore().getCode(), startAt),
                 status,
@@ -327,6 +373,10 @@ public class SpaceBookingService {
                 startAt,
                 endAt
         );
+        if (member != null) {
+            booking.bindMember(member);
+        }
+        return booking;
     }
 
     private void validateDateRange(LocalDate from, LocalDate to) {
@@ -490,6 +540,11 @@ public class SpaceBookingService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
     }
 
+    private SpaceBookingEntity requireMemberBooking(UUID memberId, UUID bookingId) {
+        return spaceBookingRepository.findByIdAndReceiptMember_Id(bookingId, memberId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
+    }
+
     private UserEntity requireUser(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
@@ -506,6 +561,15 @@ public class SpaceBookingService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Space policy is not configured");
         }
         return policy;
+    }
+
+    private void ensureMemberBookingEditable(SpaceBookingEntity booking) {
+        if (!Set.of("PENDING", "CONFIRMED").contains(booking.getStatus())) {
+            throw new BadRequestException("Only active bookings can be modified.");
+        }
+        if (!booking.getStartAt().isAfter(OffsetDateTime.now())) {
+            throw new BadRequestException("Past or ongoing bookings cannot be modified.");
+        }
     }
 
     private OffsetDateTime atZone(LocalDate date, LocalTime time, ZoneId zoneId) {
@@ -611,6 +675,25 @@ public class SpaceBookingService {
                 booking.getApprovedAt() != null ? booking.getApprovedAt().toString() : null,
                 booking.getApprovedByUser() != null ? booking.getApprovedByUser().getDisplayName() : null,
                 booking.getCancelledAt() != null ? booking.getCancelledAt().toString() : null
+        );
+    }
+
+    private PublicSpaceMemberBookingResponse toPublicMemberBooking(SpaceBookingEntity booking) {
+        boolean editable = Set.of("PENDING", "CONFIRMED").contains(booking.getStatus()) && booking.getStartAt().isAfter(OffsetDateTime.now());
+        return new PublicSpaceMemberBookingResponse(
+                booking.getId().toString(),
+                booking.getBookingNumber(),
+                booking.getStatus(),
+                booking.getSpaceResource().getSlug(),
+                booking.getSpaceResource().getName(),
+                booking.getPurpose(),
+                booking.getEventLink(),
+                booking.getAttendeeCount(),
+                booking.getNote(),
+                booking.getStartAt().toString(),
+                booking.getEndAt().toString(),
+                editable,
+                editable
         );
     }
 

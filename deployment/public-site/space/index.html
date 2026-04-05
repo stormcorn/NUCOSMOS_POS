@@ -346,6 +346,47 @@
         opacity: 0.8;
       }
 
+      .booking-list {
+        display: grid;
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      .booking-item {
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 18px;
+        background: rgba(255,255,255,0.04);
+        padding: 14px;
+      }
+
+      .booking-item strong {
+        display: block;
+        font-size: 16px;
+        line-height: 1.4;
+      }
+
+      .booking-meta {
+        margin-top: 8px;
+        color: #9eb0c8;
+        line-height: 1.8;
+      }
+
+      .booking-actions {
+        margin-top: 12px;
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .member-card {
+        border: 1px solid rgba(87, 228, 201, 0.22);
+        border-radius: 18px;
+        background: rgba(87, 228, 201, 0.08);
+        padding: 14px 16px;
+        line-height: 1.8;
+        color: #d9fff9;
+      }
+
       @media (max-width: 900px) {
         .grid, .row { grid-template-columns: 1fr; }
         .shell { width: calc(100vw - 14px); }
@@ -448,6 +489,12 @@
           <h2>送出預約申請 / Booking Request</h2>
           <p class="sub">請先從左側月曆選擇日期，再選開始與結束時段。若時段可行，我們會再與你確認。<br />Please pick a date from the calendar first, then choose the booking time range.</p>
 
+          <div id="member-session-card" class="member-card" style="margin-top:18px;"></div>
+          <div class="row" style="margin-top:12px;">
+            <a class="top-link" href="/redeem/" style="text-align:center;">會員登入 / Member Login</a>
+            <button id="refresh-member-session" type="button" class="button-secondary">重新整理會員狀態 / Refresh Member Status</button>
+          </div>
+
           <div class="row" style="margin-top:18px;">
             <label class="field">
               <span class="field-label">姓名 Name</span>
@@ -496,10 +543,22 @@
             <span class="field-label">備註 Notes（選填 Optional）</span>
             <textarea id="booking-note" placeholder="請輸入補充說明 / Additional notes"></textarea>
           </label>
-          <button id="submit-booking" style="margin-top:12px;">送出預約申請 / Submit Booking Request</button>
+          <div class="row" style="margin-top:12px;">
+            <button id="submit-booking" type="button">送出預約申請 / Submit Booking Request</button>
+            <button id="reset-booking-form" type="button" class="button-secondary">清除表單 / Clear Form</button>
+          </div>
+          <div id="editing-booking-message" class="message" style="display:none;"></div>
 
           <div id="booking-message" class="message" style="display:none;"></div>
           <div id="booking-error" class="error" style="display:none;"></div>
+
+          <div class="picker-card" style="margin-top:18px;">
+            <div class="picker-header">
+              <strong>我的活動 / My Events</strong>
+              <span id="member-bookings-hint" class="sub" style="margin:0;">登入會員後可管理自己的活動。 / Sign in to manage your events.</span>
+            </div>
+            <div id="member-bookings-list" class="booking-list"></div>
+          </div>
         </section>
       </div>
     </main>
@@ -519,6 +578,11 @@
         availabilityError: document.getElementById("availability-error"),
         bookingMessage: document.getElementById("booking-message"),
         bookingError: document.getElementById("booking-error"),
+        editingBookingMessage: document.getElementById("editing-booking-message"),
+        memberSessionCard: document.getElementById("member-session-card"),
+        refreshMemberSession: document.getElementById("refresh-member-session"),
+        memberBookingsHint: document.getElementById("member-bookings-hint"),
+        memberBookingsList: document.getElementById("member-bookings-list"),
         prevMonth: document.getElementById("prev-month"),
         nextMonth: document.getElementById("next-month"),
         monthLabel: document.getElementById("calendar-month-label"),
@@ -528,6 +592,7 @@
         selectedDaySlots: document.getElementById("selected-day-slots"),
         selectedDate: document.getElementById("selected-date"),
         submitBooking: document.getElementById("submit-booking"),
+        resetBookingForm: document.getElementById("reset-booking-form"),
       };
 
       const form = {
@@ -548,7 +613,40 @@
         monthCursor: startOfMonth(new Date()),
         selectedDate: "",
         selectedStart: "",
+        memberSession: null,
+        memberBookings: [],
+        editingBookingId: "",
       };
+
+      const storageKeys = {
+        deviceToken: "nucosmos_redeem_device_token",
+        deviceLabel: "nucosmos_redeem_device_label",
+      };
+
+      function getOrCreateDeviceToken() {
+        let token = localStorage.getItem(storageKeys.deviceToken);
+        if (!token) {
+          token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+          localStorage.setItem(storageKeys.deviceToken, token);
+        }
+        return token;
+      }
+
+      function getOrCreateDeviceLabel() {
+        let label = localStorage.getItem(storageKeys.deviceLabel);
+        if (!label) {
+          label = (navigator.userAgent || "Space Booking Browser").slice(0, 180);
+          localStorage.setItem(storageKeys.deviceLabel, label);
+        }
+        return label;
+      }
+
+      function deviceHeaders() {
+        return {
+          "X-Nucosmos-Device-Token": getOrCreateDeviceToken(),
+          "X-Nucosmos-Device-Label": getOrCreateDeviceLabel(),
+        };
+      }
 
       function setMessage(el, text) {
         el.textContent = text || "";
@@ -557,7 +655,8 @@
 
       async function requestJson(url, options = {}) {
         const response = await fetch(url, {
-          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json", ...deviceHeaders(), ...(options.headers || {}) },
           ...options,
         });
         const payload = await response.json().catch(() => null);
@@ -618,6 +717,18 @@
 
       function withOffset(value) {
         return `${value}:00+08:00`;
+      }
+
+      function dateTimeLabel(startAt, endAt) {
+        const start = new Date(startAt);
+        const end = new Date(endAt);
+        const date = new Intl.DateTimeFormat("zh-TW", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          weekday: "long",
+        }).format(start);
+        return `${date} ${timeLabel(startAt)} - ${timeLabel(endAt)}`;
       }
 
       function slotDurationMinutes(slot) {
@@ -817,6 +928,176 @@
         }
       }
 
+      function resetBookingForm(keepIdentity = true) {
+        if (!keepIdentity || !state.memberSession?.authenticated) {
+          form.name.value = "";
+          form.phone.value = "";
+        }
+        if (keepIdentity && state.memberSession?.authenticated && state.memberSession.member) {
+          form.name.value = state.memberSession.member.displayName || form.name.value;
+          form.phone.value = state.memberSession.member.phoneNumber || form.phone.value;
+        }
+        form.email.value = "";
+        form.purpose.value = "";
+        form.eventLink.value = "";
+        form.attendees.value = "10";
+        form.note.value = "";
+        state.editingBookingId = "";
+        els.submitBooking.textContent = "送出預約申請 / Submit Booking Request";
+        setMessage(els.editingBookingMessage, "");
+      }
+
+      function renderMemberSession() {
+        const session = state.memberSession;
+        if (session?.authenticated && session.member) {
+          els.memberSessionCard.innerHTML = `
+            <strong>已登入會員：${session.member.displayName}</strong><br />
+            手機：${session.member.phoneNumber}<br />
+            這次送出的活動申請會自動綁定會員，之後可在下方查詢、修改或刪除。`
+          ;
+          form.name.value = session.member.displayName || form.name.value;
+          form.phone.value = session.member.phoneNumber || form.phone.value;
+          els.memberBookingsHint.textContent = "已登入會員，可管理自己的活動。 / You can manage your own events below.";
+        } else {
+          els.memberSessionCard.innerHTML = `
+            <strong>尚未登入會員</strong><br />
+            未登入時仍可送出預約申請，但不會綁定到會員名下，也無法在此管理自己的活動。`
+          ;
+          els.memberBookingsHint.textContent = "登入會員後可管理自己的活動。 / Sign in to manage your events.";
+        }
+      }
+
+      function renderMemberBookings() {
+        els.memberBookingsList.innerHTML = "";
+        if (!state.memberSession?.authenticated) {
+          const empty = document.createElement("div");
+          empty.className = "note";
+          empty.textContent = "請先登入會員，這裡才會顯示你建立的活動。";
+          els.memberBookingsList.appendChild(empty);
+          return;
+        }
+        if (!state.memberBookings.length) {
+          const empty = document.createElement("div");
+          empty.className = "note";
+          empty.textContent = "目前還沒有綁定到此會員的活動。";
+          els.memberBookingsList.appendChild(empty);
+          return;
+        }
+
+        state.memberBookings.forEach((booking) => {
+          const item = document.createElement("article");
+          item.className = "booking-item";
+
+          const title = document.createElement("strong");
+          title.textContent = booking.eventName || "未命名活動";
+          item.appendChild(title);
+
+          const meta = document.createElement("div");
+          meta.className = "booking-meta";
+          meta.innerHTML = `
+            <div>${dateTimeLabel(booking.startAt, booking.endAt)}</div>
+            <div>狀態：${booking.status}</div>
+            <div>人數：${booking.attendeeCount}</div>
+            <div>編號：${booking.bookingNumber}</div>
+          `;
+          item.appendChild(meta);
+
+          if (booking.eventLink) {
+            const link = document.createElement("a");
+            link.className = "stat-link";
+            link.href = booking.eventLink;
+            link.target = "_blank";
+            link.rel = "noreferrer";
+            link.textContent = "活動連結 / Event Link";
+            item.appendChild(link);
+          }
+
+          const actions = document.createElement("div");
+          actions.className = "booking-actions";
+
+          const editButton = document.createElement("button");
+          editButton.type = "button";
+          editButton.textContent = "修改活動 / Edit";
+          editButton.className = "button-secondary";
+          editButton.disabled = !booking.canEdit;
+          editButton.addEventListener("click", () => beginEditingBooking(booking));
+          actions.appendChild(editButton);
+
+          const cancelButton = document.createElement("button");
+          cancelButton.type = "button";
+          cancelButton.textContent = "刪除活動 / Delete";
+          cancelButton.disabled = !booking.canCancel;
+          cancelButton.addEventListener("click", () => cancelMemberBooking(booking));
+          actions.appendChild(cancelButton);
+
+          item.appendChild(actions);
+          els.memberBookingsList.appendChild(item);
+        });
+      }
+
+      async function refreshMemberSession() {
+        state.memberSession = await requestJson("/api/v1/public/member/session");
+        renderMemberSession();
+        if (state.memberSession?.authenticated) {
+          await loadMemberBookings();
+        } else {
+          state.memberBookings = [];
+          renderMemberBookings();
+        }
+      }
+
+      async function loadMemberBookings() {
+        if (!state.memberSession?.authenticated) {
+          state.memberBookings = [];
+          renderMemberBookings();
+          return;
+        }
+        state.memberBookings = await requestJson("/api/v1/public/spaces/member/bookings");
+        renderMemberBookings();
+      }
+
+      async function beginEditingBooking(booking) {
+        state.editingBookingId = booking.id;
+        state.monthCursor = startOfMonth(new Date(`${booking.startAt.slice(0, 10)}T00:00:00+08:00`));
+        await loadAvailability();
+        state.selectedDate = booking.startAt.slice(0, 10);
+        state.selectedStart = booking.startAt.slice(0, 16);
+        renderCalendar();
+        renderSelectedDaySlots();
+        form.start.value = booking.startAt.slice(0, 16);
+        populateEndOptions(getSelectedDay(), form.start.value);
+        form.end.value = booking.endAt.slice(0, 16);
+        form.purpose.value = booking.eventName || "";
+        form.eventLink.value = booking.eventLink || "";
+        form.attendees.value = String(booking.attendeeCount || 10);
+        form.note.value = booking.note || "";
+        els.submitBooking.textContent = "更新活動 / Update Event";
+        setMessage(els.editingBookingMessage, `正在編輯：${booking.eventName || booking.bookingNumber}`);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      async function cancelMemberBooking(booking) {
+        if (!confirm(`要刪除活動「${booking.eventName || booking.bookingNumber}」嗎？這會取消該筆預約。`)) {
+          return;
+        }
+        try {
+          setMessage(els.bookingError, "");
+          setMessage(els.bookingMessage, "刪除活動中... / Deleting event...");
+          await requestJson(`/api/v1/public/spaces/member/bookings/${booking.id}/cancel`, {
+            method: "POST",
+            body: JSON.stringify({}),
+          });
+          if (state.editingBookingId === booking.id) {
+            resetBookingForm();
+          }
+          await Promise.all([loadAvailability(), loadMemberBookings()]);
+          setMessage(els.bookingMessage, "活動已刪除。 / Event deleted.");
+        } catch (error) {
+          setMessage(els.bookingMessage, "");
+          setMessage(els.bookingError, error instanceof Error ? error.message : "刪除活動失敗 / Failed to delete event");
+        }
+      }
+
       async function loadSpace() {
         const space = await requestJson(`/api/v1/public/spaces/${slug}`);
         state.space = space;
@@ -858,25 +1139,43 @@
           }
 
           setMessage(els.bookingError, "");
-          setMessage(els.bookingMessage, "送出申請中... / Submitting booking request...");
+          setMessage(els.bookingMessage, state.editingBookingId ? "更新活動中... / Updating event..." : "送出申請中... / Submitting booking request...");
 
-          const result = await requestJson(`/api/v1/public/spaces/${slug}/booking-requests`, {
-            method: "POST",
-            body: JSON.stringify({
-              customerName: form.name.value,
-              customerPhone: form.phone.value,
-              customerEmail: form.email.value || null,
-              purpose: form.purpose.value || null,
-              eventLink: form.eventLink.value || null,
-              attendeeCount: Number(form.attendees.value || "0"),
-              note: form.note.value || null,
-              startAt: withOffset(form.start.value),
-              endAt: withOffset(form.end.value),
-            }),
-          });
+          const payload = {
+            customerName: form.name.value,
+            customerPhone: form.phone.value,
+            customerEmail: form.email.value || null,
+            purpose: form.purpose.value || null,
+            eventLink: form.eventLink.value || null,
+            attendeeCount: Number(form.attendees.value || "0"),
+            note: form.note.value || null,
+            startAt: withOffset(form.start.value),
+            endAt: withOffset(form.end.value),
+          };
 
-          setMessage(els.bookingMessage, `${result.message} / Booking No. ${result.bookingNumber}`);
-          await loadAvailability();
+          if (state.editingBookingId) {
+            await requestJson(`/api/v1/public/spaces/member/bookings/${state.editingBookingId}`, {
+              method: "PATCH",
+              body: JSON.stringify({
+                purpose: payload.purpose,
+                eventLink: payload.eventLink,
+                attendeeCount: payload.attendeeCount,
+                note: payload.note,
+                startAt: payload.startAt,
+                endAt: payload.endAt,
+              }),
+            });
+            setMessage(els.bookingMessage, "活動已更新。 / Event updated.");
+          } else {
+            const result = await requestJson(`/api/v1/public/spaces/${slug}/booking-requests`, {
+              method: "POST",
+              body: JSON.stringify(payload),
+            });
+            setMessage(els.bookingMessage, `${result.message} / Booking No. ${result.bookingNumber}`);
+          }
+
+          resetBookingForm();
+          await Promise.all([loadAvailability(), loadMemberBookings()]);
         } catch (error) {
           setMessage(els.bookingMessage, "");
           setMessage(els.bookingError, error instanceof Error ? error.message : "送出預約申請失敗 / Failed to submit booking request");
@@ -885,6 +1184,8 @@
 
       function initForm() {
         form.attendees.value = "10";
+        renderMemberSession();
+        renderMemberBookings();
       }
 
       els.prevMonth.addEventListener("click", async () => {
@@ -908,10 +1209,14 @@
       });
 
       els.submitBooking.addEventListener("click", submitBooking);
+      els.resetBookingForm.addEventListener("click", () => resetBookingForm());
+      els.refreshMemberSession.addEventListener("click", async () => {
+        await refreshMemberSession();
+      });
 
       (async () => {
         initForm();
-        await loadSpace();
+        await Promise.all([loadSpace(), refreshMemberSession()]);
         await loadAvailability();
       })();
     </script>

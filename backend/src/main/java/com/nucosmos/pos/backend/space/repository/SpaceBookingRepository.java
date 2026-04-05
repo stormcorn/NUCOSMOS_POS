@@ -12,7 +12,7 @@ import java.util.UUID;
 
 public interface SpaceBookingRepository extends JpaRepository<SpaceBookingEntity, UUID> {
 
-    @EntityGraph(attributePaths = {"spaceResource", "spaceResource.store", "approvedByUser"})
+    @EntityGraph(attributePaths = {"spaceResource", "spaceResource.store", "approvedByUser", "receiptMember"})
     List<SpaceBookingEntity> findAllBySpaceResource_IdAndEndAtAfterAndStartAtBeforeAndStatusInOrderByStartAtAsc(
             UUID spaceResourceId,
             OffsetDateTime from,
@@ -20,14 +20,14 @@ public interface SpaceBookingRepository extends JpaRepository<SpaceBookingEntity
             Collection<String> statuses
     );
 
-    @EntityGraph(attributePaths = {"spaceResource", "spaceResource.store", "approvedByUser"})
+    @EntityGraph(attributePaths = {"spaceResource", "spaceResource.store", "approvedByUser", "receiptMember"})
     List<SpaceBookingEntity> findAllBySpaceResource_Store_CodeAndEndAtAfterAndStartAtBeforeOrderByStartAtAsc(
             String storeCode,
             OffsetDateTime from,
             OffsetDateTime to
     );
 
-    @EntityGraph(attributePaths = {"spaceResource", "spaceResource.store", "approvedByUser"})
+    @EntityGraph(attributePaths = {"spaceResource", "spaceResource.store", "approvedByUser", "receiptMember"})
     List<SpaceBookingEntity> findAllBySpaceResource_Store_CodeAndStatusAndEndAtAfterAndStartAtBeforeOrderByStartAtAsc(
             String storeCode,
             String status,
@@ -35,12 +35,18 @@ public interface SpaceBookingRepository extends JpaRepository<SpaceBookingEntity
             OffsetDateTime to
     );
 
-    @EntityGraph(attributePaths = {"spaceResource", "spaceResource.store", "approvedByUser"})
+    @EntityGraph(attributePaths = {"spaceResource", "spaceResource.store", "approvedByUser", "receiptMember"})
     Optional<SpaceBookingEntity> findByIdAndSpaceResource_Store_Code(UUID id, String storeCode);
 
-    @EntityGraph(attributePaths = {"spaceResource", "spaceResource.store", "approvedByUser"})
+    @EntityGraph(attributePaths = {"spaceResource", "spaceResource.store", "approvedByUser", "receiptMember"})
     List<SpaceBookingEntity> findAllByStatusAndStartAtAfterOrderByStartAtAsc(
             String status,
             OffsetDateTime startAt
     );
+
+    @EntityGraph(attributePaths = {"spaceResource", "spaceResource.store", "approvedByUser", "receiptMember"})
+    List<SpaceBookingEntity> findAllByReceiptMember_IdOrderByStartAtDesc(UUID receiptMemberId);
+
+    @EntityGraph(attributePaths = {"spaceResource", "spaceResource.store", "approvedByUser", "receiptMember"})
+    Optional<SpaceBookingEntity> findByIdAndReceiptMember_Id(UUID id, UUID receiptMemberId);
 }

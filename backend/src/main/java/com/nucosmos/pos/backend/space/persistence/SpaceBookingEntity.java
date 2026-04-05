@@ -2,6 +2,7 @@ package com.nucosmos.pos.backend.space.persistence;
 
 import com.nucosmos.pos.backend.auth.persistence.UserEntity;
 import com.nucosmos.pos.backend.common.persistence.BaseEntity;
+import com.nucosmos.pos.backend.order.persistence.ReceiptMemberEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -23,6 +24,10 @@ public class SpaceBookingEntity extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "approved_by_user_id")
     private UserEntity approvedByUser;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "receipt_member_id")
+    private ReceiptMemberEntity receiptMember;
 
     @Column(nullable = false, unique = true, length = 60)
     private String bookingNumber;
@@ -137,6 +142,10 @@ public class SpaceBookingEntity extends BaseEntity {
         return approvedByUser;
     }
 
+    public ReceiptMemberEntity getReceiptMember() {
+        return receiptMember;
+    }
+
     public String getBookingNumber() {
         return bookingNumber;
     }
@@ -215,6 +224,30 @@ public class SpaceBookingEntity extends BaseEntity {
 
     public OffsetDateTime getCompletedAt() {
         return completedAt;
+    }
+
+    public void bindMember(ReceiptMemberEntity receiptMember) {
+        this.receiptMember = receiptMember;
+    }
+
+    public void updatePublicBooking(
+            String purpose,
+            String eventLink,
+            int attendeeCount,
+            String note,
+            OffsetDateTime startAt,
+            OffsetDateTime endAt,
+            BigDecimal subtotalAmount,
+            BigDecimal balanceAmount
+    ) {
+        this.purpose = purpose;
+        this.eventLink = eventLink;
+        this.attendeeCount = attendeeCount;
+        this.note = note;
+        this.startAt = startAt;
+        this.endAt = endAt;
+        this.subtotalAmount = subtotalAmount;
+        this.balanceAmount = balanceAmount;
     }
 
     public void approve(UserEntity approvedByUser, String internalNote) {
