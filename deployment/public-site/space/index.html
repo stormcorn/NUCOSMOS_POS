@@ -441,7 +441,7 @@
             <input id="customer-phone" type="tel" placeholder="手機號碼 Phone Number" />
           </div>
           <input id="customer-email" type="email" placeholder="Email（選填 Optional）" style="margin-top:12px;" />
-          <input id="customer-purpose" type="text" placeholder="活動用途 Purpose（講座、聚會、拍攝等）" style="margin-top:12px;" />
+          <input id="customer-purpose" type="text" placeholder="活動名稱 Event Name" style="margin-top:12px;" />
           <input id="selected-date" type="text" readonly placeholder="請先選擇日期 / Select a date first" style="margin-top:12px;" />
           <div class="row" style="margin-top:12px;">
             <select id="booking-start">
@@ -578,6 +578,10 @@
 
       function slotDurationMinutes(slot) {
         return Math.round((new Date(slot.endAt) - new Date(slot.startAt)) / 60000);
+      }
+
+      function availableHours(day) {
+        return Math.round((day?.slots || []).filter(isAvailableSlot).reduce((sum, slot) => sum + slotDurationMinutes(slot), 0) / 60);
       }
 
       function isAvailableSlot(slot) {
@@ -755,7 +759,7 @@
 
           button.innerHTML = `
             <strong>${day}</strong>
-            <small>${availableCount > 0 ? `可預約 ${availableCount} 格 / ${availableCount} slot(s)` : "無可用時段 / No slots"}</small>
+            <small>${availableCount > 0 ? `可預約 ${availableHours(availabilityDay)} 小時 / ${availableHours(availabilityDay)} hours` : "無可用時段 / No availability"}</small>
           `;
 
           button.addEventListener("click", () => {

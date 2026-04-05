@@ -408,18 +408,27 @@ public class SpaceBookingService {
             OffsetDateTime slotEnd = next.toOffsetDateTime();
 
             String status = "AVAILABLE";
-            String label = "Available";
+            String label = "可預約";
 
-            boolean blocked = blockouts.stream().anyMatch(blockout -> overlaps(slotStart, slotEnd, blockout.getStartAt(), blockout.getEndAt()));
-            boolean reserved = bookings.stream().anyMatch(booking ->
-                    overlaps(slotStart, slotEnd, bufferedStart(space, booking.getStartAt()), bufferedEnd(space, booking.getEndAt())));
+            SpaceBlockoutEntity overlappingBlockout = blockouts.stream()
+                    .filter(blockout -> overlaps(slotStart, slotEnd, blockout.getStartAt(), blockout.getEndAt()))
+                    .findFirst()
+                    .orElse(null);
+            SpaceBookingEntity overlappingBooking = bookings.stream()
+                    .filter(booking -> overlaps(slotStart, slotEnd, bufferedStart(space, booking.getStartAt()), bufferedEnd(space, booking.getEndAt())))
+                    .findFirst()
+                    .orElse(null);
 
-            if (blocked) {
+            if (overlappingBlockout != null) {
                 status = "UNAVAILABLE";
-                label = "Blocked";
-            } else if (reserved) {
+                label = overlappingBlockout.getTitle() != null && !overlappingBlockout.getTitle().isBlank()
+                        ? overlappingBlockout.getTitle()
+                        : "封鎖時段";
+            } else if (overlappingBooking != null) {
                 status = "UNAVAILABLE";
-                label = "Reserved";
+                label = overlappingBooking.getPurpose() != null && !overlappingBooking.getPurpose().isBlank()
+                        ? overlappingBooking.getPurpose()
+                        : "已預約";
             }
 
             slots.add(new PublicSpaceAvailabilitySlotResponse(slotStart.toString(), slotEnd.toString(), status, label));
