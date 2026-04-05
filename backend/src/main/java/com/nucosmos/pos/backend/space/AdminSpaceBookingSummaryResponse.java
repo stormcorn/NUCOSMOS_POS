@@ -11,6 +11,7 @@ public record AdminSpaceBookingSummaryResponse(
         String customerName,
         String customerPhone,
         String purpose,
+        String eventLink,
         int attendeeCount,
         String startAt,
         String endAt,

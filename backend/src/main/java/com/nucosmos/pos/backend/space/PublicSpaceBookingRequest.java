@@ -14,6 +14,7 @@ public record PublicSpaceBookingRequest(
         @NotBlank @Size(max = 40) String customerPhone,
         @Email @Size(max = 160) String customerEmail,
         @Size(max = 240) String purpose,
+        @Size(max = 500) String eventLink,
         @Min(1) @Max(500) int attendeeCount,
         @Size(max = 1000) String note,
         @NotNull OffsetDateTime startAt,

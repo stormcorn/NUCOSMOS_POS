@@ -45,6 +45,9 @@ public class SpaceBookingEntity extends BaseEntity {
     @Column(length = 240)
     private String purpose;
 
+    @Column(length = 500)
+    private String eventLink;
+
     @Column(nullable = false)
     private int attendeeCount;
 
@@ -93,6 +96,7 @@ public class SpaceBookingEntity extends BaseEntity {
             String customerPhone,
             String customerEmail,
             String purpose,
+            String eventLink,
             int attendeeCount,
             BigDecimal subtotalAmount,
             BigDecimal depositAmount,
@@ -112,6 +116,7 @@ public class SpaceBookingEntity extends BaseEntity {
         entity.customerPhone = customerPhone;
         entity.customerEmail = customerEmail;
         entity.purpose = purpose;
+        entity.eventLink = eventLink;
         entity.attendeeCount = attendeeCount;
         entity.subtotalAmount = subtotalAmount;
         entity.depositAmount = depositAmount;
@@ -158,6 +163,10 @@ public class SpaceBookingEntity extends BaseEntity {
 
     public String getPurpose() {
         return purpose;
+    }
+
+    public String getEventLink() {
+        return eventLink;
     }
 
     public int getAttendeeCount() {

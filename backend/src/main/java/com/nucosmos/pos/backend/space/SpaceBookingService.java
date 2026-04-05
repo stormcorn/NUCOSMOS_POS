@@ -109,6 +109,25 @@ public class SpaceBookingService {
         );
     }
 
+    public List<PublicSpaceUpcomingEventResponse> listPublicUpcomingEvents(int limit) {
+        int safeLimit = Math.min(Math.max(limit, 1), 12);
+        return spaceBookingRepository.findAllByStatusAndStartAtAfterOrderByStartAtAsc("CONFIRMED", OffsetDateTime.now())
+                .stream()
+                .filter(booking -> booking.getSpaceResource() != null && booking.getSpaceResource().isActive())
+                .filter(booking -> booking.getPurpose() != null && !booking.getPurpose().isBlank())
+                .limit(safeLimit)
+                .map(booking -> new PublicSpaceUpcomingEventResponse(
+                        booking.getSpaceResource().getSlug(),
+                        booking.getSpaceResource().getName(),
+                        booking.getSpaceResource().getLocationLabel(),
+                        booking.getPurpose(),
+                        booking.getEventLink(),
+                        booking.getStartAt().toString(),
+                        booking.getEndAt().toString()
+                ))
+                .toList();
+    }
+
     public PublicSpaceBookingResponse createPublicBookingRequest(String slug, PublicSpaceBookingRequest request) {
         SpaceResourceEntity space = requireActiveSpace(slug);
         SpaceBookingEntity booking = createBooking(
@@ -117,6 +136,7 @@ public class SpaceBookingService {
                 request.customerPhone(),
                 request.customerEmail(),
                 request.purpose(),
+                request.eventLink(),
                 request.attendeeCount(),
                 request.note(),
                 null,
@@ -179,6 +199,7 @@ public class SpaceBookingService {
                 request.customerPhone(),
                 request.customerEmail(),
                 request.purpose(),
+                request.eventLink(),
                 request.attendeeCount(),
                 request.note(),
                 request.internalNote(),
@@ -268,6 +289,7 @@ public class SpaceBookingService {
             String customerPhone,
             String customerEmail,
             String purpose,
+            String eventLink,
             int attendeeCount,
             String note,
             String internalNote,
@@ -294,6 +316,7 @@ public class SpaceBookingService {
                 customerPhone.trim(),
                 blankToNull(customerEmail),
                 blankToNull(purpose),
+                blankToNull(eventLink),
                 attendeeCount,
                 subtotal,
                 BigDecimal.ZERO,
@@ -554,6 +577,7 @@ public class SpaceBookingService {
                 booking.getCustomerName(),
                 booking.getCustomerPhone(),
                 booking.getPurpose(),
+                booking.getEventLink(),
                 booking.getAttendeeCount(),
                 booking.getStartAt().toString(),
                 booking.getEndAt().toString(),
@@ -574,6 +598,7 @@ public class SpaceBookingService {
                 booking.getCustomerPhone(),
                 booking.getCustomerEmail(),
                 booking.getPurpose(),
+                booking.getEventLink(),
                 booking.getAttendeeCount(),
                 booking.getSubtotalAmount(),
                 booking.getDepositAmount(),

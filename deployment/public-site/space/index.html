@@ -467,6 +467,10 @@
             <input id="customer-purpose" type="text" placeholder="請輸入活動名稱 / Enter event name" />
           </label>
           <label class="field" style="margin-top:12px;">
+            <span class="field-label">活動連結 Event Link</span>
+            <input id="customer-event-link" type="url" placeholder="請輸入活動連結，例如 Facebook 或活動通網址 / Enter event link" />
+          </label>
+          <label class="field" style="margin-top:12px;">
             <span class="field-label">預約日期 Booking Date</span>
             <input id="selected-date" type="text" readonly placeholder="請先選擇日期 / Select a date first" />
           </label>
@@ -531,6 +535,7 @@
         phone: document.getElementById("customer-phone"),
         email: document.getElementById("customer-email"),
         purpose: document.getElementById("customer-purpose"),
+        eventLink: document.getElementById("customer-event-link"),
         start: document.getElementById("booking-start"),
         end: document.getElementById("booking-end"),
         attendees: document.getElementById("attendee-count"),
@@ -862,6 +867,7 @@
               customerPhone: form.phone.value,
               customerEmail: form.email.value || null,
               purpose: form.purpose.value || null,
+              eventLink: form.eventLink.value || null,
               attendeeCount: Number(form.attendees.value || "0"),
               note: form.note.value || null,
               startAt: withOffset(form.start.value),

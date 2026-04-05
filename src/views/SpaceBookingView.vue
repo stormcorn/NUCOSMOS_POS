@@ -50,6 +50,7 @@ const manualBookingForm = reactive({
   customerPhone: "",
   customerEmail: "",
   purpose: "",
+  eventLink: "",
   attendeeCount: "10",
   note: "",
   internalNote: "",
@@ -164,6 +165,7 @@ async function submitManualBooking() {
       customerPhone: manualBookingForm.customerPhone,
       customerEmail: manualBookingForm.customerEmail || null,
       purpose: manualBookingForm.purpose || null,
+      eventLink: manualBookingForm.eventLink || null,
       attendeeCount: Number(manualBookingForm.attendeeCount),
       note: manualBookingForm.note || null,
       internalNote: manualBookingForm.internalNote || null,
@@ -379,7 +381,20 @@ onMounted(() => {
               <div class="font-semibold text-white">{{ selectedBooking.bookingNumber }}</div>
               <div class="mt-2">聯絡人：{{ selectedBooking.customerName }} / {{ selectedBooking.customerPhone }}</div>
               <div>Email：{{ selectedBooking.customerEmail || "-" }}</div>
-              <div>用途：{{ selectedBooking.purpose || "-" }}</div>
+              <div>活動名稱：{{ selectedBooking.purpose || "-" }}</div>
+              <div>
+                活動連結：
+                <a
+                  v-if="selectedBooking.eventLink"
+                  :href="selectedBooking.eventLink"
+                  target="_blank"
+                  rel="noreferrer"
+                  class="text-brand-aqua underline-offset-4 hover:underline"
+                >
+                  {{ selectedBooking.eventLink }}
+                </a>
+                <span v-else>-</span>
+              </div>
               <div>時段：{{ formatDateTime(selectedBooking.startAt) }} → {{ formatDateTime(selectedBooking.endAt) }}</div>
               <div>金額：{{ formatCurrency(selectedBooking.subtotalAmount) }}</div>
               <div>狀態：{{ selectedBooking.status }}</div>
@@ -414,6 +429,10 @@ onMounted(() => {
             <label class="block space-y-2">
               <span class="text-xs uppercase tracking-[0.18em] text-slate-500">活動名稱</span>
               <input v-model="manualBookingForm.purpose" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="請輸入活動名稱" />
+            </label>
+            <label class="block space-y-2">
+              <span class="text-xs uppercase tracking-[0.18em] text-slate-500">活動連結</span>
+              <input v-model="manualBookingForm.eventLink" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="請輸入活動連結，例如 Facebook 或活動通網址" />
             </label>
             <label class="block space-y-2">
               <span class="text-xs uppercase tracking-[0.18em] text-slate-500">預計人數</span>

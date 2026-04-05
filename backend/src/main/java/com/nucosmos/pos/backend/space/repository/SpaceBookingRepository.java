@@ -37,4 +37,10 @@ public interface SpaceBookingRepository extends JpaRepository<SpaceBookingEntity
 
     @EntityGraph(attributePaths = {"spaceResource", "spaceResource.store", "approvedByUser"})
     Optional<SpaceBookingEntity> findByIdAndSpaceResource_Store_Code(UUID id, String storeCode);
+
+    @EntityGraph(attributePaths = {"spaceResource", "spaceResource.store", "approvedByUser"})
+    List<SpaceBookingEntity> findAllByStatusAndStartAtAfterOrderByStartAtAsc(
+            String status,
+            OffsetDateTime startAt
+    );
 }

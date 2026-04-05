@@ -64,6 +64,7 @@ export type AdminSpaceBookingSummary = {
   customerName: string;
   customerPhone: string;
   purpose: string | null;
+  eventLink: string | null;
   attendeeCount: number;
   startAt: string;
   endAt: string;
@@ -82,6 +83,7 @@ export type AdminSpaceBooking = {
   customerPhone: string;
   customerEmail: string | null;
   purpose: string | null;
+  eventLink: string | null;
   attendeeCount: number;
   subtotalAmount: number;
   depositAmount: number;

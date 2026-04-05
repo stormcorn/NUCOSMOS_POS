@@ -13,6 +13,7 @@ public record AdminSpaceBookingResponse(
         String customerPhone,
         String customerEmail,
         String purpose,
+        String eventLink,
         int attendeeCount,
         BigDecimal subtotalAmount,
         BigDecimal depositAmount,

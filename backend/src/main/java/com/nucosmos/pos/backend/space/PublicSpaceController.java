@@ -43,6 +43,13 @@ public class PublicSpaceController {
         return ApiResponse.ok(spaceBookingService.getPublicAvailability(slug, from, to));
     }
 
+    @GetMapping("/upcoming-events")
+    public ApiResponse<List<PublicSpaceUpcomingEventResponse>> upcomingEvents(
+            @RequestParam(defaultValue = "6") int limit
+    ) {
+        return ApiResponse.ok(spaceBookingService.listPublicUpcomingEvents(limit));
+    }
+
     @PostMapping("/{slug}/booking-requests")
     public ApiResponse<PublicSpaceBookingResponse> createBookingRequest(
             @PathVariable String slug,
