@@ -82,6 +82,16 @@
         font-size: 20px;
       }
 
+      .stat-link {
+        display: inline-flex;
+        align-items: center;
+        margin-top: 10px;
+        color: #5ff5de;
+        font-size: 13px;
+        text-decoration: none;
+        border-bottom: 1px solid rgba(95, 245, 222, 0.24);
+      }
+
       .grid {
         margin-top: 22px;
         display: grid;
@@ -365,7 +375,18 @@
           <div class="stat"><small>價格 Price</small><strong id="space-rate">--</strong></div>
           <div class="stat"><small>容納 Capacity</small><strong id="space-capacity">--</strong></div>
           <div class="stat"><small>預約規則 Booking Rule</small><strong id="space-rule">--</strong></div>
-          <div class="stat"><small>地點 Location</small><strong id="space-location">--</strong></div>
+          <div class="stat">
+            <small>地點 Location</small>
+            <strong id="space-location">--</strong>
+            <a
+              class="stat-link"
+              href="https://www.google.com/maps/search/?api=1&query=NUCOSMOS%20%E6%BD%AE%E9%A3%9F%E8%8C%B6%E9%A4%A8%20%E5%8F%B0%E4%B8%AD"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Google 地圖商家資訊 / Google Maps
+            </a>
+          </div>
         </div>
       </section>
 
@@ -754,7 +775,7 @@
         els.description.textContent = space.description || "NUCOSMOS 2F 適合講座、工作坊、聚會與品牌活動。 / Ideal for talks, workshops, gatherings, and brand events.";
         els.rate.textContent = `${currency(space.hourlyRate, space.currencyCode)} / 小時 per hour`;
         els.capacity.textContent = `${space.capacity} 人 people`;
-        els.rule.textContent = `至少 ${space.minimumHours} 小時 / Min ${space.minimumHours} hours · 每 ${space.bookingIntervalMinutes} 分鐘一格 / ${space.bookingIntervalMinutes}-minute interval`;
+        els.rule.textContent = `至少 ${space.minimumHours} 小時 / Min ${space.minimumHours} hours`;
         els.location.textContent = space.locationLabel || "NUCOSMOS 2F";
         els.houseRules.textContent = `場地規則 House Rules：${space.houseRulesText || "請先與 NUCOSMOS 確認特殊活動需求。 Please confirm any special event needs with NUCOSMOS first."}`;
         els.cancelPolicy.textContent = `取消政策 Cancellation Policy：${space.cancellationPolicyText || "第一版採人工確認，實際取消規則將於確認時告知。 Phase 1 uses manual confirmation; detailed cancellation rules will be confirmed with you."}`;
