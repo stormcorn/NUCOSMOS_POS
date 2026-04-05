@@ -250,6 +250,34 @@ public class SpaceBookingEntity extends BaseEntity {
         this.balanceAmount = balanceAmount;
     }
 
+    public void updateAdminBooking(
+            String customerName,
+            String customerPhone,
+            String customerEmail,
+            String purpose,
+            String eventLink,
+            int attendeeCount,
+            String note,
+            String internalNote,
+            OffsetDateTime startAt,
+            OffsetDateTime endAt,
+            BigDecimal subtotalAmount,
+            BigDecimal balanceAmount
+    ) {
+        this.customerName = customerName;
+        this.customerPhone = customerPhone;
+        this.customerEmail = customerEmail;
+        this.purpose = purpose;
+        this.eventLink = eventLink;
+        this.attendeeCount = attendeeCount;
+        this.note = note;
+        this.internalNote = internalNote;
+        this.startAt = startAt;
+        this.endAt = endAt;
+        this.subtotalAmount = subtotalAmount;
+        this.balanceAmount = balanceAmount;
+    }
+
     public void approve(UserEntity approvedByUser, String internalNote) {
         this.status = "CONFIRMED";
         this.approvedByUser = approvedByUser;

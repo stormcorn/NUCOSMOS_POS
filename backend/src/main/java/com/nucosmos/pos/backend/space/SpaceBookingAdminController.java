@@ -8,6 +8,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -56,6 +57,16 @@ public class SpaceBookingAdminController {
         return ApiResponse.ok(spaceBookingService.getAdminBooking(user, bookingId));
     }
 
+    @PatchMapping("/{bookingId}")
+    public ApiResponse<AdminSpaceBookingResponse> updateBooking(
+            Authentication authentication,
+            @PathVariable UUID bookingId,
+            @Valid @RequestBody AdminSpaceBookingUpdateRequest request
+    ) {
+        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
+        return ApiResponse.ok(spaceBookingService.updateAdminBooking(user, bookingId, request));
+    }
+
     @PostMapping
     public ApiResponse<AdminSpaceBookingResponse> createManualBooking(
             Authentication authentication,
@@ -73,16 +84,6 @@ public class SpaceBookingAdminController {
     ) {
         AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
         return ApiResponse.ok(spaceBookingService.approveBooking(user, bookingId, request));
-    }
-
-    @PostMapping("/{bookingId}/reject")
-    public ApiResponse<AdminSpaceBookingResponse> reject(
-            Authentication authentication,
-            @PathVariable UUID bookingId,
-            @Valid @RequestBody AdminSpaceBookingDecisionRequest request
-    ) {
-        AuthenticatedUser user = (AuthenticatedUser) authentication.getPrincipal();
-        return ApiResponse.ok(spaceBookingService.rejectBooking(user, bookingId, request));
     }
 
     @PostMapping("/{bookingId}/cancel")

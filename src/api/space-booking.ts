@@ -19,6 +19,13 @@ export function fetchAdminBooking(bookingId: string) {
   return apiRequest<AdminSpaceBooking>(`/api/v1/admin/space-bookings/${bookingId}`);
 }
 
+export function updateAdminBooking(bookingId: string, payload: Record<string, unknown>) {
+  return apiRequest<AdminSpaceBooking>(`/api/v1/admin/space-bookings/${bookingId}`, {
+    method: "PATCH",
+    body: payload,
+  });
+}
+
 export function createAdminBooking(payload: Record<string, unknown>) {
   return apiRequest<AdminSpaceBooking>("/api/v1/admin/space-bookings", {
     method: "POST",
@@ -28,13 +35,6 @@ export function createAdminBooking(payload: Record<string, unknown>) {
 
 export function approveAdminBooking(bookingId: string, internalNote: string) {
   return apiRequest<AdminSpaceBooking>(`/api/v1/admin/space-bookings/${bookingId}/approve`, {
-    method: "POST",
-    body: { internalNote },
-  });
-}
-
-export function rejectAdminBooking(bookingId: string, internalNote: string) {
-  return apiRequest<AdminSpaceBooking>(`/api/v1/admin/space-bookings/${bookingId}/reject`, {
     method: "POST",
     body: { internalNote },
   });

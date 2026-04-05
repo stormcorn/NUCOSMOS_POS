@@ -232,6 +232,41 @@ public class SpaceBookingService {
         return toAdminResponse(requireBooking(user.storeCode(), bookingId));
     }
 
+    public AdminSpaceBookingResponse updateAdminBooking(
+            AuthenticatedUser user,
+            UUID bookingId,
+            AdminSpaceBookingUpdateRequest request
+    ) {
+        SpaceBookingEntity booking = requireBooking(user.storeCode(), bookingId);
+        SpaceResourceEntity space = booking.getSpaceResource();
+        validateWindow(space, request.startAt(), request.endAt());
+        validateAttendees(space, request.attendeeCount());
+        ensureNoActiveBookingOverlap(space, request.startAt(), request.endAt(), booking.getId());
+
+        long minutes = Duration.between(request.startAt(), request.endAt()).toMinutes();
+        BigDecimal subtotalAmount = requirePolicy(space).getHourlyRate()
+                .multiply(BigDecimal.valueOf(minutes))
+                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+        BigDecimal paidAmount = booking.getPaidAmount() == null ? BigDecimal.ZERO : booking.getPaidAmount();
+        BigDecimal balanceAmount = subtotalAmount.subtract(paidAmount);
+
+        booking.updateAdminBooking(
+                request.customerName().trim(),
+                request.customerPhone().trim(),
+                blankToNull(request.customerEmail()),
+                blankToNull(request.purpose()),
+                blankToNull(request.eventLink()),
+                request.attendeeCount(),
+                blankToNull(request.note()),
+                blankToNull(request.internalNote()),
+                request.startAt(),
+                request.endAt(),
+                subtotalAmount,
+                balanceAmount.max(BigDecimal.ZERO)
+        );
+        return saveAndReloadBooking(user.storeCode(), booking);
+    }
+
     public AdminSpaceBookingResponse createManualBooking(AuthenticatedUser user, AdminSpaceBookingRequest request) {
         SpaceResourceEntity space = requireAdminSpace(user.storeCode(), request.spaceResourceId());
         String source = request.source() == null || request.source().isBlank() ? "MANUAL" : request.source().trim();
@@ -267,16 +302,6 @@ public class SpaceBookingService {
         SpaceBookingEntity booking = requireBooking(user.storeCode(), bookingId);
         ensureBookingCanStayActive(booking.getSpaceResource(), booking.getStartAt(), booking.getEndAt(), booking.getId());
         booking.approve(requireUser(user.userId()), request.internalNote());
-        return saveAndReloadBooking(user.storeCode(), booking);
-    }
-
-    public AdminSpaceBookingResponse rejectBooking(
-            AuthenticatedUser user,
-            UUID bookingId,
-            AdminSpaceBookingDecisionRequest request
-    ) {
-        SpaceBookingEntity booking = requireBooking(user.storeCode(), bookingId);
-        booking.reject(request.internalNote());
         return saveAndReloadBooking(user.storeCode(), booking);
     }
 
