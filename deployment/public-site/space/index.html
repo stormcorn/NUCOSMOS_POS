@@ -798,7 +798,7 @@
 
           button.innerHTML = `
             <strong>${day}</strong>
-            <small>${availableCount > 0 ? `可預約 ${availableHours(availabilityDay)} 小時 / ${availableHours(availabilityDay)} hours` : "無可用時段 / No availability"}</small>
+            <small>${availableCount > 0 ? "可預約" : "已額滿"}</small>
           `;
 
           button.addEventListener("click", () => {
