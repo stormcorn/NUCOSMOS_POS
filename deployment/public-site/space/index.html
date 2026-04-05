@@ -109,6 +109,18 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
+      .field {
+        display: grid;
+        gap: 8px;
+      }
+
+      .field-label {
+        color: #8fa3be;
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
       input, textarea, select, button {
         width: 100%;
         font: inherit;
@@ -437,22 +449,49 @@
           <p class="sub">請先從左側月曆選擇日期，再選開始與結束時段。若時段可行，我們會再與你確認。<br />Please pick a date from the calendar first, then choose the booking time range.</p>
 
           <div class="row" style="margin-top:18px;">
-            <input id="customer-name" type="text" placeholder="姓名 Name" />
-            <input id="customer-phone" type="tel" placeholder="手機號碼 Phone Number" />
+            <label class="field">
+              <span class="field-label">姓名 Name</span>
+              <input id="customer-name" type="text" placeholder="請輸入姓名 / Enter your name" />
+            </label>
+            <label class="field">
+              <span class="field-label">手機號碼 Phone Number</span>
+              <input id="customer-phone" type="tel" placeholder="請輸入手機號碼 / Enter your phone number" />
+            </label>
           </div>
-          <input id="customer-email" type="email" placeholder="Email（選填 Optional）" style="margin-top:12px;" />
-          <input id="customer-purpose" type="text" placeholder="活動名稱 Event Name" style="margin-top:12px;" />
-          <input id="selected-date" type="text" readonly placeholder="請先選擇日期 / Select a date first" style="margin-top:12px;" />
+          <label class="field" style="margin-top:12px;">
+            <span class="field-label">Email（選填 Optional）</span>
+            <input id="customer-email" type="email" placeholder="name@example.com" />
+          </label>
+          <label class="field" style="margin-top:12px;">
+            <span class="field-label">活動名稱 Event Name</span>
+            <input id="customer-purpose" type="text" placeholder="請輸入活動名稱 / Enter event name" />
+          </label>
+          <label class="field" style="margin-top:12px;">
+            <span class="field-label">預約日期 Booking Date</span>
+            <input id="selected-date" type="text" readonly placeholder="請先選擇日期 / Select a date first" />
+          </label>
           <div class="row" style="margin-top:12px;">
-            <select id="booking-start">
-              <option value="">請先選擇開始時段 / Select start time</option>
-            </select>
-            <select id="booking-end">
-              <option value="">請先選擇結束時段 / Select end time</option>
-            </select>
+            <label class="field">
+              <span class="field-label">開始時段 Start Time</span>
+              <select id="booking-start">
+                <option value="">請先選擇開始時段 / Select start time</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="field-label">結束時段 End Time</span>
+              <select id="booking-end">
+                <option value="">請先選擇結束時段 / Select end time</option>
+              </select>
+            </label>
           </div>
-          <input id="attendee-count" type="number" min="1" placeholder="預計人數 Attendee Count" style="margin-top:12px;" />
-          <textarea id="booking-note" placeholder="備註 Notes（選填 Optional）" style="margin-top:12px;"></textarea>
+          <label class="field" style="margin-top:12px;">
+            <span class="field-label">預計人數 Attendee Count</span>
+            <input id="attendee-count" type="number" min="1" placeholder="請輸入預計人數 / Enter attendee count" />
+          </label>
+          <label class="field" style="margin-top:12px;">
+            <span class="field-label">備註 Notes（選填 Optional）</span>
+            <textarea id="booking-note" placeholder="請輸入補充說明 / Additional notes"></textarea>
+          </label>
           <button id="submit-booking" style="margin-top:12px;">送出預約申請 / Submit Booking Request</button>
 
           <div id="booking-message" class="message" style="display:none;"></div>

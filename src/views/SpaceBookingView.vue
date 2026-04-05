@@ -264,18 +264,30 @@ onMounted(() => {
           <p class="mt-2 text-sm text-slate-400">在這裡審核預約申請、管理不可預約時段，並查看對外公開的可租借時段。</p>
         </div>
         <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <select v-model="selectedSpaceId" class="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none" @change="loadWorkspace">
-            <option v-for="space in spaces" :key="space.id" :value="space.id">{{ space.name }}</option>
-          </select>
-          <input v-model="filters.from" type="date" class="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none" />
-          <input v-model="filters.to" type="date" class="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none" />
-          <select v-model="filters.status" class="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none">
-            <option value="">全部狀態</option>
-            <option value="PENDING">待審核</option>
-            <option value="CONFIRMED">已確認</option>
-            <option value="REJECTED">已拒絕</option>
-            <option value="CANCELLED">已取消</option>
-          </select>
+          <label class="space-y-2">
+            <span class="text-xs uppercase tracking-[0.18em] text-slate-500">空間</span>
+            <select v-model="selectedSpaceId" class="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none" @change="loadWorkspace">
+              <option v-for="space in spaces" :key="space.id" :value="space.id">{{ space.name }}</option>
+            </select>
+          </label>
+          <label class="space-y-2">
+            <span class="text-xs uppercase tracking-[0.18em] text-slate-500">開始日期</span>
+            <input v-model="filters.from" type="date" class="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none" />
+          </label>
+          <label class="space-y-2">
+            <span class="text-xs uppercase tracking-[0.18em] text-slate-500">結束日期</span>
+            <input v-model="filters.to" type="date" class="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none" />
+          </label>
+          <label class="space-y-2">
+            <span class="text-xs uppercase tracking-[0.18em] text-slate-500">狀態</span>
+            <select v-model="filters.status" class="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-white outline-none">
+              <option value="">全部狀態</option>
+              <option value="PENDING">待審核</option>
+              <option value="CONFIRMED">已確認</option>
+              <option value="REJECTED">已拒絕</option>
+              <option value="CANCELLED">已取消</option>
+            </select>
+          </label>
           <button class="rounded-2xl border border-brand-aqua/30 bg-brand-aqua/10 px-5 py-3 text-sm font-semibold text-brand-aqua transition hover:border-brand-aqua/50" @click="loadWorkspace">重新整理</button>
         </div>
       </div>
@@ -387,17 +399,44 @@ onMounted(() => {
         <article class="rounded-[2rem] border border-white/10 bg-slate-950/55 p-6 shadow-soft shadow-black/20">
           <h3 class="text-xl font-semibold text-white">人工建立預約</h3>
           <div class="mt-6 space-y-4">
-            <input v-model="manualBookingForm.customerName" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="聯絡人姓名" />
-            <input v-model="manualBookingForm.customerPhone" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="手機號碼" />
-            <input v-model="manualBookingForm.customerEmail" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="Email（選填）" />
-            <input v-model="manualBookingForm.purpose" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="活動用途" />
-            <input v-model="manualBookingForm.attendeeCount" type="number" min="1" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="預計人數" />
+            <label class="block space-y-2">
+              <span class="text-xs uppercase tracking-[0.18em] text-slate-500">聯絡人姓名</span>
+              <input v-model="manualBookingForm.customerName" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="請輸入聯絡人姓名" />
+            </label>
+            <label class="block space-y-2">
+              <span class="text-xs uppercase tracking-[0.18em] text-slate-500">手機號碼</span>
+              <input v-model="manualBookingForm.customerPhone" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="請輸入手機號碼" />
+            </label>
+            <label class="block space-y-2">
+              <span class="text-xs uppercase tracking-[0.18em] text-slate-500">Email（選填）</span>
+              <input v-model="manualBookingForm.customerEmail" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="name@example.com" />
+            </label>
+            <label class="block space-y-2">
+              <span class="text-xs uppercase tracking-[0.18em] text-slate-500">活動名稱</span>
+              <input v-model="manualBookingForm.purpose" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="請輸入活動名稱" />
+            </label>
+            <label class="block space-y-2">
+              <span class="text-xs uppercase tracking-[0.18em] text-slate-500">預計人數</span>
+              <input v-model="manualBookingForm.attendeeCount" type="number" min="1" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="請輸入預計人數" />
+            </label>
             <div class="grid gap-3 sm:grid-cols-2">
-              <input v-model="manualBookingForm.startAt" type="datetime-local" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" />
-              <input v-model="manualBookingForm.endAt" type="datetime-local" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" />
+              <label class="block space-y-2">
+                <span class="text-xs uppercase tracking-[0.18em] text-slate-500">開始時間</span>
+                <input v-model="manualBookingForm.startAt" type="datetime-local" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" />
+              </label>
+              <label class="block space-y-2">
+                <span class="text-xs uppercase tracking-[0.18em] text-slate-500">結束時間</span>
+                <input v-model="manualBookingForm.endAt" type="datetime-local" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" />
+              </label>
             </div>
-            <textarea v-model="manualBookingForm.note" rows="2" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="客戶備註" />
-            <textarea v-model="manualBookingForm.internalNote" rows="2" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="內部備註" />
+            <label class="block space-y-2">
+              <span class="text-xs uppercase tracking-[0.18em] text-slate-500">客戶備註</span>
+              <textarea v-model="manualBookingForm.note" rows="2" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="請輸入客戶備註"></textarea>
+            </label>
+            <label class="block space-y-2">
+              <span class="text-xs uppercase tracking-[0.18em] text-slate-500">內部備註</span>
+              <textarea v-model="manualBookingForm.internalNote" rows="2" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="請輸入內部備註"></textarea>
+            </label>
             <button class="w-full rounded-2xl border border-brand-aqua/30 bg-brand-aqua/10 px-4 py-3 text-sm font-semibold text-brand-aqua" :disabled="saving" @click="submitManualBooking">建立已確認預約</button>
           </div>
         </article>
@@ -405,11 +444,23 @@ onMounted(() => {
         <article class="rounded-[2rem] border border-white/10 bg-slate-950/55 p-6 shadow-soft shadow-black/20">
           <h3 class="text-xl font-semibold text-white">建立封鎖時段</h3>
           <div class="mt-6 space-y-4">
-            <input v-model="blockoutForm.title" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="封鎖標題" />
-            <textarea v-model="blockoutForm.reason" rows="2" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="原因說明" />
+            <label class="block space-y-2">
+              <span class="text-xs uppercase tracking-[0.18em] text-slate-500">封鎖標題</span>
+              <input v-model="blockoutForm.title" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="請輸入封鎖標題" />
+            </label>
+            <label class="block space-y-2">
+              <span class="text-xs uppercase tracking-[0.18em] text-slate-500">原因說明</span>
+              <textarea v-model="blockoutForm.reason" rows="2" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" placeholder="請輸入原因說明"></textarea>
+            </label>
             <div class="grid gap-3 sm:grid-cols-2">
-              <input v-model="blockoutForm.startAt" type="datetime-local" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" />
-              <input v-model="blockoutForm.endAt" type="datetime-local" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" />
+              <label class="block space-y-2">
+                <span class="text-xs uppercase tracking-[0.18em] text-slate-500">開始時間</span>
+                <input v-model="blockoutForm.startAt" type="datetime-local" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" />
+              </label>
+              <label class="block space-y-2">
+                <span class="text-xs uppercase tracking-[0.18em] text-slate-500">結束時間</span>
+                <input v-model="blockoutForm.endAt" type="datetime-local" class="w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-white outline-none" />
+              </label>
             </div>
             <button class="w-full rounded-2xl border border-white/10 px-4 py-3 text-sm font-semibold text-slate-100" :disabled="saving" @click="submitBlockout">建立封鎖時段</button>
           </div>
