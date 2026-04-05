@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NUCOSMOS 會員中心 / 我的活動</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap");
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Noto Sans TC", sans-serif;
+        color: #eef4ff;
+        background:
+          radial-gradient(circle at top, rgba(84, 224, 200, 0.16), transparent 34%),
+          linear-gradient(180deg, #04111c, #020814 58%, #03070f);
+      }
+      a { color: inherit; }
+      h1, h2, h3, p { margin: 0; }
+      button, input, textarea { font: inherit; }
+      .shell { width: min(1140px, calc(100vw - 24px)); margin: 20px auto 40px; }
+      .hero, .panel {
+        border: 1px solid rgba(255,255,255,0.1);
+        background: rgba(6, 14, 28, 0.84);
+        backdrop-filter: blur(14px);
+        border-radius: 28px;
+        box-shadow: 0 18px 80px rgba(0, 0, 0, 0.28);
+      }
+      .hero { padding: 30px; }
+      .panel { padding: 24px; }
+      .top-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .nav-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .top-link {
+        text-decoration: none;
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 999px;
+        padding: 10px 14px;
+        background: rgba(255,255,255,0.04);
+        font-size: 14px;
+      }
+      .top-link.active {
+        border-color: rgba(87, 228, 201, 0.3);
+        background: rgba(87, 228, 201, 0.12);
+        color: #e3fffa;
+      }
+      .eyebrow {
+        font-family: "Rajdhani", sans-serif;
+        color: #57e4c9;
+        letter-spacing: 0.35em;
+        text-transform: uppercase;
+        font-size: 12px;
+      }
+      h1 {
+        margin-top: 14px;
+        font-family: "Orbitron", sans-serif;
+        font-size: clamp(28px, 5vw, 48px);
+        line-height: 1.06;
+      }
+      .lead {
+        margin-top: 14px;
+        max-width: 820px;
+        color: #aebdd2;
+        line-height: 1.9;
+      }
+      .message, .error, .member-card, .empty-card, .editor-summary {
+        border-radius: 18px;
+        padding: 14px 16px;
+        line-height: 1.8;
+      }
+      .message { background: rgba(87, 228, 201, 0.12); border: 1px solid rgba(87, 228, 201, 0.24); color: #dbfff8; }
+      .error { background: rgba(251, 113, 133, 0.12); border: 1px solid rgba(251, 113, 133, 0.22); color: #ffd0d8; }
+      .member-card, .editor-summary { background: rgba(87, 228, 201, 0.08); border: 1px solid rgba(87, 228, 201, 0.2); color: #dbfff8; }
+      .empty-card { background: rgba(255,255,255,0.04); border: 1px dashed rgba(255,255,255,0.12); color: #aebdd2; }
+      .layout {
+        margin-top: 18px;
+        display: grid;
+        gap: 18px;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 0.95fr);
+      }
+      .stack { display: grid; gap: 18px; }
+      .field { display: grid; gap: 8px; }
+      .field-label {
+        color: #8fa3be;
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      input, textarea, button {
+        width: 100%;
+        border-radius: 18px;
+      }
+      input, textarea {
+        border: 1px solid rgba(255,255,255,0.1);
+        background: rgba(8, 15, 29, 0.94);
+        color: #eef4ff;
+        padding: 14px 16px;
+      }
+      textarea { min-height: 120px; resize: vertical; }
+      button {
+        border: 1px solid rgba(87, 228, 201, 0.38);
+        background: rgba(87, 228, 201, 0.14);
+        color: #5ff5de;
+        padding: 14px 18px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      button:disabled { cursor: not-allowed; opacity: 0.55; }
+      .button-secondary {
+        border-color: rgba(255,255,255,0.12);
+        background: rgba(255,255,255,0.04);
+        color: #d6e5f8;
+      }
+      .button-danger {
+        border-color: rgba(251, 113, 133, 0.3);
+        background: rgba(251, 113, 133, 0.12);
+        color: #ffd0d8;
+      }
+      .row {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .booking-list { display: grid; gap: 12px; }
+      .booking-item {
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 18px;
+        background: rgba(255,255,255,0.04);
+        padding: 16px;
+        cursor: pointer;
+      }
+      .booking-item.active {
+        border-color: rgba(87, 228, 201, 0.3);
+        background: rgba(87, 228, 201, 0.1);
+      }
+      .booking-name { font-size: 18px; font-weight: 700; line-height: 1.4; }
+      .booking-meta { margin-top: 8px; color: #aebdd2; line-height: 1.8; }
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        border: 1px solid rgba(255,255,255,0.12);
+        margin-top: 10px;
+      }
+      .status-pill.pending { color: #fde68a; border-color: rgba(251,191,36,0.22); background: rgba(251,191,36,0.08); }
+      .status-pill.confirmed { color: #bbf7d0; border-color: rgba(74,222,128,0.22); background: rgba(74,222,128,0.08); }
+      .status-pill.cancelled,
+      .status-pill.rejected { color: #fecdd3; border-color: rgba(251,113,133,0.22); background: rgba(251,113,133,0.08); }
+      .booking-link {
+        display: inline-flex;
+        align-items: center;
+        margin-top: 10px;
+        color: #5ff5de;
+        font-size: 13px;
+        text-decoration: none;
+        border-bottom: 1px solid rgba(95, 245, 222, 0.24);
+      }
+      .muted { color: #9eb0c8; line-height: 1.8; }
+      .login-hint {
+        margin-top: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+      }
+      @media (max-width: 900px) {
+        .shell { width: calc(100vw - 14px); }
+        .hero, .panel { border-radius: 22px; }
+        .hero { padding: 22px; }
+        .panel { padding: 18px; }
+        .layout, .row { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <div class="top-nav">
+        <div class="nav-links">
+          <a class="top-link" href="/">返回 NUCOSMOS 首頁 / Back to NUCOSMOS</a>
+          <a class="top-link" href="/space/">活動空間租借 / Space Booking</a>
+          <a class="top-link" href="/redeem/">會員登入 / Member Login</a>
+          <a class="top-link active" href="/member/">會員中心 / 我的活動</a>
+        </div>
+      </div>
+
+      <section class="hero">
+        <p class="eyebrow">Member Center</p>
+        <h1>會員中心 / 我的活動</h1>
+        <p class="lead">已登入的會員可以在這裡查看、修改、取消自己建立的活動空間預約。若你尚未登入，請先完成會員登入，系統就會自動帶出你名下的活動。<br />Signed-in members can review, edit, or cancel their own space bookings here.</p>
+      </section>
+
+      <div id="global-message" class="message" style="display:none; margin-top:16px;"></div>
+      <div id="global-error" class="error" style="display:none; margin-top:12px;"></div>
+
+      <div class="layout">
+        <section class="stack">
+          <article class="panel">
+            <p class="eyebrow">Member Status</p>
+            <h2>會員狀態 / Member Session</h2>
+            <div id="member-card" class="member-card" style="margin-top:16px;"></div>
+            <div class="row" style="margin-top:12px;">
+              <button id="refresh-session" type="button" class="button-secondary">重新整理會員狀態 / Refresh</button>
+              <button id="logout-button" type="button" class="button-secondary">登出會員 / Logout</button>
+            </div>
+          </article>
+
+          <article class="panel">
+            <p class="eyebrow">My Events</p>
+            <h2>我的活動 / My Events</h2>
+            <p id="list-hint" class="muted" style="margin-top:12px;">登入後即可查看你建立的空間預約。</p>
+            <div id="booking-list" class="booking-list" style="margin-top:16px;"></div>
+          </article>
+        </section>
+
+        <section class="stack">
+          <article class="panel">
+            <p class="eyebrow">Editor</p>
+            <h2>編輯活動 / Edit Event</h2>
+            <div id="editor-empty" class="empty-card" style="margin-top:16px;">請先從左側選擇一筆活動，右側才會顯示可修改內容。<br />Select an event from the left to edit it here.</div>
+            <div id="editor-form-wrap" style="display:none; margin-top:16px;">
+              <div id="editor-summary" class="editor-summary"></div>
+
+              <div class="field" style="margin-top:12px;">
+                <span class="field-label">活動名稱 Event Name</span>
+                <input id="event-name" type="text" placeholder="請輸入活動名稱 / Enter event name" />
+              </div>
+              <div class="field" style="margin-top:12px;">
+                <span class="field-label">活動連結 Event Link</span>
+                <input id="event-link" type="url" placeholder="請輸入活動連結，例如 Facebook 或活動通 / Enter event link" />
+              </div>
+              <div class="field" style="margin-top:12px;">
+                <span class="field-label">預計人數 Attendee Count</span>
+                <input id="attendee-count" type="number" min="1" max="500" placeholder="請輸入預計人數 / Enter attendee count" />
+              </div>
+              <div class="row" style="margin-top:12px;">
+                <label class="field">
+                  <span class="field-label">開始時間 Start Time</span>
+                  <input id="start-at" type="datetime-local" />
+                </label>
+                <label class="field">
+                  <span class="field-label">結束時間 End Time</span>
+                  <input id="end-at" type="datetime-local" />
+                </label>
+              </div>
+              <div class="field" style="margin-top:12px;">
+                <span class="field-label">備註 Notes</span>
+                <textarea id="event-note" placeholder="可補充活動說明或特殊需求 / Additional notes"></textarea>
+              </div>
+              <div class="row" style="margin-top:12px;">
+                <button id="save-button" type="button">儲存修改 / Save Changes</button>
+                <button id="cancel-button" type="button" class="button-danger">刪除活動 / Delete Event</button>
+              </div>
+            </div>
+          </article>
+        </section>
+      </div>
+    </main>
+
+    <script>
+      const els = {
+        globalMessage: document.getElementById("global-message"),
+        globalError: document.getElementById("global-error"),
+        memberCard: document.getElementById("member-card"),
+        refreshSession: document.getElementById("refresh-session"),
+        logoutButton: document.getElementById("logout-button"),
+        listHint: document.getElementById("list-hint"),
+        bookingList: document.getElementById("booking-list"),
+        editorEmpty: document.getElementById("editor-empty"),
+        editorFormWrap: document.getElementById("editor-form-wrap"),
+        editorSummary: document.getElementById("editor-summary"),
+        eventName: document.getElementById("event-name"),
+        eventLink: document.getElementById("event-link"),
+        attendeeCount: document.getElementById("attendee-count"),
+        startAt: document.getElementById("start-at"),
+        endAt: document.getElementById("end-at"),
+        eventNote: document.getElementById("event-note"),
+        saveButton: document.getElementById("save-button"),
+        cancelButton: document.getElementById("cancel-button"),
+      };
+
+      const storageKeys = {
+        deviceToken: "nucosmos_redeem_device_token",
+        deviceLabel: "nucosmos_redeem_device_label",
+      };
+
+      const state = {
+        session: null,
+        bookings: [],
+        selectedBookingId: "",
+      };
+
+      function setMessage(el, text) {
+        el.textContent = text || "";
+        el.style.display = text ? "block" : "none";
+      }
+
+      function getOrCreateDeviceToken() {
+        let token = localStorage.getItem(storageKeys.deviceToken);
+        if (!token) {
+          token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+          localStorage.setItem(storageKeys.deviceToken, token);
+        }
+        return token;
+      }
+
+      function getOrCreateDeviceLabel() {
+        let label = localStorage.getItem(storageKeys.deviceLabel);
+        if (!label) {
+          label = (navigator.userAgent || "Member Center Browser").slice(0, 180);
+          localStorage.setItem(storageKeys.deviceLabel, label);
+        }
+        return label;
+      }
+
+      function deviceHeaders() {
+        return {
+          "X-Nucosmos-Device-Token": getOrCreateDeviceToken(),
+          "X-Nucosmos-Device-Label": getOrCreateDeviceLabel(),
+        };
+      }
+
+      async function requestJson(url, options = {}) {
+        const response = await fetch(url, {
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/json",
+            ...deviceHeaders(),
+            ...(options.headers || {}),
+          },
+          ...options,
+        });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) throw new Error(payload?.message || `Request failed with status ${response.status}`);
+        return payload?.data ?? null;
+      }
+
+      function formatDateTime(startAt, endAt) {
+        if (!startAt || !endAt) return "-";
+        const start = new Date(startAt);
+        const date = new Intl.DateTimeFormat("zh-TW", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          weekday: "long",
+        }).format(start);
+        return `${date} ${startAt.slice(11, 16)} - ${endAt.slice(11, 16)}`;
+      }
+
+      function statusLabel(status) {
+        switch (status) {
+          case "CONFIRMED":
+            return "已確認 / Confirmed";
+          case "PENDING":
+            return "待審核 / Pending";
+          case "CANCELLED":
+            return "已取消 / Cancelled";
+          case "REJECTED":
+            return "已拒絕 / Rejected";
+          default:
+            return status || "-";
+        }
+      }
+
+      function statusTone(status) {
+        switch (status) {
+          case "CONFIRMED":
+            return "status-pill confirmed";
+          case "PENDING":
+            return "status-pill pending";
+          case "CANCELLED":
+          case "REJECTED":
+            return "status-pill cancelled";
+          default:
+            return "status-pill";
+        }
+      }
+
+      function toLocalDateTimeValue(value) {
+        return value ? value.slice(0, 16) : "";
+      }
+
+      function withOffset(value) {
+        return `${value}:00+08:00`;
+      }
+
+      function getSelectedBooking() {
+        return state.bookings.find((booking) => booking.id === state.selectedBookingId) || null;
+      }
+
+      function renderSession() {
+        if (state.session?.authenticated && state.session.member) {
+          els.memberCard.innerHTML = `
+            <strong>已登入會員：${state.session.member.displayName}</strong><br />
+            手機：${state.session.member.phoneNumber}<br />
+            你在這個頁面可以查看與管理自己名下的活動預約。
+          `;
+          els.listHint.textContent = "已載入你名下的活動預約。";
+        } else {
+          els.memberCard.innerHTML = `
+            <strong>尚未登入會員</strong><br />
+            請先完成會員登入，系統才會帶出你名下的活動，並開放修改或刪除。
+            <div class="login-hint"><a class="top-link" href="/redeem/">前往會員登入 / Member Login</a></div>
+          `;
+          els.listHint.textContent = "登入後即可查看你建立的空間預約。";
+        }
+      }
+
+      function renderEditor() {
+        const booking = getSelectedBooking();
+        if (!booking) {
+          els.editorEmpty.style.display = "block";
+          els.editorFormWrap.style.display = "none";
+          return;
+        }
+
+        els.editorEmpty.style.display = "none";
+        els.editorFormWrap.style.display = "block";
+        els.editorSummary.innerHTML = `
+          <strong>${booking.eventName || booking.bookingNumber}</strong><br />
+          狀態：${statusLabel(booking.status)}<br />
+          時間：${formatDateTime(booking.startAt, booking.endAt)}<br />
+          預約編號：${booking.bookingNumber}
+        `;
+        els.eventName.value = booking.eventName || "";
+        els.eventLink.value = booking.eventLink || "";
+        els.attendeeCount.value = String(booking.attendeeCount || 1);
+        els.startAt.value = toLocalDateTimeValue(booking.startAt);
+        els.endAt.value = toLocalDateTimeValue(booking.endAt);
+        els.eventNote.value = booking.note || "";
+        els.saveButton.disabled = !booking.canEdit;
+        els.cancelButton.disabled = !booking.canCancel;
+      }
+
+      function renderBookings() {
+        els.bookingList.innerHTML = "";
+
+        if (!state.session?.authenticated) {
+          const empty = document.createElement("div");
+          empty.className = "empty-card";
+          empty.textContent = "請先登入會員，才能查看你的活動。";
+          els.bookingList.appendChild(empty);
+          renderEditor();
+          return;
+        }
+
+        if (!state.bookings.length) {
+          const empty = document.createElement("div");
+          empty.className = "empty-card";
+          empty.textContent = "目前沒有你建立的活動預約。";
+          els.bookingList.appendChild(empty);
+          renderEditor();
+          return;
+        }
+
+        state.bookings.forEach((booking) => {
+          const item = document.createElement("article");
+          item.className = `booking-item${state.selectedBookingId === booking.id ? " active" : ""}`;
+
+          const title = document.createElement("div");
+          title.className = "booking-name";
+          title.textContent = booking.eventName || booking.bookingNumber;
+          item.appendChild(title);
+
+          const status = document.createElement("span");
+          status.className = statusTone(booking.status);
+          status.textContent = statusLabel(booking.status);
+          item.appendChild(status);
+
+          const meta = document.createElement("div");
+          meta.className = "booking-meta";
+          meta.innerHTML = `
+            <div>${formatDateTime(booking.startAt, booking.endAt)}</div>
+            <div>預計人數：${booking.attendeeCount}</div>
+            <div>預約編號：${booking.bookingNumber}</div>
+          `;
+          item.appendChild(meta);
+
+          if (booking.eventLink) {
+            const link = document.createElement("a");
+            link.className = "booking-link";
+            link.href = booking.eventLink;
+            link.target = "_blank";
+            link.rel = "noreferrer";
+            link.textContent = "活動連結 / Event Link";
+            link.addEventListener("click", (event) => event.stopPropagation());
+            item.appendChild(link);
+          }
+
+          item.addEventListener("click", () => {
+            state.selectedBookingId = booking.id;
+            renderBookings();
+          });
+          els.bookingList.appendChild(item);
+        });
+
+        if (!getSelectedBooking()) {
+          state.selectedBookingId = state.bookings[0].id;
+        }
+        renderEditor();
+      }
+
+      async function loadMemberSession() {
+        state.session = await requestJson("/api/v1/public/member/session");
+        renderSession();
+      }
+
+      async function loadBookings() {
+        if (!state.session?.authenticated) {
+          state.bookings = [];
+          state.selectedBookingId = "";
+          renderBookings();
+          return;
+        }
+        state.bookings = await requestJson("/api/v1/public/spaces/member/bookings");
+        if (!state.bookings.some((booking) => booking.id === state.selectedBookingId)) {
+          state.selectedBookingId = state.bookings[0]?.id || "";
+        }
+        renderBookings();
+      }
+
+      async function refreshAll() {
+        await loadMemberSession();
+        await loadBookings();
+      }
+
+      async function logout() {
+        try {
+          await requestJson("/api/v1/public/member/logout", {
+            method: "POST",
+            body: JSON.stringify({}),
+          });
+          state.session = null;
+          state.bookings = [];
+          state.selectedBookingId = "";
+          renderSession();
+          renderBookings();
+          setMessage(els.globalError, "");
+          setMessage(els.globalMessage, "已登出會員 / Logged out.");
+        } catch (error) {
+          setMessage(els.globalMessage, "");
+          setMessage(els.globalError, error instanceof Error ? error.message : "登出失敗 / Logout failed");
+        }
+      }
+
+      async function saveChanges() {
+        const booking = getSelectedBooking();
+        if (!booking) return;
+
+        const attendeeCount = Number(els.attendeeCount.value || "0");
+        if (attendeeCount < 1) {
+          setMessage(els.globalMessage, "");
+          setMessage(els.globalError, "請輸入正確的預計人數。");
+          return;
+        }
+        if (!els.startAt.value || !els.endAt.value) {
+          setMessage(els.globalMessage, "");
+          setMessage(els.globalError, "請選擇開始與結束時間。");
+          return;
+        }
+
+        try {
+          setMessage(els.globalError, "");
+          setMessage(els.globalMessage, "正在儲存修改... / Saving changes...");
+          await requestJson(`/api/v1/public/spaces/member/bookings/${booking.id}`, {
+            method: "PATCH",
+            body: JSON.stringify({
+              purpose: els.eventName.value.trim() || null,
+              eventLink: els.eventLink.value.trim() || null,
+              attendeeCount,
+              note: els.eventNote.value.trim() || null,
+              startAt: withOffset(els.startAt.value),
+              endAt: withOffset(els.endAt.value),
+            }),
+          });
+          await refreshAll();
+          setMessage(els.globalMessage, "活動已更新 / Event updated.");
+        } catch (error) {
+          setMessage(els.globalMessage, "");
+          setMessage(els.globalError, error instanceof Error ? error.message : "更新活動失敗 / Failed to update event");
+        }
+      }
+
+      async function cancelBooking() {
+        const booking = getSelectedBooking();
+        if (!booking) return;
+        if (!confirm(`確定要刪除活動「${booking.eventName || booking.bookingNumber}」嗎？這會取消這筆預約。`)) {
+          return;
+        }
+
+        try {
+          setMessage(els.globalError, "");
+          setMessage(els.globalMessage, "正在刪除活動... / Deleting event...");
+          await requestJson(`/api/v1/public/spaces/member/bookings/${booking.id}/cancel`, {
+            method: "POST",
+            body: JSON.stringify({}),
+          });
+          await refreshAll();
+          setMessage(els.globalMessage, "活動已刪除 / Event deleted.");
+        } catch (error) {
+          setMessage(els.globalMessage, "");
+          setMessage(els.globalError, error instanceof Error ? error.message : "刪除活動失敗 / Failed to delete event");
+        }
+      }
+
+      els.refreshSession.addEventListener("click", refreshAll);
+      els.logoutButton.addEventListener("click", logout);
+      els.saveButton.addEventListener("click", saveChanges);
+      els.cancelButton.addEventListener("click", cancelBooking);
+
+      (async () => {
+        try {
+          await refreshAll();
+        } catch (error) {
+          setMessage(els.globalError, error instanceof Error ? error.message : "載入會員中心失敗 / Failed to load member center");
+        }
+      })();
+    </script>
+  </body>
+</html>
