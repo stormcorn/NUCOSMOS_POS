@@ -805,6 +805,7 @@ class SessionController extends ChangeNotifier {
     final complimentary = _discount?.type == CheckoutDiscountType.complimentary;
     return _checkoutWithPayment(
       paymentLabel: complimentary ? '招待' : '現金',
+      testOrder: false,
       addPayment: (order) => complimentary
           ? _orderService.addOtherPayment(
               accessToken: accessToken!,
@@ -820,8 +821,21 @@ class SessionController extends ChangeNotifier {
     );
   }
 
+  Future<OrderReceipt?> checkoutTestOrder() async {
+    return _checkoutWithPayment(
+      paymentLabel: '測試訂單',
+      testOrder: true,
+      addPayment: (order) => _orderService.addOtherPayment(
+        accessToken: accessToken!,
+        orderId: order.id,
+        note: 'Flutter POS test order checkout',
+      ),
+    );
+  }
+
   Future<OrderReceipt?> _checkoutWithPayment({
     required String paymentLabel,
+    required bool testOrder,
     required Future<OrderReceipt> Function(OrderReceipt order) addPayment,
   }) async {
     if (accessToken == null || session == null) {
@@ -856,6 +870,7 @@ class SessionController extends ChangeNotifier {
                 ),
               )
               .toList(growable: false),
+          testOrder: testOrder,
           discount: _discount,
         ),
       );

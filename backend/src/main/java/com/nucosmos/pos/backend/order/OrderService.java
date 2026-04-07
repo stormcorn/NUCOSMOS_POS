@@ -140,6 +140,7 @@ public class OrderService {
                 blankToNull(request.discountNote()),
                 orderedAt
         );
+        order.markAsTestOrder(Boolean.TRUE.equals(request.testOrder()));
 
         List<OrderItemCustomizationEntity> pendingCustomizations = new ArrayList<>();
         int lineNumber = 1;
@@ -167,7 +168,9 @@ public class OrderService {
         if (!pendingCustomizations.isEmpty()) {
             orderItemCustomizationRepository.saveAll(pendingCustomizations);
         }
-        receiptRedemptionService.ensureForOrder(savedOrder);
+        if (!savedOrder.isTestOrder()) {
+            receiptRedemptionService.ensureForOrder(savedOrder);
+        }
 
         return toResponse(savedOrder);
     }
@@ -229,7 +232,7 @@ public class OrderService {
         boolean fullyPaid = paymentMethod == PaymentMethod.OTHER
                 || totalCaptured.compareTo(order.getTotalAmount()) >= 0;
         order.applyPayment(totalCaptured, totalChange, fullyPaid ? paidAt : null, fullyPaid);
-        if (fullyPaid) {
+        if (fullyPaid && !order.isTestOrder()) {
             orderInventoryWorkflowService.commitOrderInventory(order, createdByUser);
         }
 
@@ -325,7 +328,7 @@ public class OrderService {
 
         boolean fullyPaid = totalCaptured.compareTo(order.getTotalAmount()) >= 0;
         order.applyPayment(totalCaptured, totalChange, fullyPaid ? capturedAt : null, fullyPaid);
-        if (fullyPaid) {
+        if (fullyPaid && !order.isTestOrder()) {
             orderInventoryWorkflowService.commitOrderInventory(order, payment.getCreatedByUser());
         }
 

@@ -233,6 +233,34 @@ class _PosHomeScreenState extends State<PosHomeScreen>
     );
   }
 
+  Future<void> _checkoutTestOrder() async {
+    final cartSnapshot = widget.controller.cart.toList(growable: false);
+    final receipt = await widget.controller.checkoutTestOrder();
+    if (!mounted || receipt == null) {
+      return;
+    }
+
+    await widget.printerController.printReceiptForOrder(
+      receipt: receipt,
+      lines: cartSnapshot,
+      storeCode: widget.controller.session?.storeCode,
+      staffName: widget.controller.session?.displayName,
+      receiptFooterText: widget.controller.storeReceiptFooterText,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '測試訂單 ${receipt.orderNumber} 已建立，不計營收也不扣庫存。',
+        ),
+      ),
+    );
+  }
+
   Future<void> _openDiscountSheet() async {
     final subtotal = widget.controller.cartSubtotal;
     if (subtotal <= 0) {
@@ -431,6 +459,8 @@ class _PosHomeScreenState extends State<PosHomeScreen>
                                         child: _CurrentOrderPanel(
                                           controller: controller,
                                           onCheckout: _checkoutCash,
+                                          onCheckoutTestOrder:
+                                              _checkoutTestOrder,
                                           onOpenDiscount: _openDiscountSheet,
                                           onOpenOrderHistory:
                                               _openOrderHistoryWorkspace,
@@ -478,6 +508,8 @@ class _PosHomeScreenState extends State<PosHomeScreen>
                                             _CurrentOrderPanel(
                                               controller: controller,
                                               onCheckout: _checkoutCash,
+                                              onCheckoutTestOrder:
+                                                  _checkoutTestOrder,
                                               onOpenDiscount:
                                                   _openDiscountSheet,
                                               onOpenOrderHistory:
@@ -1841,6 +1873,7 @@ class _CurrentOrderPanel extends StatelessWidget {
   const _CurrentOrderPanel({
     required this.controller,
     required this.onCheckout,
+    required this.onCheckoutTestOrder,
     required this.onOpenDiscount,
     required this.onOpenOrderHistory,
     this.compact = false,
@@ -1848,6 +1881,7 @@ class _CurrentOrderPanel extends StatelessWidget {
 
   final SessionController controller;
   final Future<void> Function() onCheckout;
+  final Future<void> Function() onCheckoutTestOrder;
   final Future<void> Function() onOpenDiscount;
   final Future<void> Function() onOpenOrderHistory;
   final bool compact;
@@ -1970,6 +2004,47 @@ class _CurrentOrderPanel extends StatelessWidget {
             emphasize: true,
           ),
           const SizedBox(height: 18),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              color: const Color(0x1214F1FF),
+              border: Border.all(color: const Color(0x3329D9FF)),
+            ),
+            child: Text(
+              '測試訂單不計營收也不扣庫存，且不會產生會員兌獎 QR。',
+              style: TextStyle(
+                color: const Color(0xFF9CEEFF),
+                fontSize: compact ? 11.5 : 12.5,
+                fontWeight: FontWeight.w700,
+                height: 1.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: compact ? 54 : 48,
+            child: OutlinedButton.icon(
+              onPressed: cart.isEmpty || controller.checkoutLoading
+                  ? null
+                  : onOpenDiscount,
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Color(0xFF4C5B74)),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              icon: const Icon(Icons.local_offer_rounded),
+              label: const Text(
+                '優惠',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -1978,17 +2053,17 @@ class _CurrentOrderPanel extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: cart.isEmpty || controller.checkoutLoading
                         ? null
-                        : onOpenDiscount,
+                        : onCheckoutTestOrder,
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFF4C5B74)),
-                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Color(0xFF2DCCB3)),
+                      foregroundColor: const Color(0xFF86F7E6),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    icon: const Icon(Icons.local_offer_rounded),
+                    icon: const Icon(Icons.science_rounded),
                     label: const Text(
-                      '優惠',
+                      '測試訂單',
                       style: TextStyle(fontWeight: FontWeight.w800),
                     ),
                   ),

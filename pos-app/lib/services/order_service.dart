@@ -15,6 +15,7 @@ class OrderService {
     required String accessToken,
     required List<OrderCreateItem> items,
     String? note,
+    bool testOrder = false,
     CheckoutDiscount? discount,
   }) async {
     final json = await _apiClient.post(
@@ -23,6 +24,7 @@ class OrderService {
       body: {
         'items': items.map((item) => item.toJson()).toList(),
         if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+        if (testOrder) 'testOrder': true,
         if (discount != null) 'discountType': discount.type.apiValue,
         if (discount != null && discount.type.requiresValue)
           'discountValue': discount.value,
