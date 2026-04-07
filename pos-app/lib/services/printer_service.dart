@@ -9,6 +9,8 @@ import '../models/order_models.dart';
 import '../state/session_controller.dart';
 
 class PrinterService {
+  static const int _thermalChunkSize = 128;
+
   PrinterService() {
     _plugin.bleConfig = const BleConfig(
       connectionStabilizationDelay: Duration(seconds: 3),
@@ -158,7 +160,12 @@ class PrinterService {
 
   Future<void> printTestReceipt(Printer printer) async {
     final bytes = await _buildTestReceiptBytes();
-    await _plugin.printData(printer, bytes, longData: true);
+    await _plugin.printData(
+      printer,
+      bytes,
+      longData: true,
+      chunkSize: _thermalChunkSize,
+    );
   }
 
   Future<void> printOrderReceipt({
@@ -178,7 +185,12 @@ class PrinterService {
       receiptFooterText: receiptFooterText,
       includeStoreCopy: includeStoreCopy,
     );
-    await _plugin.printData(printer, bytes, longData: true);
+    await _plugin.printData(
+      printer,
+      bytes,
+      longData: true,
+      chunkSize: _thermalChunkSize,
+    );
   }
 
   Future<void> _printClassicBytes(
@@ -584,7 +596,7 @@ class PrinterService {
       '\u7cfb\u7d71\u5217\u5370\u9069\u5408\u5e97\u5bb6\u7559\u5b58\u806f\u3001\u4e00\u822c\u8fa6\u516c\u5ba4\u5370\u8868\u6a5f\u8207 A4 \u55ae\u64da\u3002',
       '-' * width,
       _centerText('NUCOSMOS POS', width),
-    ].join('\\n');
+    ].join('\n');
   }
 
   String _buildSystemOrderDocument({
@@ -617,7 +629,7 @@ class PrinterService {
         ),
       );
     }
-    return copies.join('\\f');
+    return copies.join('\f');
   }
 
   String _buildSystemOrderCopy({
@@ -745,7 +757,7 @@ class PrinterService {
       buffer
         ..writeln('-' * width)
         ..writeln(_centerText('\u9580\u5e02\u5099\u8a3b Footer', width));
-      for (final line in normalizedFooter.split('\\n')) {
+      for (final line in normalizedFooter.split('\n')) {
         final trimmedLine = line.trim();
         if (trimmedLine.isNotEmpty) {
           buffer.writeln(trimmedLine);
@@ -760,7 +772,7 @@ class PrinterService {
     if (value == null) {
       return '';
     }
-    return value.replaceAll('\\r\\n', '\\n').trim();
+    return value.replaceAll('\r\n', '\n').trim();
   }
 
   String _centerText(String text, int width) {
@@ -781,7 +793,7 @@ class PrinterService {
     }
 
     final rightIndent = (width - normalizedRight.length).clamp(0, width);
-    return '$normalizedLeft\\n${' ' * rightIndent}$normalizedRight';
+    return '$normalizedLeft\n${' ' * rightIndent}$normalizedRight';
   }
 
   String _paymentStatusLabel(String value) {
