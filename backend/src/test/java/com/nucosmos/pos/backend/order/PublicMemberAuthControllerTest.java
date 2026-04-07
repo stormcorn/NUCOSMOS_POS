@@ -175,7 +175,7 @@ class PublicMemberAuthControllerTest {
         JsonNode createdJson = OBJECT_MAPPER.readTree(createOrder.getResponse().getContentAsString());
         String orderId = createdJson.path("data").path("id").asText();
         String redeemUrl = createdJson.path("data").path("redeemUrl").asText();
-        String redeemToken = redeemUrl.substring(redeemUrl.lastIndexOf('/') + 1);
+        String redeemToken = extractRedeemToken(redeemUrl);
 
         mockMvc.perform(post("/api/v1/orders/{orderId}/payments", UUID.fromString(orderId))
                         .header("Authorization", "Bearer " + token)
@@ -194,5 +194,13 @@ class PublicMemberAuthControllerTest {
     }
 
     private record RedeemTicket(String token) {
+    }
+
+    private String extractRedeemToken(String redeemUrl) {
+        int queryIndex = redeemUrl.indexOf("?t=");
+        if (queryIndex >= 0) {
+            return redeemUrl.substring(queryIndex + 3);
+        }
+        return redeemUrl.substring(redeemUrl.lastIndexOf('/') + 1);
     }
 }

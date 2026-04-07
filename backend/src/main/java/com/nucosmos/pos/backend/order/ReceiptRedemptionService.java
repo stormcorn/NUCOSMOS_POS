@@ -133,7 +133,7 @@ public class ReceiptRedemptionService {
         String normalizedBaseUrl = baseUrl == null || baseUrl.isBlank()
                 ? "https://nucosmos.io"
                 : baseUrl.trim().replaceAll("/+$", "");
-        return normalizedBaseUrl + "/redeem/" + redemption.getPublicToken();
+        return normalizedBaseUrl + "/redeem/?t=" + redemption.getPublicToken();
     }
 
     private ReceiptRedeemResponse toResponse(ReceiptRedemptionEntity redemption) {
