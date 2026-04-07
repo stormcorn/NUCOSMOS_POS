@@ -168,9 +168,7 @@ public class OrderService {
         if (!pendingCustomizations.isEmpty()) {
             orderItemCustomizationRepository.saveAll(pendingCustomizations);
         }
-        if (!savedOrder.isTestOrder()) {
-            receiptRedemptionService.ensureForOrder(savedOrder);
-        }
+        receiptRedemptionService.ensureForOrder(savedOrder);
 
         return toResponse(savedOrder);
     }

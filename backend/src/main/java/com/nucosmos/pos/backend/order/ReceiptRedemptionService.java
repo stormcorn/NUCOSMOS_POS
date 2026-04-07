@@ -38,6 +38,7 @@ public class ReceiptRedemptionService {
     private static final BigDecimal HUNDRED = new BigDecimal("100.00");
     private static final String DRAW_OUTCOME_WIN = "WIN";
     private static final String DRAW_OUTCOME_LOSE = "LOSE";
+    private static final String DRAW_OUTCOME_TEST = "TEST";
     private static final String SHARE_COUPON_HINT = "在店內五星好評、分享到任意社群、或分享 LINE 好友後出示給老闆看，可直接獲得 50 元抵用券。";
 
     private final ReceiptRedemptionRepository receiptRedemptionRepository;
@@ -117,12 +118,16 @@ public class ReceiptRedemptionService {
                     ? receiptMemberRepository.getReferenceById(authenticatedMember.getId())
                     : upsertMember(request);
             OffsetDateTime claimedAt = OffsetDateTime.now();
-            DrawResult drawResult = drawPrize();
-            int awardedPoints = drawResult.won() ? 0 : POINTS_PER_LOSS;
+            if (redemption.getOrder().isTestOrder()) {
+                redemption.markClaimed(claimedAt, member, DRAW_OUTCOME_TEST, 0, null);
+            } else {
+                DrawResult drawResult = drawPrize();
+                int awardedPoints = drawResult.won() ? 0 : POINTS_PER_LOSS;
 
-            member.markClaimed(claimedAt, awardedPoints);
-            redemption.markClaimed(claimedAt, member, drawResult.outcome(), awardedPoints, drawResult.prize());
-            ensureCouponForThreshold(redemption, member, awardedPoints);
+                member.markClaimed(claimedAt, awardedPoints);
+                redemption.markClaimed(claimedAt, member, drawResult.outcome(), awardedPoints, drawResult.prize());
+                ensureCouponForThreshold(redemption, member, awardedPoints);
+            }
         }
 
         return toResponse(redemption);
@@ -144,11 +149,15 @@ public class ReceiptRedemptionService {
 
         String message;
         if (claimed) {
-            message = "這張收據已完成兌換。";
+            message = order.isTestOrder()
+                    ? "這是測試訂單的兌獎結果，已完成測試流程，但不會真的發獎。"
+                    : "這張收據已完成兌換。";
         } else if (!eligible) {
             message = "這張收據目前不符合兌獎資格。";
         } else {
-            message = "這張收據可參加本次抽獎活動。";
+            message = order.isTestOrder()
+                    ? "這是測試訂單，可用來測試會員登入與兌獎流程，但不會真的中獎。"
+                    : "這張收據可參加本次抽獎活動。";
         }
 
         return new ReceiptRedeemResponse(
@@ -216,7 +225,9 @@ public class ReceiptRedemptionService {
                 .orElse(null);
 
         String rewardMessage;
-        if (couponSummary != null) {
+        if (DRAW_OUTCOME_TEST.equalsIgnoreCase(redemption.getDrawOutcome())) {
+            rewardMessage = "測試訂單僅驗證流程，不會發放點數、優惠券或獎項。";
+        } else if (couponSummary != null) {
             rewardMessage = "未中獎，但已累積點數並獲得 50 元抵用券。";
         } else if (redemption.getAwardedPoints() > 0) {
             rewardMessage = "未中獎，本次已獲得 1 點。";
@@ -239,6 +250,16 @@ public class ReceiptRedemptionService {
     private ReceiptDrawSummary toDrawSummary(ReceiptRedemptionEntity redemption) {
         if (!redemption.isClaimed()) {
             return null;
+        }
+
+        if (DRAW_OUTCOME_TEST.equalsIgnoreCase(redemption.getDrawOutcome())) {
+            return new ReceiptDrawSummary(
+                    DRAW_OUTCOME_TEST,
+                    false,
+                    "測試兌獎",
+                    "這張測試訂單已完成兌獎流程驗證，不會真的中獎或扣除獎品名額。",
+                    null
+            );
         }
 
         if (DRAW_OUTCOME_WIN.equalsIgnoreCase(redemption.getDrawOutcome()) && redemption.getPrize() != null) {

@@ -2013,7 +2013,7 @@ class _CurrentOrderPanel extends StatelessWidget {
               border: Border.all(color: const Color(0x3329D9FF)),
             ),
             child: Text(
-              '測試訂單不計營收也不扣庫存，且不會產生會員兌獎 QR。',
+              '測試訂單不計營收也不扣庫存，但仍會提供測試用會員兌獎 QR。',
               style: TextStyle(
                 color: const Color(0xFF9CEEFF),
                 fontSize: compact ? 11.5 : 12.5,
