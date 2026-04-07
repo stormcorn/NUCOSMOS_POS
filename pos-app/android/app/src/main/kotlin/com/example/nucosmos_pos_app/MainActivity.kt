@@ -38,6 +38,9 @@ class MainActivity : FlutterActivity() {
         private const val CLASSIC_BLUETOOTH_CHANNEL = "nucosmos_pos_app/classic_bluetooth"
         private const val ANDROID_PRINT_CHANNEL = "nucosmos_pos_app/android_print"
         private const val CLASSIC_SCAN_TIMEOUT_MS = 8000L
+        private const val CLASSIC_CONNECT_STABILIZATION_MS = 300L
+        private const val CLASSIC_PRINT_CHUNK_SIZE = 256
+        private const val CLASSIC_PRINT_CHUNK_DELAY_MS = 20L
         private const val REQUEST_CLASSIC_PERMISSIONS = 2207
         private val CLASSIC_SPP_UUID: UUID =
             UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
@@ -365,15 +368,33 @@ class MainActivity : FlutterActivity() {
                     socket.connect()
                     classicSocket = socket
                     classicConnectedAddress = address
+                    Thread.sleep(CLASSIC_CONNECT_STABILIZATION_MS)
                 }
 
                 val outputStream = classicSocket?.outputStream
                     ?: throw IOException("Classic Bluetooth output stream is unavailable.")
-                outputStream.write(bytes)
+                writeClassicPrintJob(outputStream, bytes)
                 outputStream.flush()
                 postSuccess(result, true)
             } catch (exception: Exception) {
                 postError(result, "BT_PRINT", "Classic Bluetooth print failed: ${exception.message}")
+            }
+        }
+    }
+
+    private fun writeClassicPrintJob(
+        outputStream: java.io.OutputStream,
+        bytes: ByteArray,
+    ) {
+        var offset = 0
+        while (offset < bytes.size) {
+            val remaining = bytes.size - offset
+            val chunkSize = minOf(CLASSIC_PRINT_CHUNK_SIZE, remaining)
+            outputStream.write(bytes, offset, chunkSize)
+            outputStream.flush()
+            offset += chunkSize
+            if (offset < bytes.size) {
+                Thread.sleep(CLASSIC_PRINT_CHUNK_DELAY_MS)
             }
         }
     }

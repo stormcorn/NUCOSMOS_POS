@@ -200,6 +200,7 @@ class PrinterService {
     final now = DateTime.now();
 
     final bytes = <int>[];
+    bytes.addAll(generator.reset());
     bytes.addAll(generator.text(
       'NUCOSMOS POS',
       styles: const PosStyles(
@@ -242,6 +243,7 @@ class PrinterService {
     final profile = await CapabilityProfile.load();
     final generator = Generator(PaperSize.mm80, profile);
     final bytes = <int>[];
+    bytes.addAll(generator.reset());
     bytes.addAll(
       _buildThermalOrderCopyBytes(
         generator: generator,
