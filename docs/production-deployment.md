@@ -122,6 +122,20 @@ container removal. See the incident record:
 
 - [2026-03-28-vps-recovery-incident.md](/c:/NUCOSMOS_POS/docs/2026-03-28-vps-recovery-incident.md)
 
+If Compose also reports a container-name conflict after a failed recreate, check for leftover
+temporary containers in `Created` state:
+
+```bash
+docker ps -a --no-trunc --format 'table {{.ID}}\t{{.Names}}\t{{.Status}}'
+docker rm -f <created-temp-container-id>
+docker rm -f nucosmos-pos-admin-web-prod 2>/dev/null || true
+docker rm -f nucosmos-pos-backend-prod 2>/dev/null || true
+systemctl restart docker
+```
+
+This usually appears together with `virtfs` overlay mounts and should be treated as the same family
+of recovery steps.
+
 ## VPS memory stability note
 
 During the `2026-03-25` to `2026-03-26` production rollout, the VPS became unstable because:

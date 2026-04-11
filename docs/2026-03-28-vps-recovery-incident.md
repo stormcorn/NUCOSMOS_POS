@@ -59,18 +59,33 @@ The old container overlay directories were still mounted under cPanel jailed-she
 
 This blocked removal of old `backend` and `admin-web` containers.
 
+In later repeats of the same issue, Docker also left behind extra containers in `Created` state with
+temporary names such as:
+
+```text
+<old-container-id>_nucosmos-pos-admin-web-prod
+<old-container-id>_nucosmos-pos-backend-prod
+```
+
+At the same time, the canonical service container could remain stuck in `Removal In Progress`.
+This combination prevents Compose from recreating the service because the old generated name is still reserved.
+
 Recovery:
 
 1. identify the stuck overlay path
 2. lazy-unmount the matching virtfs mount
-3. remove the dead container
-4. recreate the service
+3. remove any temporary `Created` containers that were left behind
+4. remove the dead or stuck service container
+5. restart Docker if the stuck state does not clear
+6. recreate the service
 
 Example commands that were used:
 
 ```bash
 mount | grep '/home/virtfs/stormcorn/var/lib/docker/overlay2'
 umount -l /home/virtfs/stormcorn/var/lib/docker/overlay2/<overlay-id>/merged
+docker ps -a --no-trunc --format 'table {{.ID}}\t{{.Names}}\t{{.Status}}'
+docker rm -f <created-temp-container-id>
 docker rm -f <dead-container-id>
 systemctl restart docker
 docker compose --env-file deployment/.env.prod -f deployment/docker-compose.prod.yml up -d --build backend admin-web
@@ -104,6 +119,7 @@ docker ps -a --no-trunc --format '{{.ID}}  {{.Names}}  {{.Status}}'
 
 ```bash
 docker inspect <container-id> --format '{{.State.Status}} {{.State.Error}}'
+docker ps -a --no-trunc --format 'table {{.ID}}\t{{.Names}}\t{{.Status}}'
 mount | grep '/home/virtfs/stormcorn/var/lib/docker/overlay2'
 ```
 
@@ -111,8 +127,17 @@ If a matching `virtfs` mount exists:
 
 ```bash
 umount -l /home/virtfs/stormcorn/var/lib/docker/overlay2/<overlay-id>/merged
+docker rm -f <created-temp-container-id>
 docker rm -f <container-id>
 ```
+
+If Compose reports a name conflict like:
+
+```text
+Conflict. The container name "/<old-id>_nucosmos-pos-admin-web-prod" is already in use
+```
+
+remove that temporary `Created` container first, then remove the original service container if needed.
 
 ### D. Restart only after stale mounts are cleared
 
