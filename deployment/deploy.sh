@@ -27,7 +27,6 @@ source "$ENV_FILE"
 set +a
 
 ADMIN_WEB_PORT="${ADMIN_WEB_PORT:-8080}"
-BACKEND_PORT="${BACKEND_PORT:-8081}"
 BACKEND_CONTAINER_NAME="${BACKEND_CONTAINER_NAME:-nucosmos-pos-backend-prod}"
 
 if [ -d "$PUBLIC_SITE_SOURCE" ]; then
@@ -59,17 +58,29 @@ docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" pull || true
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --build
 
 echo "[deploy] waiting for backend health..."
-HEALTH_URL="http://127.0.0.1:${BACKEND_PORT}/actuator/health"
 HEALTH_TIMEOUT_SECONDS="${HEALTH_TIMEOUT_SECONDS:-60}"
 HEALTH_INTERVAL_SECONDS="${HEALTH_INTERVAL_SECONDS:-2}"
 elapsed=0
 
-until curl -fsS "$HEALTH_URL"; do
-  if docker ps --format '{{.Names}}' | grep -qx "$BACKEND_CONTAINER_NAME" \
-    && docker logs "$BACKEND_CONTAINER_NAME" 2>&1 | grep -q "Started NucosmosPosBackendApplication"; then
-    echo "[deploy] backend startup confirmed via container logs"
-    break
+until false; do
+  if docker ps --format '{{.Names}}' | grep -qx "$BACKEND_CONTAINER_NAME"; then
+    backend_health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$BACKEND_CONTAINER_NAME" 2>/dev/null || true)"
+    if [ "$backend_health" = "healthy" ]; then
+      echo "[deploy] backend reported healthy via container healthcheck"
+      break
+    fi
+
+    if docker exec "$BACKEND_CONTAINER_NAME" sh -lc 'curl -fsS http://127.0.0.1:8081/actuator/health >/dev/null' >/dev/null 2>&1; then
+      echo "[deploy] backend reachable via in-container actuator check"
+      break
+    fi
+
+    if docker logs "$BACKEND_CONTAINER_NAME" 2>&1 | grep -q "Started NucosmosPosBackendApplication"; then
+      echo "[deploy] backend startup confirmed via container logs"
+      break
+    fi
   fi
+
   elapsed=$((elapsed + HEALTH_INTERVAL_SECONDS))
   if [ "$elapsed" -ge "$HEALTH_TIMEOUT_SECONDS" ]; then
     echo

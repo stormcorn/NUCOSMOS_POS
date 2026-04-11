@@ -12,7 +12,7 @@ RUN ./mvnw -q -DskipTests package
 FROM eclipse-temurin:17-jre
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends docker.io \
+    && apt-get install -y --no-install-recommends docker.io curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

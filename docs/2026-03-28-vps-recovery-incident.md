@@ -128,14 +128,15 @@ Use these checks after recovery:
 
 ```bash
 docker ps
-curl --max-time 10 http://127.0.0.1:8081/api/v1/health
 curl -I --max-time 10 http://127.0.0.1:8080
 curl -I --max-time 10 https://nucosmos.io/erp/
+docker inspect nucosmos-pos-backend-prod --format '{{.State.Health.Status}}'
+docker exec nucosmos-pos-backend-prod sh -lc 'curl -fsS http://127.0.0.1:8081/actuator/health'
 ```
 
 Notes:
 
-- `backend` should listen on `127.0.0.1:8081`
+- `backend` should be healthy inside the Docker network on `backend:8081`
 - `admin-web` should listen on `:8080`
 - Apache should route `/erp/` publicly to the Dockerized admin web
 

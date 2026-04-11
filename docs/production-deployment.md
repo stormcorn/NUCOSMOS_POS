@@ -161,6 +161,20 @@ docker system df
 du -xh /var/lib/docker --max-depth=1 2>/dev/null | sort -h
 ```
 
+## Backend port-mapping guardrail
+
+Production should not depend on host `127.0.0.1:8081` being reachable through Docker port mapping.
+
+The supported path is:
+
+- Apache -> `127.0.0.1:8080` -> container nginx -> backend service DNS `backend:8081`
+
+Current deployment rules:
+
+- backend should be exposed only to the Docker network
+- deploy health checks should use the backend container health status or an in-container actuator check
+- do not treat host `curl http://127.0.0.1:8081/...` as the canonical production health test
+
 ## Optional admin cache cleanup
 
 The admin web can expose an `ADMIN`-only "Docker cache cleanup" action, but it is intentionally
